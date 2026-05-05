@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+/* ── Calma Operativa Design System ── */
+@theme {
+  --color-calm-bg: #F6F8FB;
+  --color-calm-surface: #FFFFFF;
+  --color-calm-border: #D9E2EC;
+  --color-calm-text: #1E293B;
+  --color-calm-muted: #64748B;
+  --color-calm-blue: #2563EB;
+  --color-calm-blue-light: #EFF6FF;
+  --color-calm-green-bg: #DCFCE7;
+  --color-calm-green-text: #166534;
+  --color-calm-amber-bg: #FEF9C3;
+  --color-calm-amber-text: #854D0E;
+  --color-calm-orange-bg: #FFEDD5;
+  --color-calm-orange-text: #9A3412;
+  --color-calm-red-bg: #FEE2E2;
+  --color-calm-red-text: #991B1B;
+  --color-calm-purple-bg: #EDE9FE;
+  --color-calm-purple-text: #5B21B6;
+  --color-calm-slate-bg: #F1F5F9;
+  --color-calm-slate-text: #475569;
+}
+
+/* Global soft reset */
+html {
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+body {
+  background: #F6F8FB;
+}
+
+/* Softer scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+/* Focus ring for all interactive elements */
+*:focus-visible {
+  outline: 2px solid #93C5FD;
+  outline-offset: 2px;
+}
+
+/* Softer table alternate rows */
+.table-stripe tr:nth-child(even) {
+  background: #F8FAFC;
+}

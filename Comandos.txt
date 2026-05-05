@@ -1,0 +1,5 @@
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+npm install
+
+npm run dev
