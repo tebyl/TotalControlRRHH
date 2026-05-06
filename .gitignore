@@ -23,8 +23,9 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 
-# Editors/IDEs
-.vscode/
+# Editors/IDEs — solo archivos personales, no configuración de equipo
+.vscode/*.code-workspace
+.vscode/.ropeproject
 .idea/
 
 # TypeScript
@@ -36,6 +37,9 @@ Thumbs.db
 
 # Test coverage
 coverage/
+
+# Archivos de notas personales
+Comandos.txt
 
 # Misc
 *.tgz

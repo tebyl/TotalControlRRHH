@@ -66,14 +66,11 @@ El build genera un **único archivo HTML** (via `vite-plugin-singlefile`) que pu
 
 ---
 
-## Credenciales de acceso
+## Acceso
 
-```
-Usuario:  KataS
-Contraseña: Tota95
-```
+La aplicación tiene una pantalla de login básica para uso local/demo. Las credenciales están definidas directamente en `src/App.tsx`.
 
-> Credenciales hardcodeadas para uso local/demo.
+> **Advertencia de seguridad:** Este sistema de autenticación no es apto para entornos expuestos en red. Es solo una barrera de acceso local. No compartir el archivo HTML compilado con personas no autorizadas.
 
 ---
 

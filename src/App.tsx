@@ -25,42 +25,50 @@ type DateInputProps = {
 
 function DateInput({ value, onChange, placeholder = "dd/mm/yyyy" }: DateInputProps) {
   const [displayValue, setDisplayValue] = useState(formatDateCL(value));
+  const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
     setDisplayValue(formatDateCL(value));
+    setErrorMsg("");
   }, [value]);
 
   return (
-    <input
-      type="text"
-      value={displayValue}
-      placeholder={placeholder}
-      className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white w-full font-sans text-slate-800"
-      inputMode="numeric"
-      maxLength={10}
-      onChange={(e) => {
-        let v = e.target.value.replace(/[^\d]/g, "");
+    <div className="w-full">
+      <input
+        type="text"
+        value={displayValue}
+        placeholder={placeholder}
+        className={`border ${errorMsg ? "border-red-400 focus:ring-red-100 focus:border-red-400" : "border-slate-300 focus:ring-blue-500 focus:border-transparent"} rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 bg-white w-full font-sans text-slate-800`}
+        inputMode="numeric"
+        maxLength={10}
+        onChange={(e) => {
+          let v = e.target.value.replace(/[^\d]/g, "");
 
-        if (v.length >= 5) {
-          v = `${v.slice(0, 2)}/${v.slice(2, 4)}/${v.slice(4, 8)}`;
-        } else if (v.length >= 3) {
-          v = `${v.slice(0, 2)}/${v.slice(2, 4)}`;
-        }
+          if (v.length >= 5) {
+            v = `${v.slice(0, 2)}/${v.slice(2, 4)}/${v.slice(4, 8)}`;
+          } else if (v.length >= 3) {
+            v = `${v.slice(0, 2)}/${v.slice(2, 4)}`;
+          }
 
-        setDisplayValue(v);
+          setDisplayValue(v);
+          setErrorMsg("");
 
-        if (/^\d{2}\/\d{2}\/\d{4}$/.test(v)) {
-          onChange(parseDateCL(v));
-        } else if (v === "") {
-          onChange("");
-        }
-      }}
-      onBlur={() => {
-        if (displayValue && !/^\d{2}\/\d{2}\/\d{4}$/.test(displayValue)) {
-          alert("Formato de fecha inválido. Use dd/mm/yyyy");
-        }
-      }}
-    />
+          if (/^\d{2}\/\d{2}\/\d{4}$/.test(v)) {
+            onChange(parseDateCL(v));
+          } else if (v === "") {
+            onChange("");
+          }
+        }}
+        onBlur={() => {
+          if (displayValue && !/^\d{2}\/\d{2}\/\d{4}$/.test(displayValue)) {
+            setErrorMsg("Formato de fecha inválido. Usa dd/mm/aaaa.");
+          } else {
+            setErrorMsg("");
+          }
+        }}
+      />
+      {errorMsg && <p className="text-[11px] text-red-500 mt-1">{errorMsg}</p>}
+    </div>
   );
 }
 import * as XLSX from "xlsx";
@@ -212,7 +220,7 @@ function Table({ columns, rows, onEdit, onDelete, onDuplicate, onMarkClosed, clo
 interface Curso { id: string; curso: string; origen: string; area: string; solicitante: string; fechaSolicitud: string; fechaRequerida: string; estado: string; prioridad: string; nivelCritico: string; requiereOC: string; numeroOC: string; proveedor: string; montoEstimado: number; responsableId: string; proximaAccion: string; fechaProximaAccion: string; bloqueadoPor: string; ultimaActualizacion: string; observaciones: string; }
 interface OC { id: string; numeroOC: string; cursoAsociado: string; proveedor: string; monto: number; fechaSolicitud: string; fechaLimite: string; estadoOC: string; prioridad: string; accionPendiente: string; responsableId: string; bloqueadoPor: string; ultimaActualizacion: string; observaciones: string; }
 interface Practicante { id: string; nombre: string; area: string; especialidad: string; fechaInicio: string; fechaTermino: string; costoMensual: number; estado: string; responsableId: string; proximoPaso: string; fechaProximaAccion: string; bloqueadoPor: string; ultimaActualizacion: string; observaciones: string; }
-interface PresupuestoItem { id: string; concepto: string; presupuestoTotal: number; gastado: number; responsableId: string; ultimaActualizacion: string; observaciones: string; }
+interface PresupuestoItem { id: string; concepto: string; presupuestoTotal: number; gastado: number; responsableId: string; ultimaActualizacion: string; observaciones: string; montoComprometidoManual?: number; montoEjecutadoManual?: number; modoCalculo?: string; }
 interface Proceso { id: string; proceso: string; tipo: string; estadoActual: string; queFalta: string; responsableId: string; fechaLimite: string; riesgo: string; prioridad: string; proximaAccion: string; fechaProximaAccion: string; bloqueadoPor: string; ultimaActualizacion: string; observaciones: string; }
 interface Diploma { id: string; cursoAsociado: string; participante: string; tipoDocumento: string; otec: string; etapa: string; fechaSolicitudOTEC: string; fechaRecepcionDoc: string; fechaEnvioParticipante: string; fechaSubidaBUK: string; estadoBUK: string; prioridad: string; responsableId: string; proximaAccion: string; fechaProximaAccion: string; bloqueadoPor: string; ultimaActualizacion: string; observaciones: string; }
 interface CargaSemanal { id: string; semana: string; cursosPlanificados: number; cursosUrgentesNuevos: number; cursosNoPlanificados: number; ocsNuevas: number; diplomasPendientes: number; procesosBloqueados: number; comentario: string; }
@@ -222,14 +230,126 @@ interface Evaluacion { id: string; mes: string; ano: number; cargo: string; area
 interface AppData { cursos: Curso[]; ocs: OC[]; practicantes: Practicante[]; presupuesto: PresupuestoItem[]; procesos: Proceso[]; diplomas: Diploma[]; cargaSemanal: CargaSemanal[]; contactos: Contacto[]; evaluacionesPsicolaborales: Evaluacion[]; meta: { version: string; ultimaExportacion: string; actualizado: string }; }
 
 // ──────────────────────────────────────────────
+// BACKUPS
+// ──────────────────────────────────────────────
+
+interface BackupItem {
+  id: string;
+  fecha: string;
+  motivo: string;
+  data: AppData;
+  tamaño: string;
+}
+
+function getLocalBackups(): BackupItem[] {
+  try {
+    const raw = localStorage.getItem("controlOperativo_backups");
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalBackups(backups: BackupItem[]): boolean {
+  try {
+    localStorage.setItem("controlOperativo_backups", JSON.stringify(backups));
+    return true;
+  } catch (e: any) {
+    if (e.name === "QuotaExceededError" || e.code === 22) {
+      return false;
+    }
+    return false;
+  }
+}
+
+function formatBytes(bytes: number, decimals = 1) {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ["Bytes", "KB", "MB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
+}
+
+function ensureBudgetRows(presupuesto: PresupuestoItem[]): PresupuestoItem[] {
+  const baseConcepts = [
+    { key: "curso", concepto: "Cursos / Capacitaciones", modo: "Calculado desde registros" },
+    { key: "oc", concepto: "Órdenes de Compra (OC)", modo: "Calculado desde registros" },
+    { key: "practicante", concepto: "Practicantes", modo: "Calculado desde registros" },
+    { key: "evaluaci", concepto: "Evaluaciones Psicolaborales", modo: "Calculado desde registros" },
+    { key: "diploma", concepto: "Diplomas / Certificados", modo: "Manual" }
+  ];
+
+  const updated = [...(presupuesto || [])];
+  baseConcepts.forEach(bc => {
+    const exists = updated.some(p => p.concepto.toLowerCase().includes(bc.key));
+    if (!exists) {
+      updated.push({
+        id: "pres_" + bc.key + "_" + genId(),
+        concepto: bc.concepto,
+        presupuestoTotal: 0,
+        gastado: 0,
+        responsableId: "",
+        ultimaActualizacion: hoy(),
+        observaciones: "Concepto inicial base en $0",
+        montoComprometidoManual: 0,
+        montoEjecutadoManual: 0,
+        modoCalculo: bc.modo
+      });
+    }
+  });
+  return updated;
+}
+
+function createBackup(data: AppData, motivo: string): boolean {
+  const backups = getLocalBackups();
+  const stringified = JSON.stringify(data);
+  const size = formatBytes(new Blob([stringified]).size);
+
+  const newBackup: BackupItem = {
+    id: genId(),
+    fecha: new Date().toISOString(),
+    motivo,
+    data,
+    tamaño: size,
+  };
+
+  const updated = [newBackup, ...backups];
+  if (updated.length > 10) {
+    updated.splice(10);
+  }
+
+  return saveLocalBackups(updated);
+}
+
+// ──────────────────────────────────────────────
 // HELPERS
 // ──────────────────────────────────────────────
 
-const genId = () => crypto.randomUUID?.() ?? Math.random().toString(36).slice(2, 10);
+const genId = (prefix = "id") => {
+  if (typeof crypto !== "undefined") {
+    if (typeof crypto.randomUUID === "function") {
+      return `${prefix}_${crypto.randomUUID()}`;
+    }
+    if (typeof crypto.getRandomValues === "function") {
+      const arr = new Uint32Array(3);
+      crypto.getRandomValues(arr);
+      return `${prefix}_${arr[0].toString(36)}-${arr[1].toString(36)}-${arr[2].toString(36)}`;
+    }
+  }
+  return `${prefix}_${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+};
 const hoy = () => new Date().toISOString().slice(0, 10);
 const ahora = () => new Date().toISOString();
 const toDDMMYYYY = (iso: string) => formatDateCL(iso);
 const fmtCLP = (n: number) => n != null ? "$" + n.toLocaleString("es-CL") : "-";
+const durMesesEntre = (ini: string, fin: string): number => {
+  if (!ini || !fin) return 0;
+  const d1 = new Date(ini);
+  const d2 = new Date(fin);
+  const m = Math.round((d2.getTime() - d1.getTime()) / (365.25 * 24 * 3600 * 1000) * 12);
+  return m > 0 ? m : 1;
+};
 
 function semaforo(fechaLimite: string): { label: string; color: string; order: number } {
   if (!fechaLimite) return { label: "Sin fecha", color: "#9CA3AF", order: 10 };
@@ -241,6 +361,27 @@ function semaforo(fechaLimite: string): { label: string; color: string; order: n
   if (diff <= 3) return { label: "1-3 días", color: "#F59E0B", order: 3 };
   if (diff <= 7) return { label: "4-7 días", color: "#FBBF24", order: 4 };
   return { label: "Sin urgencia", color: "#16A34A", order: 5 };
+}
+
+function isClosedRecord(row: any, moduleKey: string): boolean {
+  if (!row) return false;
+  switch (moduleKey) {
+    case "cursos":
+      return ["Cerrado", "Ejecutado"].includes(row.estado);
+    case "ocs":
+      return row.estadoOC === "Cerrada" || row.estadoOC === "Emitida" || row.estadoOC === "Enviada proveedor";
+    case "practicantes":
+      return row.estado === "Finalizado";
+    case "procesos":
+      return ["Cerrado", "Finalizado", "Completado"].includes(row.estadoActual);
+    case "diplomas":
+      return row.etapa === "Completado" || row.estadoBUK === "Subido";
+    case "evaluaciones":
+    case "evaluacionesPsicolaborales":
+      return row.estado === "Cerrada";
+    default:
+      return false;
+  }
 }
 
 function getResponsableName(data: AppData, id: string): string {
@@ -258,28 +399,32 @@ interface WeekInfo {
   monthLabel: string;
 }
 
-function getWeeksFor2026(): WeekInfo[] {
+function getWeeksForYear(year: number): WeekInfo[] {
   const weeks: WeekInfo[] = [];
-  const firstMonday = new Date(2025, 11, 29); // Monday Dec 29, 2025
   const monthNames = [
     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
   ];
+  // ISO week 1 starts on the Monday of the week containing Jan 4
+  const jan4 = new Date(year, 0, 4);
+  const dayOfWeek = jan4.getDay() || 7; // 1=Mon … 7=Sun
+  const firstMonday = new Date(jan4.getTime() - (dayOfWeek - 1) * 86400000);
   for (let w = 1; w <= 53; w++) {
-    const monday = new Date(firstMonday.getTime() + (w - 1) * 7 * 24 * 60 * 60 * 1000);
-    const sunday = new Date(monday.getTime() + 6 * 24 * 60 * 60 * 1000);
+    const monday = new Date(firstMonday.getTime() + (w - 1) * 7 * 86400000);
+    const sunday = new Date(monday.getTime() + 6 * 86400000);
+    // Stop if the week belongs entirely to the next year
+    if (monday.getFullYear() > year && w > 52) break;
     const pad = (n: number) => n.toString().padStart(2, "0");
     const fmt = (d: Date) => `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
     const fmtISO = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-    const wednesday = new Date(monday.getTime() + 2 * 24 * 60 * 60 * 1000);
-    const monthLabel = monthNames[wednesday.getMonth()];
+    const wednesday = new Date(monday.getTime() + 2 * 86400000);
     weeks.push({
       number: w,
       label: `Semana ${w}`,
       startDateStr: fmtISO(monday),
       endDateStr: fmtISO(sunday),
       rangeLabel: `${fmt(monday)} - ${fmt(sunday)}`,
-      monthLabel
+      monthLabel: monthNames[wednesday.getMonth()]
     });
   }
   return weeks;
@@ -473,9 +618,15 @@ function migrateData(data: any): AppData {
 function cargarDatos(): AppData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return migrateData(JSON.parse(raw));
+    if (raw) {
+      const parsed = migrateData(JSON.parse(raw));
+      parsed.presupuesto = ensureBudgetRows(parsed.presupuesto);
+      return parsed;
+    }
   } catch { /* ignore */ }
-  return crearDatosEjemplo();
+  const de = crearDatosEjemplo();
+  de.presupuesto = ensureBudgetRows(de.presupuesto);
+  return de;
 }
 
 function guardarDatos(data: AppData) {
@@ -642,6 +793,10 @@ export default function App() {
   const [captureOpen, setCaptureOpen] = useState(false);
   const [lastCapturedModulo, setLastCapturedModulo] = useState<Modulo | null>(null);
 
+  const [backups, setBackups] = useState<BackupItem[]>(() => getLocalBackups());
+  const [lastJSONExport, setLastJSONExport] = useState<string>(() => localStorage.getItem("kata_last_json_export") || "");
+  const [lastXLSXExport, setLastXLSXExport] = useState<string>(() => localStorage.getItem("kata_last_xlsx_export") || "");
+
   const toggleFocusMode = () => { const v = !focusMode; setFocusMode(v); localStorage.setItem("kata_focus_mode", String(v)); };
 
   useEffect(() => {
@@ -652,13 +807,30 @@ export default function App() {
 
   const toastShow = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 2500); };
 
+  const runBackupAndToast = (motivo: string) => {
+    const success = createBackup(data, motivo);
+    if (!success) {
+      toastShow("localStorage lleno, libera espacio o elimina respaldos antiguos");
+    } else {
+      setBackups(getLocalBackups());
+    }
+  };
+
   // ── EXPORT / IMPORT ────────────────────────
 
   const exportJSON = () => {
+    const backupFileName = `total-control-rh-backup-${hoy()}.json`;
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
-    a.download = `control_operativo_kata_v5_${hoy()}.json`; a.click();
-    setData(d => ({ ...d, meta: { ...d.meta, ultimaExportacion: ahora() } }));
+    const a = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    a.href = url;
+    a.download = backupFileName;
+    a.click();
+    URL.revokeObjectURL(url);
+    const timeNow = ahora();
+    localStorage.setItem("kata_last_json_export", timeNow);
+    setLastJSONExport(timeNow);
+    setData(d => ({ ...d, meta: { ...d.meta, ultimaExportacion: timeNow } }));
     toastShow("JSON exportado correctamente");
   };
 
@@ -670,7 +842,13 @@ export default function App() {
       const reader = new FileReader();
       reader.onload = (ev) => {
         try {
-          const imported = migrateData(JSON.parse(ev.target?.result as string));
+          const parsed = JSON.parse(ev.target?.result as string);
+          if (!parsed || typeof parsed !== "object") {
+            toastShow("Respaldo corrupto o inválido");
+            return;
+          }
+          const imported = migrateData(parsed);
+          runBackupAndToast("importar");
           setData(imported); toastShow("Datos importados exitosamente");
         } catch { toastShow("Error al leer el archivo JSON"); }
       };
@@ -694,7 +872,10 @@ export default function App() {
     ];
     sheets.forEach(([name, rows]) => { const ws = XLSX.utils.json_to_sheet(rows); XLSX.utils.book_append_sheet(wb, ws, name); });
     XLSX.writeFile(wb, `control_operativo_kata_v5_${hoy()}.xlsx`);
-    setData(d => ({ ...d, meta: { ...d.meta, ultimaExportacion: ahora() } }));
+    const timeNow = ahora();
+    localStorage.setItem("kata_last_xlsx_export", timeNow);
+    setLastXLSXExport(timeNow);
+    setData(d => ({ ...d, meta: { ...d.meta, ultimaExportacion: timeNow } }));
     toastShow("XLSX exportado correctamente");
   };
 
@@ -717,12 +898,12 @@ export default function App() {
   };
 
   const restaurarEjemplos = () => {
-    setConfirm({ msg: "¿Restaurar datos de ejemplo? Se perderán los datos actuales.", cb: () => { limpiarDatos(); setData(crearDatosEjemplo()); toastShow("Datos de ejemplo restaurados"); setConfirm(null); } });
+    setConfirm({ msg: "¿Restaurar datos de ejemplo? Se perderán los datos actuales.", cb: () => { runBackupAndToast("restaurar"); limpiarDatos(); setData(crearDatosEjemplo()); toastShow("Datos de ejemplo restaurados"); setConfirm(null); } });
   };
 
   const limpiarTodo = () => {
     setConfirm({ msg: "⚠️ ¿Eliminar TODOS los datos? Esta acción no se puede deshacer.", cb: () => {
-      setConfirm({ msg: "🚨 ÚLTIMA CONFIRMACIÓN: Se borrará todo definitivamente. ¿Continuar?", cb: () => { limpiarDatos(); setData({ ...crearDatosEjemplo(), cursos: [], ocs: [], practicantes: [], presupuesto: [], procesos: [], diplomas: [], cargaSemanal: [], contactos: [], evaluacionesPsicolaborales: [] }); toastShow("Todos los datos eliminados"); setConfirm(null); } });
+      setConfirm({ msg: "🚨 ÚLTIMA CONFIRMACIÓN: Se borrará todo definitivamente. ¿Continuar?", cb: () => { runBackupAndToast("limpiar"); limpiarDatos(); setData({ ...crearDatosEjemplo(), cursos: [], ocs: [], practicantes: [], presupuesto: [], procesos: [], diplomas: [], cargaSemanal: [], contactos: [], evaluacionesPsicolaborales: [] }); toastShow("Todos los datos eliminados"); setConfirm(null); } });
     }});
   };
 
@@ -768,18 +949,40 @@ export default function App() {
   };
 
   const duplicateItem = (modulo: string, item: any) => {
+    runBackupAndToast("crear");
     setData(d => {
       const nd = { ...d };
       const arr = [...(nd as any)[modulo]];
-      const newItem = { ...item, id: genId(), ultimaActualizacion: hoy(), curso: item.curso ? `${item.curso} (copia)` : "", nombre: item.nombre ? `${item.nombre} (copia)` : "", proceso: item.proceso ? `${item.proceso} (copia)` : "", cargo: item.cargo ? `${item.cargo} (copia)` : "", semana: item.semana ? `${item.semana} (copia)` : "", contacto: item.contacto ? `${item.contacto} (copia)` : "" };
+      
+      let extraFields = {};
+      if (modulo === "cargaSemanal") {
+        extraFields = {
+          semana: item.semana ? `${item.semana} (copia)` : "",
+          comentario: item.comentario ? `${item.comentario} (Copia de registro anterior)` : "Copia de registro anterior"
+        };
+      }
+
+      const newItem = {
+        ...item,
+        id: genId(),
+        ultimaActualizacion: hoy(),
+        curso: item.curso ? `${item.curso} (copia)` : "",
+        nombre: item.nombre ? `${item.nombre} (copia)` : "",
+        proceso: item.proceso ? `${item.proceso} (copia)` : "",
+        cargo: item.cargo ? `${item.cargo} (copia)` : "",
+        semana: item.semana ? `${item.semana} (copia)` : "",
+        contacto: item.contacto ? `${item.contacto} (copia)` : "",
+        ...extraFields
+      };
       arr.push(newItem);
       (nd as any)[modulo] = arr;
       return nd;
     });
-    toastShow("Registro duplicado");
+    toastShow("Registro duplicado correctamente.");
   };
 
   const saveItem = (modulo: string, item: any) => {
+    runBackupAndToast(editItem ? "editar" : "crear");
     setData(d => {
       const nd = { ...d };
       const arr = [...(nd as any)[modulo]];
@@ -797,14 +1000,28 @@ export default function App() {
   };
 
   // ── CAPTURA RÁPIDA ─────────────────────────
+  const ensureSinResponsable = (): string => {
+    const existing = data.contactos.find(c => c.nombre.trim().toLowerCase() === "sin responsable");
+    if (existing) return existing.id;
+    const newId = genId();
+    const newContact: Contacto = {
+      id: newId, nombre: "Sin responsable", rol: "Auto", areaEmpresa: "",
+      correo: "", telefono: "", relacion: "Interno", activo: "Sí",
+      observaciones: "Contacto base creado automáticamente para capturas rápidas",
+    };
+    setData(d => ({ ...d, contactos: [...d.contactos, newContact] }));
+    return newId;
+  };
+
   // Saves a minimal record across any of the 6 main modules with a single form.
   const saveCaptura = (capture: { tipo: string; nombre: string; prioridad: string; responsableId: string; proximaAccion: string; fechaProximaAccion: string; bloqueadoPor: string; observaciones: string; }) => {
     const today = hoy();
     const baseId = genId();
+    const resolvedResponsableId = capture.responsableId || ensureSinResponsable();
     const baseFields = {
       id: baseId,
       prioridad: capture.prioridad,
-      responsableId: capture.responsableId,
+      responsableId: resolvedResponsableId,
       proximaAccion: capture.proximaAccion,
       fechaProximaAccion: capture.fechaProximaAccion,
       bloqueadoPor: capture.bloqueadoPor || "Sin bloqueo",
@@ -812,12 +1029,13 @@ export default function App() {
       ultimaActualizacion: today,
     };
 
-    let targetModulo: Modulo = "cursos";
+    type CapturaTarget = { modulo: Modulo; dataKey: keyof AppData };
+    let target: CapturaTarget = { modulo: "cursos", dataKey: "cursos" };
     let newItem: any = {};
 
     switch (capture.tipo) {
       case "Curso":
-        targetModulo = "cursos";
+        target = { modulo: "cursos", dataKey: "cursos" };
         newItem = {
           ...baseFields, curso: capture.nombre, origen: "Urgente no planificado", area: "", solicitante: "",
           fechaSolicitud: today, fechaRequerida: capture.fechaProximaAccion || "", estado: "Pendiente revisar",
@@ -825,7 +1043,7 @@ export default function App() {
         };
         break;
       case "OC":
-        targetModulo = "ocs";
+        target = { modulo: "ocs", dataKey: "ocs" };
         newItem = {
           ...baseFields, numeroOC: capture.nombre, cursoAsociado: "", proveedor: "", monto: 0,
           fechaSolicitud: today, fechaLimite: capture.fechaProximaAccion || "", estadoOC: "Pendiente crear",
@@ -833,7 +1051,7 @@ export default function App() {
         };
         break;
       case "Practicante":
-        targetModulo = "practicantes";
+        target = { modulo: "practicantes", dataKey: "practicantes" };
         newItem = {
           ...baseFields, nombre: capture.nombre, area: "", especialidad: "",
           fechaInicio: "", fechaTermino: "", costoMensual: 0, estado: "Por buscar",
@@ -841,7 +1059,7 @@ export default function App() {
         };
         break;
       case "Diploma / Certificado / Licencia":
-        targetModulo = "diplomas";
+        target = { modulo: "diplomas", dataKey: "diplomas" };
         newItem = {
           ...baseFields, cursoAsociado: capture.nombre, participante: "", tipoDocumento: "Diploma",
           otec: "", etapa: "Pedir a la OTEC", fechaSolicitudOTEC: "", fechaRecepcionDoc: "",
@@ -849,7 +1067,7 @@ export default function App() {
         };
         break;
       case "Evaluación Psicolaboral":
-        targetModulo = "evaluaciones";
+        target = { modulo: "evaluaciones", dataKey: "evaluacionesPsicolaborales" };
         newItem = {
           ...baseFields, mes: MESES[new Date().getMonth()], ano: new Date().getFullYear(),
           cargo: capture.nombre, area: "", candidato: "", rut: "", tipoEvaluacion: "Psicolaboral",
@@ -858,7 +1076,7 @@ export default function App() {
         };
         break;
       case "Proceso Pendiente":
-        targetModulo = "procesos";
+        target = { modulo: "procesos", dataKey: "procesos" };
         newItem = {
           ...baseFields, proceso: capture.nombre, tipo: "Otro", estadoActual: "Pendiente revisar",
           queFalta: capture.proximaAccion, fechaLimite: capture.fechaProximaAccion || "", riesgo: "",
@@ -868,13 +1086,12 @@ export default function App() {
         return;
     }
 
-    const targetKey = targetModulo === "evaluaciones" ? "evaluacionesPsicolaborales" : targetModulo;
     setData(d => {
       const nd = { ...d };
-      (nd as any)[targetKey] = [...(nd as any)[targetKey], newItem];
+      (nd as any)[target.dataKey] = [...(nd as any)[target.dataKey], newItem];
       return nd;
     });
-    setLastCapturedModulo(targetModulo);
+    setLastCapturedModulo(target.modulo);
     setCaptureOpen(false);
     toastShow("Captura guardada correctamente.");
   };
@@ -914,22 +1131,22 @@ export default function App() {
     const hoyStr = hoy();
     const hace7 = new Date(hoyStr); hace7.setDate(hace7.getDate() - 7); const hace7Str = hace7.toISOString().slice(0, 10);
 
-    const cursosAbiertos = data.cursos.filter(c => c.estado !== "Cerrado").length;
-    const cursosP1 = data.cursos.filter(c => c.prioridad === "P1 Crítico" && c.estado !== "Cerrado").length;
-    const ocsPendientes = data.ocs.filter(o => !["Cerrada", "Emitida", "Enviada proveedor"].includes(o.estadoOC)).length;
+    const cursosAbiertos = data.cursos.filter(c => !isClosedRecord(c, "cursos")).length;
+    const cursosP1 = data.cursos.filter(c => c.prioridad === "P1 Crítico" && !isClosedRecord(c, "cursos")).length;
+    const ocsPendientes = data.ocs.filter(o => !isClosedRecord(o, "ocs")).length;
     const diplomasBUK = data.diplomas.filter(d => d.estadoBUK === "Pendiente subir").length;
-    const evaluacionesAbiertas = data.evaluacionesPsicolaborales.filter(e => !["Cerrada", "Detenida"].includes(e.estado)).length;
+    const evaluacionesAbiertas = data.evaluacionesPsicolaborales.filter(e => !isClosedRecord(e, "evaluacionesPsicolaborales")).length;
     const evaluacionesInformePendiente = data.evaluacionesPsicolaborales.filter(e => e.estado === "Realizada" && e.resultado === "Pendiente").length;
     const presupuestoUsado = data.presupuesto.reduce((s, p) => s + p.gastado, 0);
     const presupuestoTotal = data.presupuesto.reduce((s, p) => s + p.presupuestoTotal, 0);
-    const procesosBloqueados = data.procesos.filter(p => p.bloqueadoPor !== "Sin bloqueo" && p.estadoActual !== "Cerrado").length;
-    const sinActualizar = [...data.cursos, ...data.procesos, ...data.diplomas, ...data.evaluacionesPsicolaborales].filter((x: any) => x.ultimaActualizacion && x.ultimaActualizacion < hace7Str && !["Cerrado", "Cerrada", "Completado", "Finalizado"].includes(x.estado)).length;
+    const procesosBloqueados = data.procesos.filter(p => p.bloqueadoPor !== "Sin bloqueo" && !isClosedRecord(p, "procesos")).length;
+    const sinActualizar = [...data.cursos, ...data.procesos, ...data.diplomas, ...data.evaluacionesPsicolaborales].filter((x: any) => x.ultimaActualizacion && x.ultimaActualizacion < hace7Str && !["Cerrado", "Cerrada", "Completado", "Finalizado", "Subido"].includes(x.estado || x.etapa)).length;
 
     // Bandeja priorizada
     interface ItemBandeja { order: number; tipo: string; nombre: string; prioridad: string; estado: string; bloqueadoPor: string; proximaAccion: string; fechaProximaAccion: string; responsableId: string; modulo: string; }
     const bandeja: ItemBandeja[] = [];
 
-    data.cursos.filter(c => c.estado !== "Cerrado").forEach(c => {
+    data.cursos.filter(c => !isClosedRecord(c, "cursos")).forEach(c => {
       const s = semaforo(c.fechaProximaAccion || c.fechaRequerida);
       let order = 0;
       if (s.label === "Vencido") order = 1;
@@ -944,7 +1161,7 @@ export default function App() {
       bandeja.push({ order, tipo: "Curso", nombre: c.curso, prioridad: c.prioridad, estado: c.estado, bloqueadoPor: c.bloqueadoPor, proximaAccion: c.proximaAccion, fechaProximaAccion: c.fechaProximaAccion, responsableId: c.responsableId, modulo: "cursos" });
     });
 
-    data.ocs.filter(o => o.estadoOC !== "Cerrada").forEach(o => {
+    data.ocs.filter(o => !isClosedRecord(o, "ocs")).forEach(o => {
       const s = semaforo(o.fechaLimite);
       let order = 0;
       if (s.label === "Vencido") order = 1;
@@ -957,7 +1174,7 @@ export default function App() {
       bandeja.push({ order, tipo: "OC", nombre: `${o.numeroOC} - ${o.cursoAsociado}`, prioridad: o.prioridad, estado: o.estadoOC, bloqueadoPor: o.bloqueadoPor, proximaAccion: o.accionPendiente, fechaProximaAccion: o.fechaLimite, responsableId: o.responsableId, modulo: "ocs" });
     });
 
-    data.diplomas.forEach(d => {
+    data.diplomas.filter(d => !isClosedRecord(d, "diplomas")).forEach(d => {
       const s = semaforo(d.fechaProximaAccion);
       let order = 0;
       if (d.etapa === "Subir a BUK" && d.estadoBUK === "Pendiente subir") order = 6;
@@ -970,7 +1187,7 @@ export default function App() {
       bandeja.push({ order, tipo: "Diploma/Cert/Lic", nombre: `${d.tipoDocumento} - ${d.participante}`, prioridad: d.prioridad, estado: d.etapa, bloqueadoPor: d.bloqueadoPor, proximaAccion: d.proximaAccion, fechaProximaAccion: d.fechaProximaAccion, responsableId: d.responsableId, modulo: "diplomas" });
     });
 
-    data.evaluacionesPsicolaborales.forEach(e => {
+    data.evaluacionesPsicolaborales.filter(e => !isClosedRecord(e, "evaluacionesPsicolaborales")).forEach(e => {
       const s = semaforo(e.fechaProximaAccion || e.fechaEntregaInforme);
       let order = 0;
       if (s.label === "Vencido") order = 1;
@@ -983,7 +1200,7 @@ export default function App() {
       bandeja.push({ order, tipo: "Evaluación Psico", nombre: `${e.cargo} - ${e.candidato}`, prioridad: e.prioridad, estado: e.estado, bloqueadoPor: e.bloqueadoPor, proximaAccion: e.proximaAccion, fechaProximaAccion: e.fechaProximaAccion, responsableId: e.responsableId, modulo: "evaluaciones" });
     });
 
-    data.procesos.forEach(p => {
+    data.procesos.filter(p => !isClosedRecord(p, "procesos")).forEach(p => {
       const s = semaforo(p.fechaProximaAccion || p.fechaLimite);
       let order = 0;
       if (s.label === "Vencido") order = 1;
@@ -997,7 +1214,7 @@ export default function App() {
     bandeja.sort((a, b) => a.order - b.order);
 
     const semaforoCounts = { vencido: 0, venceHoy: 0, unoATres: 0, cuatroASiete: 0, sinUrgencia: 0, sinFecha: 0 };
-    const allItems = [...data.cursos.filter(c => c.estado !== "Cerrado").map(c => c.fechaProximaAccion || c.fechaRequerida), ...data.ocs.filter(o => o.estadoOC !== "Cerrada").map(o => o.fechaLimite), ...data.diplomas.map(d => d.fechaProximaAccion), ...data.procesos.map(p => p.fechaProximaAccion || p.fechaLimite), ...data.evaluacionesPsicolaborales.map(e => e.fechaProximaAccion || e.fechaEntregaInforme)];
+    const allItems = [...data.cursos.filter(c => !isClosedRecord(c, "cursos")).map(c => c.fechaProximaAccion || c.fechaRequerida), ...data.ocs.filter(o => !isClosedRecord(o, "ocs")).map(o => o.fechaLimite), ...data.diplomas.map(d => d.fechaProximaAccion), ...data.procesos.map(p => p.fechaProximaAccion || p.fechaLimite), ...data.evaluacionesPsicolaborales.map(e => e.fechaProximaAccion || e.fechaEntregaInforme)];
     allItems.forEach(f => {
       const s = semaforo(f);
       if (s.label === "Vencido") semaforoCounts.vencido++;
@@ -1101,7 +1318,16 @@ El dashboard responde:
   `.trim();
 
   const copyInstructions = () => { navigator.clipboard.writeText(instructionsContent); toastShow("Instrucciones copiadas"); };
-  const downloadInstructions = () => { const blob = new Blob([instructionsContent], { type: "text/plain" }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "instrucciones_kata_v5.txt"; a.click(); toastShow("Instrucciones descargadas"); };
+  const downloadInstructions = () => {
+    const blob = new Blob([instructionsContent], { type: "text/plain" });
+    const a = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    a.href = url;
+    a.download = "instrucciones_kata_v5.txt";
+    a.click();
+    URL.revokeObjectURL(url);
+    toastShow("Instrucciones descargadas");
+  };
 
   // ── MAIN RENDER ────────────────────────────
 
@@ -1176,6 +1402,11 @@ El dashboard responde:
             <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm"><h3 className="font-bold text-slate-800 mb-3">🚦 Semáforo general</h3><div className="flex flex-wrap gap-4"><SemaforoItem color="#DC2626" label="Vencido" count={dashboardData.semaforoCounts.vencido} /><SemaforoItem color="#EA580C" label="Vence hoy" count={dashboardData.semaforoCounts.venceHoy} /><SemaforoItem color="#F59E0B" label="1-3 días" count={dashboardData.semaforoCounts.unoATres} /><SemaforoItem color="#FBBF24" label="4-7 días" count={dashboardData.semaforoCounts.cuatroASiete} /><SemaforoItem color="#16A34A" label="Sin urgencia" count={dashboardData.semaforoCounts.sinUrgencia} /><SemaforoItem color="#9CA3AF" label="Sin fecha" count={dashboardData.semaforoCounts.sinFecha} /></div></div>
             <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm"><h3 className="font-bold text-slate-800 mb-3">📋 Bandeja de acción priorizada</h3><div className="overflow-x-auto"><table className="w-full text-sm text-left"><thead><tr className="bg-slate-100 text-slate-600 uppercase text-xs"><th className="px-3 py-2">#</th><th className="px-3 py-2">Tipo</th><th className="px-3 py-2">Nombre / Proceso</th><th className="px-3 py-2">Prioridad</th><th className="px-3 py-2">Estado</th><th className="px-3 py-2">Bloqueado por</th><th className="px-3 py-2">Próxima acción</th><th className="px-3 py-2">Fecha</th><th className="px-3 py-2">Responsable</th><th className="px-3 py-2">Módulo</th></tr></thead><tbody>{dashboardData.bandeja.slice(0, 20).map((item, i) => (<tr key={i} className="border-t border-slate-100 hover:bg-blue-50/50 transition-colors cursor-pointer" onClick={() => setActiveModulo(item.modulo as Modulo)}><td className="px-3 py-2 text-slate-400">{i + 1}</td><td className="px-3 py-2"><Badge label={item.tipo} colorClass="bg-slate-200 text-slate-700" /></td><td className="px-3 py-2 font-medium text-slate-800">{item.nombre}</td><td className="px-3 py-2"><Badge label={item.prioridad} colorClass={prioridadColor[item.prioridad] || ""} /></td><td className="px-3 py-2"><Badge label={item.estado} colorClass={estadoColor[item.estado] || ""} /></td><td className="px-3 py-2">{item.bloqueadoPor !== "Sin bloqueo" ? <Badge label={item.bloqueadoPor} colorClass="bg-red-100 text-red-700" /> : "-"}</td><td className="px-3 py-2 text-slate-600">{item.proximaAccion}</td><td className="px-3 py-2">{item.fechaProximaAccion ? <SemaforoBadge fecha={item.fechaProximaAccion} /> : "-"}</td><td className="px-3 py-2">{getResponsableName(data, item.responsableId)}</td><td className="px-3 py-2"><span className="text-xs text-blue-600 underline">{item.modulo}</span></td></tr>))}</tbody></table></div></div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm"><h4 className="font-bold text-slate-800 mb-2 text-sm">Cursos por prioridad</h4><div className="h-48"><Doughnut data={chartCursosPorPrioridad} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } } }} /></div></div><div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm"><h4 className="font-bold text-slate-800 mb-2 text-sm">Evaluaciones por estado</h4><div className="h-48"><Doughnut data={chartEvaluacionesPorEstado} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } } }} /></div></div><div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm"><h4 className="font-bold text-slate-800 mb-2 text-sm">Presupuesto: usado vs disponible</h4><div className="h-48"><Bar data={chartPresupuesto} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } }, scales: { x: { stacked: true }, y: { stacked: true } } }} /></div></div></div>
+            
+            {/* 📄 Reporte Mensual Ejecutivo */}
+            <div className="border-t border-slate-200 pt-6">
+              <ModuloReporteMensual data={data} toastShow={toastShow} />
+            </div>
           </div>
         )}
 
@@ -1186,9 +1417,27 @@ El dashboard responde:
         {activeModulo === "procesos" && <ModuloProcesos data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={deleteItem} getResponsableName={getResponsableName} />}
         {activeModulo === "diplomas" && <ModuloDiplomas data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={deleteItem} markClosed={markClosed} getResponsableName={getResponsableName} />}
         {activeModulo === "evaluaciones" && <ModuloEvaluaciones data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={deleteItem} duplicateItem={duplicateItem} markClosed={markClosed} getResponsableName={getResponsableName} />}
-        {activeModulo === "cargaSemanal" && <ModuloCargaSemanal data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={deleteItem} />}
+        {activeModulo === "cargaSemanal" && <ModuloCargaSemanal data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={deleteItem} duplicateItem={duplicateItem} />}
         {activeModulo === "contactos" && <ModuloContactos data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={deleteItem} />}
-        {activeModulo === "configuracion" && <ModuloConfiguracion data={data} exportJSON={exportJSON} importJSON={importJSON} exportXLSX={exportXLSX} exportLimpia={exportLimpia} restaurarEjemplos={restaurarEjemplos} limpiarTodo={limpiarTodo} showInstructions={() => setShowInstructions(true)} />}
+        {activeModulo === "configuracion" && (
+          <ModuloConfiguracion
+            data={data}
+            exportJSON={exportJSON}
+            importJSON={importJSON}
+            exportXLSX={exportXLSX}
+            exportLimpia={exportLimpia}
+            restaurarEjemplos={restaurarEjemplos}
+            limpiarTodo={limpiarTodo}
+            showInstructions={() => setShowInstructions(true)}
+            backups={backups}
+            setBackups={setBackups}
+            lastJSONExport={lastJSONExport}
+            lastXLSXExport={lastXLSXExport}
+            runBackupAndToast={runBackupAndToast}
+            setData={setData}
+            toastShow={toastShow}
+          />
+        )}
 
         {/* Modals */}
         <Modal open={modalOpen} onClose={closeModal} title={editItem ? "Editar registro" : "Nuevo registro"} wide={modalModulo === "cursos" || modalModulo === "diplomas" || modalModulo === "evaluaciones"}>
@@ -1230,7 +1479,7 @@ El dashboard responde:
 
         {/* CAPTURA RÁPIDA: Modal global */}
         <Modal open={captureOpen} onClose={() => setCaptureOpen(false)} title="⚡ Captura rápida">
-          <FormCapturaRapida data={data} setData={setData} onCancel={() => setCaptureOpen(false)} onSave={saveCaptura} />
+          <FormCapturaRapida data={data} onCancel={() => setCaptureOpen(false)} onSave={saveCaptura} />
         </Modal>
 
         {/* CAPTURA RÁPIDA: Botón flotante global (visible en cualquier pantalla) */}
@@ -1290,7 +1539,6 @@ function FilterBar({ filters, searchPlaceholder, search, setSearch }: { filters:
 // ── "MI DÍA" MODULE ──────────────────────────
 
 function ModuloMiDia({ data, setActiveModulo, onCapturaRapida }: { data: AppData; setActiveModulo: (m: Modulo) => void; onCapturaRapida: () => void }) {
-  const closedStates = ["Cerrado", "Cerrada", "Completado", "Finalizado", "Subido"];
   const hoyStr = hoy();
   const hace7Str = new Date(new Date(hoyStr).getTime() - 7 * 86400000).toISOString().slice(0, 10);
 
@@ -1309,85 +1557,83 @@ function ModuloMiDia({ data, setActiveModulo, onCapturaRapida }: { data: AppData
     order: number;
   }
 
-  const allOpenItems = useMemo(() => {
-    const items: Tarjeta[] = [];
+    const allOpenItems = useMemo(() => {
+      const items: Tarjeta[] = [];
 
-    const closedSet = new Set(closedStates);
-    const isClosed = (estado: string) => closedSet.has(estado);
-
-    data.cursos.forEach(c => {
-      if (isClosed(c.estado)) return;
-      const s = semaforo(c.fechaProximaAccion || c.fechaRequerida);
-      items.push({
-        tipo: "Curso", nombre: c.curso, prioridad: c.prioridad, estado: c.estado,
-        responsable: getResponsableName(data, c.responsableId),
-        proximaAccion: c.proximaAccion, fecha: c.fechaProximaAccion || c.fechaRequerida,
-        bloqueadoPor: c.bloqueadoPor, modulo: "cursos",
-        semaforoLabel: s.label, semaforoColor: s.color, order: s.order,
+      data.cursos.forEach(c => {
+        if (isClosedRecord(c, "cursos")) return;
+        const s = semaforo(c.fechaProximaAccion || c.fechaRequerida);
+        items.push({
+          tipo: "Curso", nombre: c.curso, prioridad: c.prioridad, estado: c.estado,
+          responsable: getResponsableName(data, c.responsableId),
+          proximaAccion: c.proximaAccion, fecha: c.fechaProximaAccion || c.fechaRequerida,
+          bloqueadoPor: c.bloqueadoPor, modulo: "cursos",
+          semaforoLabel: s.label, semaforoColor: s.color, order: s.order,
+        });
       });
-    });
 
-    data.ocs.forEach(o => {
-      if (isClosed(o.estadoOC)) return;
-      const s = semaforo(o.fechaLimite);
-      items.push({
-        tipo: "OC", nombre: `${o.numeroOC} - ${o.cursoAsociado}`, prioridad: o.prioridad,
-        estado: o.estadoOC, responsable: getResponsableName(data, o.responsableId),
-        proximaAccion: o.accionPendiente, fecha: o.fechaLimite,
-        bloqueadoPor: o.bloqueadoPor, modulo: "ocs",
-        semaforoLabel: s.label, semaforoColor: s.color, order: s.order,
+      data.ocs.forEach(o => {
+        if (isClosedRecord(o, "ocs")) return;
+        const s = semaforo(o.fechaLimite);
+        items.push({
+          tipo: "OC", nombre: `${o.numeroOC} - ${o.cursoAsociado}`, prioridad: o.prioridad,
+          estado: o.estadoOC, responsable: getResponsableName(data, o.responsableId),
+          proximaAccion: o.accionPendiente, fecha: o.fechaLimite,
+          bloqueadoPor: o.bloqueadoPor, modulo: "ocs",
+          semaforoLabel: s.label, semaforoColor: s.color, order: s.order,
+        });
       });
-    });
 
-    data.practicantes.forEach(p => {
-      if (isClosed(p.estado)) return;
-      const s = semaforo(p.fechaProximaAccion || p.fechaTermino);
-      items.push({
-        tipo: "Practicante", nombre: p.nombre, prioridad: "P3 Medio", estado: p.estado,
-        responsable: getResponsableName(data, p.responsableId),
-        proximaAccion: p.proximoPaso, fecha: p.fechaProximaAccion || p.fechaTermino,
-        bloqueadoPor: p.bloqueadoPor, modulo: "practicantes",
-        semaforoLabel: s.label, semaforoColor: s.color, order: s.order,
+      data.practicantes.forEach(p => {
+        if (isClosedRecord(p, "practicantes")) return;
+        const s = semaforo(p.fechaProximaAccion || p.fechaTermino);
+        items.push({
+          tipo: "Practicante", nombre: p.nombre, prioridad: "P3 Medio", estado: p.estado,
+          responsable: getResponsableName(data, p.responsableId),
+          proximaAccion: p.proximoPaso, fecha: p.fechaProximaAccion || p.fechaTermino,
+          bloqueadoPor: p.bloqueadoPor, modulo: "practicantes",
+          semaforoLabel: s.label, semaforoColor: s.color, order: s.order,
+        });
       });
-    });
 
-    data.procesos.forEach(p => {
-      const s = semaforo(p.fechaProximaAccion || p.fechaLimite);
-      items.push({
-        tipo: "Proceso", nombre: p.proceso, prioridad: p.prioridad,
-        estado: p.estadoActual, responsable: getResponsableName(data, p.responsableId),
-        proximaAccion: p.proximaAccion, fecha: p.fechaProximaAccion || p.fechaLimite,
-        bloqueadoPor: p.bloqueadoPor, modulo: "procesos",
-        semaforoLabel: s.label, semaforoColor: s.color, order: s.order,
+      data.procesos.forEach(p => {
+        if (isClosedRecord(p, "procesos")) return;
+        const s = semaforo(p.fechaProximaAccion || p.fechaLimite);
+        items.push({
+          tipo: "Proceso", nombre: p.proceso, prioridad: p.prioridad,
+          estado: p.estadoActual, responsable: getResponsableName(data, p.responsableId),
+          proximaAccion: p.proximaAccion, fecha: p.fechaProximaAccion || p.fechaLimite,
+          bloqueadoPor: p.bloqueadoPor, modulo: "procesos",
+          semaforoLabel: s.label, semaforoColor: s.color, order: s.order,
+        });
       });
-    });
 
-    data.diplomas.forEach(d => {
-      if (isClosed(d.etapa)) return;
-      const s = semaforo(d.fechaProximaAccion);
-      items.push({
-        tipo: "Diploma/Cert/Lic", nombre: `${d.tipoDocumento} - ${d.participante}`,
-        prioridad: d.prioridad, estado: d.etapa, responsable: getResponsableName(data, d.responsableId),
-        proximaAccion: d.proximaAccion, fecha: d.fechaProximaAccion,
-        bloqueadoPor: d.bloqueadoPor, modulo: "diplomas",
-        semaforoLabel: s.label, semaforoColor: s.color, order: s.order,
+      data.diplomas.forEach(d => {
+        if (isClosedRecord(d, "diplomas")) return;
+        const s = semaforo(d.fechaProximaAccion);
+        items.push({
+          tipo: "Diploma/Cert/Lic", nombre: `${d.tipoDocumento} - ${d.participante}`,
+          prioridad: d.prioridad, estado: d.etapa, responsable: getResponsableName(data, d.responsableId),
+          proximaAccion: d.proximaAccion, fecha: d.fechaProximaAccion,
+          bloqueadoPor: d.bloqueadoPor, modulo: "diplomas",
+          semaforoLabel: s.label, semaforoColor: s.color, order: s.order,
+        });
       });
-    });
 
-    data.evaluacionesPsicolaborales.forEach(e => {
-      if (isClosed(e.estado)) return;
-      const s = semaforo(e.fechaProximaAccion || e.fechaEntregaInforme);
-      items.push({
-        tipo: "Eval. Psico", nombre: `${e.cargo} - ${e.candidato}`,
-        prioridad: e.prioridad, estado: e.estado, responsable: getResponsableName(data, e.responsableId),
-        proximaAccion: e.proximaAccion, fecha: e.fechaProximaAccion || e.fechaEntregaInforme,
-        bloqueadoPor: e.bloqueadoPor, modulo: "evaluaciones",
-        semaforoLabel: s.label, semaforoColor: s.color, order: s.order,
+      data.evaluacionesPsicolaborales.forEach(e => {
+        if (isClosedRecord(e, "evaluacionesPsicolaborales")) return;
+        const s = semaforo(e.fechaProximaAccion || e.fechaEntregaInforme);
+        items.push({
+          tipo: "Eval. Psico", nombre: `${e.cargo} - ${e.candidato}`,
+          prioridad: e.prioridad, estado: e.estado, responsable: getResponsableName(data, e.responsableId),
+          proximaAccion: e.proximaAccion, fecha: e.fechaProximaAccion || e.fechaEntregaInforme,
+          bloqueadoPor: e.bloqueadoPor, modulo: "evaluaciones",
+          semaforoLabel: s.label, semaforoColor: s.color, order: s.order,
+        });
       });
-    });
 
-    return items;
-  }, [data]);
+      return items;
+    }, [data]);
 
   const blocked = (b: string) => b && b !== "Sin bloqueo" && b !== "";
 
@@ -1501,7 +1747,7 @@ function ModuloCursos({ data, search, setSearch, openNew, openEdit, deleteItem, 
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between"><div><h1 className="text-xl font-semibold text-slate-800">📚 Cursos / DNC Real</h1><p className="text-sm text-slate-500 mt-0.5">Control de cursos y capacitaciones</p></div><button onClick={() => openNew("cursos")} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Agregar nuevo</button></div>
+      <div className="flex items-center justify-between"><div><h1 className="text-xl font-semibold text-slate-800">📚 Cursos / DNC</h1><p className="text-sm text-slate-500 mt-0.5">Control de cursos y capacitaciones</p></div><button onClick={() => openNew("cursos")} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Agregar nuevo</button></div>
       <FilterBar search={search} setSearch={setSearch} searchPlaceholder="Buscar curso o proveedor..." filters={<><Select value={filtroPrioridad} onChange={setFiltroPrioridad} options={PRIORIDADES} placeholder="Prioridad" /><Select value={filtroEstado} onChange={setFiltroEstado} options={ESTADOS_CURSO} placeholder="Estado" /><Select value={filtroOrigen} onChange={setFiltroOrigen} options={ORIGENES_CURSO} placeholder="Origen" /><Select value={filtroSemaforo} onChange={setFiltroSemaforo} options={["Vencido", "Vence hoy", "1-3 días", "4-7 días", "Sin urgencia", "Sin fecha"]} placeholder="Semáforo" /></>} />
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"><Table columns={columns} rows={filtered} onEdit={(r: any) => openEdit("cursos", r)} onDelete={(id: string) => deleteItem("cursos", id)} onMarkClosed={(id: string) => markClosed("cursos", id, "Cerrado")} closedState="Cerrado" /></div>
       <p className="text-xs text-slate-400 mt-1">Mostrando {filtered.length} cursos</p>
@@ -1537,7 +1783,7 @@ function ModuloPracticantes({ data, search, setSearch, openNew, openEdit, delete
     if (search && !p.nombre.toLowerCase().includes(search.toLowerCase()) && !p.area.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
-  const durMeses = (ini: string, fin: string) => { if (!ini || !fin) return "-"; const d1 = new Date(ini); const d2 = new Date(fin); return Math.round((d2.getTime() - d1.getTime()) / (365.25 * 24 * 3600 * 1000) * 12); };
+  const durMeses = (ini: string, fin: string) => ini && fin ? durMesesEntre(ini, fin) : "-";
   const columns = [{ key: "nombre", label: "Nombre" }, { key: "area", label: "Área" }, { key: "especialidad", label: "Especialidad" }, { key: "duracion", label: "Duración (meses)", render: (r: Practicante) => durMeses(r.fechaInicio, r.fechaTermino) }, { key: "costoMensual", label: "Costo/mes", render: (r: Practicante) => fmtCLP(r.costoMensual) }, { key: "costoTotal", label: "Costo total", render: (r: Practicante) => r.fechaInicio && r.fechaTermino ? fmtCLP(r.costoMensual * (durMeses(r.fechaInicio, r.fechaTermino) as number)) : "-" }, { key: "estado", label: "Estado", render: (r: Practicante) => <Badge label={r.estado} colorClass={estadoColor[r.estado] || ""} /> }, { key: "fechaTermino", label: "Fecha término", render: (r: Practicante) => toDDMMYYYY(r.fechaTermino) }, { key: "semaforo", label: "Semáforo", render: (r: Practicante) => <SemaforoBadge fecha={r.fechaProximaAccion || r.fechaTermino} /> }, { key: "responsable", label: "Resp.", render: (r: Practicante) => getResponsableName(data, r.responsableId) }];
 
   return (
@@ -1551,14 +1797,6 @@ function ModuloPracticantes({ data, search, setSearch, openNew, openEdit, delete
 }
 
 function ModuloPresupuesto({ data, search, setSearch, openNew, openEdit, deleteItem }: any) {
-  // Helper to compute duration in months
-  const getDurMeses = (ini: string, fin: string) => {
-    if (!ini || !fin) return 0;
-    const d1 = new Date(ini);
-    const d2 = new Date(fin);
-    const m = Math.round((d2.getTime() - d1.getTime()) / (365.25 * 24 * 3600 * 1000) * 12);
-    return m > 0 ? m : 1;
-  };
 
   // Calculate dynamic breakdowns
   const budgetBreakdown = useMemo(() => {
@@ -1574,8 +1812,8 @@ function ModuloPresupuesto({ data, search, setSearch, openNew, openEdit, deleteI
 
     // 3. Practicantes
     const pracBudgetRow = data.presupuesto.find((p: any) => p.concepto.toLowerCase().includes("practicante")) || { id: "", presupuestoTotal: 8000000, gastado: 6400000, observaciones: "" };
-    const pracComprometido = data.practicantes.filter((p: any) => p.estado !== "Finalizado" && p.fechaInicio && p.fechaTermino).reduce((sum: number, p: any) => sum + ((p.costoMensual || 0) * getDurMeses(p.fechaInicio, p.fechaTermino)), 0);
-    const pracEjecutado = data.practicantes.filter((p: any) => p.estado === "Finalizado" && p.fechaInicio && p.fechaTermino).reduce((sum: number, p: any) => sum + ((p.costoMensual || 0) * getDurMeses(p.fechaInicio, p.fechaTermino)), 0);
+    const pracComprometido = data.practicantes.filter((p: any) => p.estado !== "Finalizado" && p.fechaInicio && p.fechaTermino).reduce((sum: number, p: any) => sum + ((p.costoMensual || 0) * durMesesEntre(p.fechaInicio, p.fechaTermino)), 0);
+    const pracEjecutado = data.practicantes.filter((p: any) => p.estado === "Finalizado" && p.fechaInicio && p.fechaTermino).reduce((sum: number, p: any) => sum + ((p.costoMensual || 0) * durMesesEntre(p.fechaInicio, p.fechaTermino)), 0);
 
     // 4. Evaluaciones Psicolaborales
     const evalBudgetRow = data.presupuesto.find((p: any) => p.concepto.toLowerCase().includes("evaluaci")) || { id: "", presupuestoTotal: 3000000, gastado: 500000, observaciones: "" };
@@ -1879,7 +2117,7 @@ function ModuloPresupuesto({ data, search, setSearch, openNew, openEdit, deleteI
                 <p className="text-xs text-slate-400">No hay practicantes registrados.</p>
               ) : (
                 data.practicantes.map((p: any) => {
-                  const m = getDurMeses(p.fechaInicio, p.fechaTermino);
+                  const m = durMesesEntre(p.fechaInicio, p.fechaTermino);
                   const total = (p.costoMensual || 0) * m;
                   return (
                     <div key={p.id} className="flex justify-between items-center text-xs p-2 rounded hover:bg-slate-50 border border-slate-100">
@@ -2047,7 +2285,7 @@ function ModuloEvaluaciones({ data, search, setSearch, openNew, openEdit, delete
   );
 }
 
-function ModuloCargaSemanal({ data, search, setSearch, openNew, openEdit, deleteItem }: any) {
+function ModuloCargaSemanal({ data, search, setSearch, openNew, openEdit, deleteItem, duplicateItem }: any) {
   const filtered = data.cargaSemanal.filter((c: CargaSemanal) => { if (search && !c.semana.toLowerCase().includes(search.toLowerCase()) && !c.comentario.toLowerCase().includes(search.toLowerCase())) return false; return true; });
   const columns = [{ key: "semana", label: "Semana" }, { key: "cursosPlanificados", label: "Planificados" }, { key: "cursosUrgentesNuevos", label: "Urgentes nuevos" }, { key: "cursosNoPlanificados", label: "No planificados" }, { key: "ocsNuevas", label: "OCs nuevas" }, { key: "diplomasPendientes", label: "Diplomas pend." }, { key: "procesosBloqueados", label: "Proc. bloqueados" }, { key: "comentario", label: "Comentario" }];
 
@@ -2055,7 +2293,7 @@ function ModuloCargaSemanal({ data, search, setSearch, openNew, openEdit, delete
     <div className="space-y-4">
       <div className="flex items-center justify-between"><h1 className="text-xl font-bold text-slate-800">📅 Carga Semanal</h1><button onClick={() => openNew("cargaSemanal")} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition">+ Nueva semana</button></div>
       <FilterBar search={search} setSearch={setSearch} searchPlaceholder="Buscar semana..." filters={null} />
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"><Table columns={columns} rows={filtered} onEdit={(r: any) => openEdit("cargaSemanal", r)} onDelete={(id: string) => deleteItem("cargaSemanal", id)} onDuplicate={(r: any) => { /* handled in main */ }} /></div>
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"><Table columns={columns} rows={filtered} onEdit={(r: any) => openEdit("cargaSemanal", r)} onDelete={(id: string) => deleteItem("cargaSemanal", id)} onDuplicate={(r: any) => duplicateItem("cargaSemanal", r)} /></div>
       <p className="text-xs text-slate-400">{filtered.length} semanas registradas</p>
     </div>
   );
@@ -2083,18 +2321,210 @@ function ModuloContactos({ data, search, setSearch, openNew, openEdit, deleteIte
   );
 }
 
-function ModuloConfiguracion({ data, exportJSON, importJSON, exportXLSX, exportLimpia, restaurarEjemplos, limpiarTodo, showInstructions }: any) {
-  const counts: Record<string, number> = { cursos: data.cursos.length, ocs: data.ocs.length, practicantes: data.practicantes.length, presupuesto: data.presupuesto.length, procesos: data.procesos.length, diplomas: data.diplomas.length, evaluacionesPsicolaborales: data.evaluacionesPsicolaborales.length, cargaSemanal: data.cargaSemanal.length, contactos: data.contactos.length };
+function ModuloConfiguracion({
+  data, exportJSON, importJSON, exportXLSX, exportLimpia, restaurarEjemplos, limpiarTodo, showInstructions,
+  backups, setBackups, lastJSONExport, lastXLSXExport, runBackupAndToast, setData, toastShow
+}: any) {
+  const counts: Record<string, number> = {
+    cursos: data.cursos.length,
+    ocs: data.ocs.length,
+    practicantes: data.practicantes.length,
+    presupuesto: data.presupuesto.length,
+    procesos: data.procesos.length,
+    diplomas: data.diplomas.length,
+    evaluacionesPsicolaborales: data.evaluacionesPsicolaborales.length,
+    cargaSemanal: data.cargaSemanal.length,
+    contactos: data.contactos.length
+  };
+
+  const handleRestaurarBackup = (backup: BackupItem) => {
+    if (confirm(`¿Seguro que deseas restaurar este respaldo del ${new Date(backup.fecha).toLocaleString("es-CL")}? Se creará un respaldo de seguridad del estado actual antes de restaurar.`)) {
+      runBackupAndToast("antes de restaurar");
+      if (backup.data && typeof backup.data === "object") {
+        setData(backup.data);
+        toastShow("Respaldo restaurado exitosamente.");
+      } else {
+        toastShow("Respaldo corrupto o inválido");
+      }
+    }
+  };
+
+  const handleDescargarBackup = (backup: BackupItem) => {
+    const blob = new Blob([JSON.stringify(backup.data, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    a.href = url;
+    a.download = `respaldo_local_kata_${new Date(backup.fecha).toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toastShow("JSON de respaldo descargado.");
+  };
+
+  const handleEliminarBackup = (id: string) => {
+    if (confirm("¿Seguro que deseas eliminar este respaldo local de forma permanente?")) {
+      const updated = backups.filter((b: BackupItem) => b.id !== id);
+      saveLocalBackups(updated);
+      setBackups(updated);
+      toastShow("Respaldo eliminado.");
+    }
+  };
+
+  const handleCrearBackupManual = () => {
+    runBackupAndToast("manual");
+    toastShow("Respaldo manual creado correctamente.");
+  };
+
+  const lastLocalBackupDate = backups[0]?.fecha;
 
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-bold text-slate-800">⚙️ Configuración y Respaldos</h1>
+
+      {/* Alerta Semanal */}
+      <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-sm text-blue-800 flex items-start gap-3 shadow-sm">
+        <span className="text-lg">📢</span>
+        <div>
+          <p className="font-semibold">Recomendación operativa semanal:</p>
+          <p className="text-xs text-blue-600 mt-1">Descarga un respaldo JSON al menos 1 vez por semana y guárdalo de manera segura en tu carpeta /backups.</p>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm"><h3 className="font-bold text-slate-800 mb-3">📊 Contador de registros</h3><div className="space-y-2">{Object.entries(counts).map(([k, v]) => (<div key={k} className="flex justify-between text-sm"><span className="text-slate-600 capitalize">{k.replace(/([A-Z])/g, " $").trim()}</span><span className="font-semibold text-slate-800">{v}</span></div>))}<hr className="my-2" /><div className="flex justify-between text-sm font-bold"><span>Total registros</span><span>{Object.values(counts).reduce((a, b) => a + b, 0)}</span></div></div></div>
-        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm"><h3 className="font-bold text-slate-800 mb-3">💾 Respaldos</h3><div className="space-y-2"><p className="text-xs text-slate-500">Última exportación: {data.meta.ultimaExportacion ? new Date(data.meta.ultimaExportacion).toLocaleString("es-CL") : "Nunca"}</p><p className="text-xs text-slate-500">Última actualización: {new Date(data.meta.actualizado).toLocaleString("es-CL")}</p><p className="text-xs text-slate-500">Versión: {data.meta.version}</p></div><div className="flex flex-wrap gap-2 mt-4"><button onClick={exportJSON} className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 transition">📥 Exportar JSON</button><button onClick={importJSON} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition">📤 Importar JSON</button><button onClick={exportXLSX} className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 transition">📥 Exportar XLSX</button><button onClick={exportLimpia} className="bg-slate-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-slate-700 transition">📋 Plantilla limpia</button></div></div>
-        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm"><h3 className="font-bold text-slate-800 mb-3">📖 Instrucciones de uso</h3><p className="text-sm text-slate-600 mb-3">Guía completa para usar el sistema correctamente.</p><button onClick={showInstructions} className="bg-amber-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-amber-600 transition">Ver instrucciones de uso</button></div>
-        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm"><h3 className="font-bold text-slate-800 mb-3">🔄 Datos de ejemplo</h3><p className="text-sm text-slate-600 mb-3">Restaura los datos de ejemplo para previsualizar el sistema.</p><button onClick={restaurarEjemplos} className="bg-amber-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-amber-600 transition">Restaurar datos de ejemplo</button></div>
-        <div className="bg-white rounded-xl border border-red-200 p-5 shadow-sm"><h3 className="font-bold text-red-700 mb-3">⚠️ Zona de peligro</h3><p className="text-sm text-slate-600 mb-3">Elimina todos los datos. Requiere doble confirmación.</p><button onClick={limpiarTodo} className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700 transition">Limpiar todos los datos</button></div>
+        {/* Contador */}
+        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+          <h3 className="font-bold text-slate-800 mb-3">📊 Contador de registros</h3>
+          <div className="space-y-2">
+            {Object.entries(counts).map(([k, v]) => (
+              <div key={k} className="flex justify-between text-sm">
+                <span className="text-slate-600 capitalize">{k.replace(/([A-Z])/g, " $").trim()}</span>
+                <span className="font-semibold text-slate-800">{v}</span>
+              </div>
+            ))}
+            <hr className="my-2" />
+            <div className="flex justify-between text-sm font-bold">
+              <span>Total registros</span>
+              <span>{Object.values(counts).reduce((a, b) => a + b, 0)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Info de Últimos Respaldos */}
+        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+          <h3 className="font-bold text-slate-800 mb-3">💾 Estado de Respaldos</h3>
+          <div className="space-y-3">
+            <div className="text-xs space-y-1.5 text-slate-600">
+              <p>🔄 Último respaldo automático local: <span className="font-semibold text-slate-800">{lastLocalBackupDate ? new Date(lastLocalBackupDate).toLocaleString("es-CL") : "Ninguno todavía"}</span></p>
+              <p>📥 Última descarga de respaldo JSON: <span className="font-semibold text-slate-800">{lastJSONExport ? new Date(lastJSONExport).toLocaleString("es-CL") : "Nunca"}</span></p>
+              <p>📥 Última descarga de reporte XLSX: <span className="font-semibold text-slate-800">{lastXLSXExport ? new Date(lastXLSXExport).toLocaleString("es-CL") : "Nunca"}</span></p>
+              <p>⏱️ Última actualización de datos: <span className="font-semibold text-slate-800">{new Date(data.meta.actualizado).toLocaleString("es-CL")}</span></p>
+              <p>⚙️ Versión del sistema: <span className="font-semibold text-slate-800">{data.meta.version}</span></p>
+            </div>
+            <div className="flex flex-wrap gap-2 pt-2">
+              <button onClick={exportJSON} className="bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-green-700 transition">📥 Exportar JSON</button>
+              <button onClick={importJSON} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-blue-700 transition">📤 Importar JSON</button>
+              <button onClick={exportXLSX} className="bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-green-700 transition">📥 Exportar XLSX</button>
+              <button onClick={exportLimpia} className="bg-slate-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-slate-700 transition">📋 Plantilla limpia</button>
+            </div>
+          </div>
+        </div>
+
+        {/* Instrucciones */}
+        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+          <h3 className="font-bold text-slate-800 mb-3">📖 Instrucciones de uso</h3>
+          <p className="text-sm text-slate-600 mb-3">Guía completa para usar el sistema correctamente.</p>
+          <button onClick={showInstructions} className="bg-amber-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-amber-600 transition">Ver instrucciones de uso</button>
+        </div>
+
+        {/* Datos de Ejemplo */}
+        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+          <h3 className="font-bold text-slate-800 mb-3">🔄 Datos de ejemplo</h3>
+          <p className="text-sm text-slate-600 mb-3">Restaura los datos de ejemplo para previsualizar el sistema.</p>
+          <button onClick={restaurarEjemplos} className="bg-amber-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-amber-600 transition">Restaurar datos de ejemplo</button>
+        </div>
+
+        {/* Zona de peligro */}
+        <div className="bg-white rounded-xl border border-red-200 p-5 shadow-sm">
+          <h3 className="font-bold text-red-700 mb-3">⚠️ Zona de peligro</h3>
+          <p className="text-sm text-slate-600 mb-3">Elimina todos los datos. Requiere doble confirmación.</p>
+          <button onClick={limpiarTodo} className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700 transition">Limpiar todos los datos</button>
+        </div>
+      </div>
+
+      {/* Respaldos Locales Tabla */}
+      <div className="bg-white rounded-2xl border border-[#D9E2EC] p-6 shadow-sm space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h3 className="font-bold text-slate-800 text-base">💾 Respaldos Locales (localStorage)</h3>
+            <p className="text-xs text-slate-500 mt-0.5">Se guardan automáticamente antes de cada acción importante (hasta 10 registros).</p>
+          </div>
+          <button
+            onClick={handleCrearBackupManual}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-semibold transition animate-pulse"
+          >
+            ⚡ Crear respaldo local ahora
+          </button>
+        </div>
+
+        {backups.length === 0 ? (
+          <div className="text-center py-8 text-slate-400 text-sm">
+            Aún no hay respaldos locales
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-2xl border border-[#D9E2EC]">
+            <table className="w-full text-sm text-left table-stripe">
+              <thead>
+                <tr className="bg-[#F1F5F9] text-slate-500 text-xs font-medium tracking-wide">
+                  <th className="px-4 py-3">Fecha</th>
+                  <th className="px-4 py-3">Motivo / Acción</th>
+                  <th className="px-4 py-3">Tamaño</th>
+                  <th className="px-4 py-3 text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {backups.map((backup: BackupItem) => (
+                  <tr key={backup.id} className="border-t border-[#F1F5F9] hover:bg-slate-50 transition-colors">
+                    <td className="px-4 py-3 text-slate-700 font-medium">
+                      {new Date(backup.fecha).toLocaleString("es-CL")}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded text-xs font-semibold uppercase ${
+                        backup.motivo === "manual" ? "bg-blue-50 text-blue-700 border border-blue-200" :
+                        backup.motivo === "importar" ? "bg-purple-50 text-purple-700 border border-purple-200" :
+                        backup.motivo === "eliminar" ? "bg-red-50 text-red-700 border border-red-200" :
+                        "bg-slate-100 text-slate-700 border border-slate-200"
+                      }`}>
+                        {backup.motivo}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">{backup.tamaño}</td>
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex gap-1.5 justify-center">
+                        <button
+                          onClick={() => handleRestaurarBackup(backup)}
+                          className="px-3 py-1 text-xs font-medium bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors"
+                        >
+                          Restaurar
+                        </button>
+                        <button
+                          onClick={() => handleDescargarBackup(backup)}
+                          className="px-3 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors"
+                        >
+                          Descargar
+                        </button>
+                        <button
+                          onClick={() => handleEliminarBackup(backup.id)}
+                          className="px-3 py-1 text-xs font-medium bg-red-50 text-red-700 rounded-lg border border-red-100 hover:bg-red-100 transition-colors"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -2103,8 +2533,9 @@ function ModuloConfiguracion({ data, exportJSON, importJSON, exportXLSX, exportL
 // ── FORM COMPONENTS ────────────────────────
 
 function useForm(initial: any, editItem: any) {
-  const [form, setForm] = useState(initial);
-  useEffect(() => { setForm(editItem || initial); }, [editItem]);
+  const initialRef = React.useRef(initial);
+  const [form, setForm] = useState(() => editItem ?? initial);
+  useEffect(() => { setForm(editItem ?? initialRef.current); }, [editItem]);
   const set = (key: string, value: any) => setForm((prev: any) => ({ ...prev, [key]: value }));
   return { form, set };
 }
@@ -2206,31 +2637,100 @@ function FormPracticantes({ data, editItem, closeModal, saveItem }: any) {
 }
 
 function FormPresupuesto({ data, editItem, closeModal, saveItem }: any) {
-  const { form, set } = useForm({ concepto: "", presupuestoTotal: 0, gastado: 0, responsableId: "", observaciones: "" }, editItem);
+  const { form, set } = useForm({
+    concepto: "",
+    presupuestoTotal: 0,
+    montoComprometidoManual: 0,
+    montoEjecutadoManual: 0,
+    modoCalculo: "Calculado desde registros",
+    responsableId: "",
+    observaciones: ""
+  }, editItem);
+
   const [vErr, setVErr] = useState<VError>({});
   const [vWarn, setVWarn] = useState<string[]>([]);
+
   const save = () => {
     const errors: VError = {};
     const warnings: string[] = [];
-    if (!form.concepto.trim()) errors.concepto = "El concepto o área es obligatorio.";
+
+    if (!form.concepto.trim()) {
+      errors.concepto = "El concepto o área es obligatorio.";
+    }
+
     const total = Number(form.presupuestoTotal) || 0;
-    const gastado = Number(form.gastado) || 0;
-    if (total < 0) errors.presupuestoTotal = "El presupuesto no puede ser negativo.";
-    if (gastado < 0) errors.gastado = "El monto gastado no puede ser negativo.";
-    if (total === 0 && gastado > 0) warnings.push("El presupuesto asignado es $0 pero hay monto ejecutado. ¿Es correcto?");
-    setVErr(errors); setVWarn(warnings);
+    const comprometido = Number(form.montoComprometidoManual) || 0;
+    const ejecutado = Number(form.montoEjecutadoManual) || 0;
+
+    if (total < 0) errors.presupuestoTotal = "El presupuesto asignado no puede ser negativo.";
+    if (comprometido < 0) errors.montoComprometidoManual = "El monto comprometido manual no puede ser negativo.";
+    if (ejecutado < 0) errors.montoEjecutadoManual = "El monto ejecutado manual no puede ser negativo.";
+
+    if (total === 0 && ejecutado > 0) {
+      warnings.push("El presupuesto asignado es $0 pero hay monto ejecutado. ¿Es correcto?");
+    }
+
+    setVErr(errors);
+    setVWarn(warnings);
+
     if (Object.keys(errors).length > 0) return;
-    saveItem("presupuesto", { ...form, presupuestoTotal: total, gastado });
+
+    saveItem("presupuesto", {
+      ...form,
+      presupuestoTotal: total,
+      montoComprometidoManual: comprometido,
+      montoEjecutadoManual: ejecutado,
+      // For backwards compatibility with older reports, also set gastado to ejecutado
+      gastado: ejecutado
+    });
   };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <Field label="Concepto" required error={vErr.concepto}><Input value={form.concepto} onChange={e => set("concepto", e.target.value)} /></Field>
-      <Field label="Presupuesto total (CLP)" error={vErr.presupuestoTotal}><Input type="number" value={form.presupuestoTotal} onChange={e => set("presupuestoTotal", Number(e.target.value) || 0)} /></Field>
-      <Field label="Gastado (CLP)" error={vErr.gastado}><Input type="number" value={form.gastado} onChange={e => set("gastado", Number(e.target.value) || 0)} /></Field>
-      <Field label="Responsable"><SelectContact value={form.responsableId} onChange={v => set("responsableId", v)} data={data} /></Field>
-      <Field label="Observaciones"><Textarea value={form.observaciones} onChange={e => set("observaciones", e.target.value)} /></Field>
+      <Field label="Área / Módulo" required error={vErr.concepto}>
+        <Input value={form.concepto} onChange={e => set("concepto", e.target.value)} />
+      </Field>
+      
+      <Field label="Modo de cálculo" error={vErr.modoCalculo}>
+        <Select
+          value={form.modoCalculo || "Calculado desde registros"}
+          onChange={v => set("modoCalculo", v)}
+          options={["Manual", "Calculado desde registros", "Mixto"]}
+        />
+      </Field>
+
+      <Field label="Presupuesto asignado (CLP)" error={vErr.presupuestoTotal}>
+        <Input type="number" value={form.presupuestoTotal} onChange={e => set("presupuestoTotal", Number(e.target.value) || 0)} />
+      </Field>
+
+      {(form.modoCalculo === "Manual" || form.modoCalculo === "Mixto") ? (
+        <>
+          <Field label="Monto comprometido manual (CLP)" error={vErr.montoComprometidoManual}>
+            <Input type="number" value={form.montoComprometidoManual} onChange={e => set("montoComprometidoManual", Number(e.target.value) || 0)} />
+          </Field>
+          <Field label="Monto ejecutado manual (CLP)" error={vErr.montoEjecutadoManual}>
+            <Input type="number" value={form.montoEjecutadoManual} onChange={e => set("montoEjecutadoManual", Number(e.target.value) || 0)} />
+          </Field>
+        </>
+      ) : (
+        <div className="md:col-span-2 text-xs text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-100">
+          ℹ️ Los montos de comprometido y ejecutado se calcularán automáticamente a partir de los registros de los módulos asociados (Cursos, OCs, Practicantes, Evaluaciones).
+        </div>
+      )}
+
+      <Field label="Responsable">
+        <SelectContact value={form.responsableId} onChange={v => set("responsableId", v)} data={data} />
+      </Field>
+
+      <Field label="Observaciones">
+        <Textarea value={form.observaciones} onChange={e => set("observaciones", e.target.value)} />
+      </Field>
+
       <FormMessages errors={vErr} warnings={vWarn} />
-      <div className="md:col-span-2 flex gap-3 justify-end pt-2"><button onClick={closeModal} className="px-5 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-medium hover:bg-slate-200 transition-colors">Cancelar</button><button onClick={save} className="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">Guardar</button></div>
+      <div className="md:col-span-2 flex gap-3 justify-end pt-2">
+        <button onClick={closeModal} className="px-5 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-medium hover:bg-slate-200 transition-colors">Cancelar</button>
+        <button onClick={save} className="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">Guardar</button>
+      </div>
     </div>
   );
 }
@@ -2361,16 +2861,23 @@ function FormEvaluaciones({ data, editItem, closeModal, saveItem }: any) {
 
 function FormCargaSemanal({ data, editItem, closeModal, saveItem }: any) {
   const { form, set } = useForm({ semana: "", cursosPlanificados: 0, cursosUrgentesNuevos: 0, cursosNoPlanificados: 0, ocsNuevas: 0, diplomasPendientes: 0, procesosBloqueados: 0, comentario: "" }, editItem);
-  const save = () => { if (!form.semana.trim()) { alert("El campo Semana es obligatorio"); return; } saveItem("cargaSemanal", form); };
-  const weeks2026 = getWeeksFor2026();
+  const [vErr, setVErr] = useState<VError>({});
+  const save = () => {
+    if (!form.semana.trim()) {
+      setVErr({ semana: "El campo Semana es obligatorio." });
+      return;
+    }
+    saveItem("cargaSemanal", form);
+  };
+  const weeks2026 = getWeeksForYear(new Date().getFullYear());
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <Field label="Semana (Calendario 2026)">
+      <Field label="Semana (Calendario 2026)" required error={vErr.semana}>
         <select
           value={form.semana}
           onChange={e => set("semana", e.target.value)}
-          className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          className="border border-[#D9E2EC] rounded-xl px-4 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:border-[#93C5FD] focus:ring-2 focus:ring-blue-100 transition-colors w-full"
         >
           <option value="">Seleccionar semana...</option>
           {weeks2026.map(w => (
@@ -2380,14 +2887,15 @@ function FormCargaSemanal({ data, editItem, closeModal, saveItem }: any) {
           ))}
         </select>
       </Field>
-      <Field label="Cursos planificados"><Input type="number" value={form.cursosPlanificados} onChange={e => set("cursosPlanificados", Number(e.target.value))} /></Field>
-      <Field label="Cursos urgentes nuevos"><Input type="number" value={form.cursosUrgentesNuevos} onChange={e => set("cursosUrgentesNuevos", Number(e.target.value))} /></Field>
-      <Field label="Cursos no planificados necesarios"><Input type="number" value={form.cursosNoPlanificados} onChange={e => set("cursosNoPlanificados", Number(e.target.value))} /></Field>
-      <Field label="OCs nuevas"><Input type="number" value={form.ocsNuevas} onChange={e => set("ocsNuevas", Number(e.target.value))} /></Field>
-      <Field label="Diplomas pendientes"><Input type="number" value={form.diplomasPendientes} onChange={e => set("diplomasPendientes", Number(e.target.value))} /></Field>
-      <Field label="Procesos bloqueados"><Input type="number" value={form.procesosBloqueados} onChange={e => set("procesosBloqueados", Number(e.target.value))} /></Field>
+      <Field label="Cursos planificados"><Input type="number" value={form.cursosPlanificados} onChange={e => set("cursosPlanificados", Number(e.target.value) || 0)} /></Field>
+      <Field label="Cursos urgentes nuevos"><Input type="number" value={form.cursosUrgentesNuevos} onChange={e => set("cursosUrgentesNuevos", Number(e.target.value) || 0)} /></Field>
+      <Field label="Cursos no planificados necesarios"><Input type="number" value={form.cursosNoPlanificados} onChange={e => set("cursosNoPlanificados", Number(e.target.value) || 0)} /></Field>
+      <Field label="OCs nuevas"><Input type="number" value={form.ocsNuevas} onChange={e => set("ocsNuevas", Number(e.target.value) || 0)} /></Field>
+      <Field label="Diplomas pendientes"><Input type="number" value={form.diplomasPendientes} onChange={e => set("diplomasPendientes", Number(e.target.value) || 0)} /></Field>
+      <Field label="Procesos bloqueados"><Input type="number" value={form.procesosBloqueados} onChange={e => set("procesosBloqueados", Number(e.target.value) || 0)} /></Field>
       <Field label="Comentario"><Textarea value={form.comentario} onChange={e => set("comentario", e.target.value)} /></Field>
-      <div className="md:col-span-2 flex gap-3 justify-end pt-4"><button onClick={closeModal} className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition">Cancelar</button><button onClick={save} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">Guardar</button></div>
+      <FormMessages errors={vErr} warnings={[]} />
+      <div className="md:col-span-2 flex gap-3 justify-end pt-2"><button onClick={closeModal} className="px-5 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-medium hover:bg-slate-200 transition-colors">Cancelar</button><button onClick={save} className="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">Guardar</button></div>
     </div>
   );
 }
@@ -2427,27 +2935,13 @@ function FormContactos({ data, editItem, closeModal, saveItem }: any) {
 // ── CAPTURA RÁPIDA FORM ─────────────────────────
 const TIPOS_CAPTURA = ["Curso", "OC", "Practicante", "Diploma / Certificado / Licencia", "Evaluación Psicolaboral", "Proceso Pendiente"];
 
-function FormCapturaRapida({ data, onCancel, onSave, setData }: { data: AppData; onCancel: () => void; onSave: (capture: any) => void; setData: React.Dispatch<React.SetStateAction<AppData>>; }) {
+function FormCapturaRapida({ data, onCancel, onSave }: { data: AppData; onCancel: () => void; onSave: (capture: any) => void; }) {
   const [form, setForm] = useState({
     tipo: "Curso", nombre: "", prioridad: "P3 Medio", responsableId: "",
     proximaAccion: "", fechaProximaAccion: "", bloqueadoPor: "Sin bloqueo", observaciones: "",
   });
   const [error, setError] = useState("");
   const set = (k: string, v: any) => setForm(prev => ({ ...prev, [k]: v }));
-
-  // Ensure a "Sin responsable" placeholder contact exists if user leaves empty.
-  const ensureSinResponsable = (): string => {
-    const existing = data.contactos.find(c => c.nombre.trim().toLowerCase() === "sin responsable");
-    if (existing) return existing.id;
-    const newId = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2, 10);
-    const newContact: Contacto = {
-      id: newId, nombre: "Sin responsable", rol: "Auto", areaEmpresa: "",
-      correo: "", telefono: "", relacion: "Interno", activo: "Sí",
-      observaciones: "Contacto base creado automáticamente para capturas rápidas",
-    };
-    setData(d => ({ ...d, contactos: [...d.contactos, newContact] }));
-    return newId;
-  };
 
   const handleSave = () => {
     setError("");
@@ -2457,9 +2951,7 @@ function FormCapturaRapida({ data, onCancel, onSave, setData }: { data: AppData;
     if (!form.proximaAccion.trim()) return setError("La próxima acción es obligatoria.");
     if (form.prioridad === "P1 Crítico" && !form.fechaProximaAccion) return setError("Si la prioridad es P1 Crítico, la fecha próxima acción es obligatoria.");
 
-    let respId = form.responsableId;
-    if (!respId) respId = ensureSinResponsable();
-    onSave({ ...form, responsableId: respId });
+    onSave({ ...form });
   };
 
   return (
@@ -2506,6 +2998,486 @@ function FormCapturaRapida({ data, onCancel, onSave, setData }: { data: AppData;
       <div className="flex gap-3 justify-end pt-2">
         <button onClick={onCancel} className="px-5 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-medium hover:bg-slate-200 transition-colors">Cancelar</button>
         <button onClick={handleSave} className="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">Guardar captura</button>
+      </div>
+    </div>
+  );
+}
+
+// ── REPORTE MENSUAL EJECUTIVO COMPONENT ─────────────────────────
+
+function ModuloReporteMensual({ data, toastShow }: { data: AppData; toastShow: (msg: string) => void }) {
+  const currentMonth = MESES[new Date().getMonth()] || "Enero";
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+  const parseMonthOfDate = (dateStr: string) => {
+    if (!dateStr) return -1;
+    const parts = dateStr.split("-");
+    if (parts.length < 2) return -1;
+    return parseInt(parts[1]) - 1; // 0-indexed month
+  };
+
+  const parseYearOfDate = (dateStr: string) => {
+    if (!dateStr) return -1;
+    const parts = dateStr.split("-");
+    if (parts.length < 1) return -1;
+    return parseInt(parts[0]);
+  };
+
+  const monthIndex = MESES.indexOf(selectedMonth);
+
+  // Filter datasets based on selected month and year
+  const monthCursos = data.cursos.filter(c => {
+    const m = parseMonthOfDate(c.fechaSolicitud || c.fechaRequerida);
+    const y = parseYearOfDate(c.fechaSolicitud || c.fechaRequerida);
+    return m === monthIndex && y === selectedYear;
+  });
+
+  const cursosEjecutados = monthCursos.filter(c => ["Ejecutado", "Cerrado"].includes(c.estado)).length;
+  const cursosAbiertos = monthCursos.filter(c => c.estado !== "Cerrado").length;
+  const cursosUrgentes = monthCursos.filter(c => c.origen === "Urgente no planificado").length;
+  const cursosNoPlanificados = monthCursos.filter(c => c.origen === "No planificado necesario").length;
+  const cursosP1 = monthCursos.filter(c => c.prioridad === "P1 Crítico").length;
+  const cursosDetenidos = monthCursos.filter(c => c.estado === "Detenido").length;
+
+  const monthOCs = data.ocs.filter(o => {
+    const m = parseMonthOfDate(o.fechaSolicitud || o.fechaLimite);
+    const y = parseYearOfDate(o.fechaSolicitud || o.fechaLimite);
+    return m === monthIndex && y === selectedYear;
+  });
+
+  const ocsCreadas = monthOCs.filter(o => o.estadoOC !== "Pendiente crear").length;
+  const ocsPendientes = monthOCs.filter(o => ["Pendiente crear", "Solicitada", "En aprobación"].includes(o.estadoOC)).length;
+  const ocsCerradas = monthOCs.filter(o => o.estadoOC === "Cerrada").length;
+  const ocsBloqueadas = monthOCs.filter(o => o.bloqueadoPor && o.bloqueadoPor !== "Sin bloqueo").length;
+
+  const monthDiplomas = data.diplomas.filter(d => {
+    const m = parseMonthOfDate(d.fechaSolicitudOTEC || d.fechaSubidaBUK || d.fechaRecepcionDoc);
+    const y = parseYearOfDate(d.fechaSolicitudOTEC || d.fechaSubidaBUK || d.fechaRecepcionDoc);
+    return m === monthIndex && y === selectedYear;
+  });
+
+  const dipPedididos = monthDiplomas.filter(d => d.etapa === "Pedir a la OTEC").length;
+  const dipParticipante = monthDiplomas.filter(d => d.etapa === "Enviar o pedir al participante").length;
+  const dipBUK = monthDiplomas.filter(d => d.etapa === "Subir a BUK").length;
+  const dipCompletados = monthDiplomas.filter(d => d.etapa === "Completado").length;
+
+  const monthEvaluaciones = data.evaluacionesPsicolaborales.filter(e => {
+    return e.mes === selectedMonth && e.ano === selectedYear;
+  });
+
+  const evSolicitadas = monthEvaluaciones.filter(e => e.estado === "Solicitada").length;
+  const evRealizadas = monthEvaluaciones.filter(e => e.estado === "Realizada").length;
+  const evInformes = monthEvaluaciones.filter(e => e.estado === "Informe recibido").length;
+  const evCerradas = monthEvaluaciones.filter(e => e.estado === "Cerrada").length;
+  const evBloqueadas = monthEvaluaciones.filter(e => e.bloqueadoPor && e.bloqueadoPor !== "Sin bloqueo").length;
+  const evRecomendados = monthEvaluaciones.filter(e => e.resultado === "Recomendado").length;
+  const evNoRecomendados = monthEvaluaciones.filter(e => e.resultado === "No recomendado").length;
+
+  const monthPracticantes = data.practicantes.filter(p => {
+    const mStart = parseMonthOfDate(p.fechaInicio);
+    const yStart = parseYearOfDate(p.fechaInicio);
+    const mEnd = parseMonthOfDate(p.fechaTermino);
+    const yEnd = parseYearOfDate(p.fechaTermino);
+    return (mStart === monthIndex && yStart === selectedYear) || (mEnd === monthIndex && yEnd === selectedYear);
+  });
+
+  const pracActivos = monthPracticantes.filter(p => p.estado === "Activo").length;
+  const pracIngresos = monthPracticantes.filter(p => parseMonthOfDate(p.fechaInicio) === monthIndex && parseYearOfDate(p.fechaInicio) === selectedYear).length;
+  const pracTerminos = monthPracticantes.filter(p => parseMonthOfDate(p.fechaTermino) === monthIndex && parseYearOfDate(p.fechaTermino) === selectedYear).length;
+  const pracPorBuscar = monthPracticantes.filter(p => p.estado === "Por buscar").length;
+
+  const budgetTotal = data.presupuesto.reduce((s, p) => s + p.presupuestoTotal, 0);
+  const budgetGastado = data.presupuesto.reduce((s, p) => s + p.gastado, 0);
+  const budgetDisponible = budgetTotal - budgetGastado;
+  const budgetPct = budgetTotal > 0 ? Math.round((budgetGastado / budgetTotal) * 100) : 0;
+
+  // Bloqueos frequencies
+  const blockCounts: Record<string, number> = {
+    "Falta aprobación": 0,
+    "Falta OC": 0,
+    "Falta OTEC": 0,
+    "Falta participante": 0,
+    "Falta informe": 0,
+    "Falta presupuesto": 0,
+    "Otros": 0
+  };
+
+  const countBlocks = (item: any) => {
+    const b = item.bloqueadoPor;
+    if (b && b !== "Sin bloqueo") {
+      if (blockCounts[b] !== undefined) {
+        blockCounts[b]++;
+      } else {
+        blockCounts["Otros"]++;
+      }
+    }
+  };
+
+  monthCursos.forEach(countBlocks);
+  monthOCs.forEach(countBlocks);
+  monthPracticantes.forEach(countBlocks);
+  monthDiplomas.forEach(countBlocks);
+  monthEvaluaciones.forEach(countBlocks);
+
+  const topBlockeoName = Object.entries(blockCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "Ninguno";
+  const topBlockeoValue = blockCounts[topBlockeoName] || 0;
+  const topBlockeoText = topBlockeoValue > 0 ? `${topBlockeoName} (${topBlockeoValue} veces)` : "Ninguno";
+
+  // Planning vs actual metrics
+  const cursosPlanificados = monthCursos.filter(c => ["DNC", "Carta Gantt"].includes(c.origen)).length;
+  const cursosUrgentesNuevos = monthCursos.filter(c => c.origen === "Urgente no planificado").length;
+  const cursosNoPlanificadosNecesarios = monthCursos.filter(c => c.origen === "No planificado necesario" || c.origen === "Emergente por operación").length;
+  const totalCursosReal = monthCursos.length;
+  const diffPlanificadoReal = totalCursosReal - cursosPlanificados;
+
+  // Exports
+  const exportReportXLSX = () => {
+    const wb = XLSX.utils.book_new();
+    const reportData = [
+      ["REPORTE MENSUAL EJECUTIVO", `${selectedMonth} ${selectedYear}`],
+      ["Fecha de Generación", new Date().toLocaleDateString("es-CL")],
+      [],
+      ["1. RESUMEN DE CURSOS", ""],
+      ["Cursos Ejecutados", cursosEjecutados],
+      ["Cursos Abiertos", cursosAbiertos],
+      ["Cursos Urgentes No Planificados", cursosUrgentes],
+      ["Cursos No Planificados Necesarios", cursosNoPlanificados],
+      ["Cursos P1 Críticos", cursosP1],
+      ["Cursos Detenidos", cursosDetenidos],
+      [],
+      ["2. RESUMEN DE ORDENES DE COMPRA (OCs)", ""],
+      ["OCs Creadas", ocsCreadas],
+      ["OCs Pendientes", ocsPendientes],
+      ["OCs Cerradas", ocsCerradas],
+      ["OCs Bloqueadas", ocsBloqueadas],
+      [],
+      ["3. RESUMEN DE DIPLOMAS / CERTIFICADOS", ""],
+      ["Documentos Pedidos a OTEC", dipPedididos],
+      ["Pendientes de Participante", dipParticipante],
+      ["Pendientes de Subir a BUK", dipBUK],
+      ["Completados", dipCompletados],
+      [],
+      ["4. RESUMEN DE EVALUACIONES PSICOLABORALES", ""],
+      ["Evaluaciones Solicitadas", evSolicitadas],
+      ["Evaluaciones Realizadas", evRealizadas],
+      ["Informes Recibidos", evInformes],
+      ["Evaluaciones Cerradas", evCerradas],
+      ["Evaluaciones Bloqueadas", evBloqueadas],
+      ["Recomendados", evRecomendados],
+      ["No Recomendados", evNoRecomendados],
+      [],
+      ["5. RESUMEN DE PRACTICANTES", ""],
+      ["Practicantes Activos", pracActivos],
+      ["Ingresos del Mes", pracIngresos],
+      ["Términos del Mes", pracTerminos],
+      ["Por Buscar", pracPorBuscar],
+      [],
+      ["6. RESUMEN DE PRESUPUESTO", ""],
+      ["Presupuesto Asignado", budgetTotal],
+      ["Presupuesto Ejecutado", budgetGastado],
+      ["Saldo Disponible", budgetDisponible],
+      ["Porcentaje Utilizado (%)", `${budgetPct}%`],
+      [],
+      ["7. FRECUENCIA DE BLOQUEOS", ""],
+      ["Falta Aprobación", blockCounts["Falta aprobación"]],
+      ["Falta OC", blockCounts["Falta OC"]],
+      ["Falta OTEC", blockCounts["Falta OTEC"]],
+      ["Falta Participante", blockCounts["Falta participante"]],
+      ["Falta Informe", blockCounts["Falta informe"]],
+      ["Falta Presupuesto", blockCounts["Falta presupuesto"]],
+      ["Otros Bloqueos", blockCounts["Otros"]],
+      [],
+      ["8. CARGA REAL VS PLANIFICACIÓN", ""],
+      ["Cursos Planificados", cursosPlanificados],
+      ["Cursos Urgentes Nuevos", cursosUrgentesNuevos],
+      ["Cursos No Planificados Necesarios", cursosNoPlanificadosNecesarios],
+      ["Carga Real Total (Cursos)", totalCursosReal],
+      ["Diferencia (Real - Planificado)", diffPlanificadoReal],
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(reportData);
+    XLSX.utils.book_append_sheet(wb, ws, "Reporte Mensual");
+    XLSX.writeFile(wb, `reporte_mensual_kata_v5_${selectedMonth}_${selectedYear}.xlsx`);
+    toastShow("Reporte mensual XLSX descargado");
+  };
+
+  const exportReportJSON = () => {
+    const jsonReport = {
+      periodo: `${selectedMonth} ${selectedYear}`,
+      cursos: { cursosEjecutados, cursosAbiertos, cursosUrgentes, cursosNoPlanificados, cursosP1, cursosDetenidos },
+      ocs: { ocsCreadas, ocsPendientes, ocsCerradas, ocsBloqueadas },
+      diplomas: { dipPedididos, dipParticipante, dipBUK, dipCompletados },
+      evaluaciones: { evSolicitadas, evRealizadas, evInformes, evCerradas, evBloqueadas, evRecomendados, evNoRecomendados },
+      practicantes: { pracActivos, pracIngresos, pracTerminos, pracPorBuscar },
+      presupuesto: { budgetTotal, budgetGastado, budgetDisponible, budgetPct },
+      bloqueos: blockCounts,
+      cargaVsPlanificacion: { cursosPlanificados, cursosUrgentesNuevos, cursosNoPlanificadosNecesarios, totalCursosReal, diffPlanificadoReal }
+    };
+
+    const blob = new Blob([JSON.stringify(jsonReport, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    a.href = url;
+    a.download = `reporte_mensual_${selectedMonth}_${selectedYear}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toastShow("Reporte mensual JSON descargado");
+  };
+
+  const copyExecutiveSummary = () => {
+    const summaryText = `
+REPORTE MENSUAL EJECUTIVO - ${selectedMonth} ${selectedYear}
+=================================
+Fecha de Generación: ${new Date().toLocaleDateString("es-CL")}
+
+1. PRINCIPALES CIFRAS:
+- Cursos Registrados: ${totalCursosReal} (Abiertos: ${cursosAbiertos}, Ejecutados: ${cursosEjecutados})
+- Cursos Urgentes No Planificados: ${cursosUrgentes}
+- OCs Creadas / Pendientes: ${ocsCreadas} / ${ocsPendientes}
+- Evaluaciones Realizadas: ${evRealizadas} (Cerradas: ${evCerradas})
+- Practicantes Activos: ${pracActivos}
+
+2. SITUACIÓN DE BLOQUEOS:
+- Bloqueo más frecuente: ${topBlockeoText}
+- Procesos Bloqueados Totales: ${evBloqueadas + ocsBloqueadas + cursosDetenidos}
+
+3. PRESUPUESTO DEL MES:
+- Presupuesto Total: ${fmtCLP(budgetTotal)}
+- Presupuesto Ejecutado: ${fmtCLP(budgetGastado)}
+- % Utilizado: ${budgetPct}%
+- Saldo Disponible: ${fmtCLP(budgetDisponible)}
+
+4. CARGA REAL VS PLANIFICACIÓN:
+- Cursos Planificados (DNC/Gantt): ${cursosPlanificados}
+- Cursos Emergentes/Urgentes: ${cursosUrgentesNuevos + cursosNoPlanificadosNecesarios}
+- Carga de Trabajo Adicional: ${diffPlanificadoReal} cursos más que la planificación original.
+
+5. RECOMENDACIÓN OPERATIVA:
+${diffPlanificadoReal > 0 
+  ? "Se observa una carga real significativamente superior a la planificación inicial por la aparición de cursos urgentes/no planificados. Se sugiere reevaluar los márgenes operativos para evitar sobrecarga y gestionar los bloqueos pendientes."
+  : "La carga operativa del mes se mantiene alineada con la planificación formal. Se recomienda mantener el ritmo operativo de cierres."}
+    `.trim();
+
+    navigator.clipboard.writeText(summaryText);
+    toastShow("Resumen ejecutivo copiado al portapapeles");
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border border-[#D9E2EC] p-6 shadow-sm space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-4 border-b border-slate-100 pb-4">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-800">📄 Reporte Mensual Ejecutivo</h2>
+          <p className="text-xs text-slate-500">Resumen y análisis de la actividad operativa mensual para reportes a jefatura.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Select value={selectedMonth} onChange={setSelectedMonth} options={MESES} />
+          <select
+            value={selectedYear}
+            onChange={e => setSelectedYear(parseInt(e.target.value))}
+            className="border border-[#D9E2EC] rounded-xl px-4 py-2 text-sm bg-white text-slate-800 focus:outline-none focus:border-[#93C5FD] transition-colors"
+          >
+            <option value="2026">2026</option>
+            <option value="2025">2025</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Narrative Card */}
+      <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4 text-slate-700 space-y-2">
+        <h4 className="font-semibold text-blue-800 text-sm">💡 Interpretación automática del mes:</h4>
+        <p className="text-sm leading-relaxed">
+          Durante <span className="font-semibold">{selectedMonth}</span> de <span className="font-semibold">{selectedYear}</span> se registraron <span className="font-semibold">{totalCursosReal}</span> cursos, de los cuales <span className="font-semibold">{cursosUrgentes}</span> fueron urgentes no planificados y <span className="font-semibold">{cursosNoPlanificados}</span> fueron no planificados pero necesarios.
+          Además, se contabilizaron <span className="font-semibold">{evSolicitadas}</span> evaluaciones psicolaborales y se gestionaron <span className="font-semibold">{ocsCreadas}</span> órdenes de compra.
+          Actualmente, el bloqueo más frecuente es <span className="font-semibold text-red-600">"{topBlockeoName}"</span>, ocurriendo <span className="font-semibold">{topBlockeoValue}</span> veces. Esto indica una carga operativa <span className="font-semibold">{totalCursosReal > 5 ? "alta y superior a la planificación original" : "estable y controlada"}</span>.
+        </p>
+      </div>
+
+      {/* Main breakdown grids */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        
+        {/* Cursos */}
+        <div className="border border-slate-100 rounded-xl p-4 space-y-3 bg-slate-50/20">
+          <h3 className="font-semibold text-slate-800 text-sm border-b pb-1.5 flex items-center justify-between">
+            <span>📚 Cursos / Capacitaciones</span>
+            <span className="text-xs text-slate-400">Total: {totalCursosReal}</span>
+          </h3>
+          <ul className="space-y-1.5 text-xs text-slate-600">
+            <li className="flex justify-between"><span>Cursos ejecutados:</span> <span className="font-semibold text-slate-800">{cursosEjecutados}</span></li>
+            <li className="flex justify-between"><span>Cursos abiertos:</span> <span className="font-semibold text-slate-800">{cursosAbiertos}</span></li>
+            <li className="flex justify-between"><span>Urgentes no planificados:</span> <span className="font-semibold text-slate-800">{cursosUrgentes}</span></li>
+            <li className="flex justify-between"><span>No planificados necesarios:</span> <span className="font-semibold text-slate-800">{cursosNoPlanificados}</span></li>
+            <li className="flex justify-between"><span>Cursos P1 críticos:</span> <span className="font-semibold text-red-600">{cursosP1}</span></li>
+            <li className="flex justify-between"><span>Cursos detenidos:</span> <span className="font-semibold text-slate-800">{cursosDetenidos}</span></li>
+          </ul>
+        </div>
+
+        {/* OCs */}
+        <div className="border border-slate-100 rounded-xl p-4 space-y-3 bg-slate-50/20">
+          <h3 className="font-semibold text-slate-800 text-sm border-b pb-1.5 flex items-center justify-between">
+            <span>🧾 Órdenes de Compra (OCs)</span>
+            <span className="text-xs text-slate-400">Total: {monthOCs.length}</span>
+          </h3>
+          <ul className="space-y-1.5 text-xs text-slate-600">
+            <li className="flex justify-between"><span>OCs creadas:</span> <span className="font-semibold text-slate-800">{ocsCreadas}</span></li>
+            <li className="flex justify-between"><span>OCs pendientes:</span> <span className="font-semibold text-slate-800">{ocsPendientes}</span></li>
+            <li className="flex justify-between"><span>OCs cerradas:</span> <span className="font-semibold text-slate-800">{ocsCerradas}</span></li>
+            <li className="flex justify-between"><span>OCs bloqueadas:</span> <span className="font-semibold text-red-600">{ocsBloqueadas}</span></li>
+          </ul>
+        </div>
+
+        {/* Diplomas */}
+        <div className="border border-slate-100 rounded-xl p-4 space-y-3 bg-slate-50/20">
+          <h3 className="font-semibold text-slate-800 text-sm border-b pb-1.5 flex items-center justify-between">
+            <span>📜 Diplomas y Licencias</span>
+            <span className="text-xs text-slate-400">Total: {monthDiplomas.length}</span>
+          </h3>
+          <ul className="space-y-1.5 text-xs text-slate-600">
+            <li className="flex justify-between"><span>Pedidos a OTEC:</span> <span className="font-semibold text-slate-800">{dipPedididos}</span></li>
+            <li className="flex justify-between"><span>Pendientes de participante:</span> <span className="font-semibold text-slate-800">{dipParticipante}</span></li>
+            <li className="flex justify-between"><span>Pendientes subir a BUK:</span> <span className="font-semibold text-red-600">{dipBUK}</span></li>
+            <li className="flex justify-between"><span>Completados:</span> <span className="font-semibold text-slate-800">{dipCompletados}</span></li>
+          </ul>
+        </div>
+
+        {/* Evaluaciones */}
+        <div className="border border-slate-100 rounded-xl p-4 space-y-3 bg-slate-50/20">
+          <h3 className="font-semibold text-slate-800 text-sm border-b pb-1.5 flex items-center justify-between">
+            <span>🧠 Evaluaciones Psicolaborales</span>
+            <span className="text-xs text-slate-400">Total: {monthEvaluaciones.length}</span>
+          </h3>
+          <ul className="space-y-1.5 text-xs text-slate-600">
+            <li className="flex justify-between"><span>Evaluaciones solicitadas:</span> <span className="font-semibold text-slate-800">{evSolicitadas}</span></li>
+            <li className="flex justify-between"><span>Evaluaciones realizadas:</span> <span className="font-semibold text-slate-800">{evRealizadas}</span></li>
+            <li className="flex justify-between"><span>Informes recibidos:</span> <span className="font-semibold text-slate-800">{evInformes}</span></li>
+            <li className="flex justify-between"><span>Evaluaciones cerradas:</span> <span className="font-semibold text-slate-800">{evCerradas}</span></li>
+            <li className="flex justify-between"><span>Bloqueadas:</span> <span className="font-semibold text-red-600">{evBloqueadas}</span></li>
+            <li className="flex justify-between"><span>Recomendados / No recomendados:</span> <span className="font-semibold text-slate-800">{evRecomendados} / {evNoRecomendados}</span></li>
+          </ul>
+        </div>
+
+        {/* Practicantes */}
+        <div className="border border-slate-100 rounded-xl p-4 space-y-3 bg-slate-50/20">
+          <h3 className="font-semibold text-slate-800 text-sm border-b pb-1.5 flex items-center justify-between">
+            <span>👤 Practicantes</span>
+            <span className="text-xs text-slate-400">Total: {monthPracticantes.length}</span>
+          </h3>
+          <ul className="space-y-1.5 text-xs text-slate-600">
+            <li className="flex justify-between"><span>Activos:</span> <span className="font-semibold text-slate-800">{pracActivos}</span></li>
+            <li className="flex justify-between"><span>Ingresos del mes:</span> <span className="font-semibold text-slate-800">{pracIngresos}</span></li>
+            <li className="flex justify-between"><span>Términos del mes:</span> <span className="font-semibold text-slate-800">{pracTerminos}</span></li>
+            <li className="flex justify-between"><span>Por buscar:</span> <span className="font-semibold text-slate-800">{pracPorBuscar}</span></li>
+          </ul>
+        </div>
+
+        {/* Presupuesto */}
+        <div className="border border-slate-100 rounded-xl p-4 space-y-3 bg-slate-50/20">
+          <h3 className="font-semibold text-slate-800 text-sm border-b pb-1.5 flex items-center justify-between">
+            <span>💰 Presupuesto Global</span>
+            <span className="text-xs text-slate-400">{budgetPct}% usado</span>
+          </h3>
+          <ul className="space-y-1.5 text-xs text-slate-600">
+            <li className="flex justify-between"><span>Asignado:</span> <span className="font-semibold text-slate-800">{fmtCLP(budgetTotal)}</span></li>
+            <li className="flex justify-between"><span>Ejecutado:</span> <span className="font-semibold text-red-600">{fmtCLP(budgetGastado)}</span></li>
+            <li className="flex justify-between"><span>Disponible:</span> <span className="font-semibold text-green-600">{fmtCLP(budgetDisponible)}</span></li>
+          </ul>
+        </div>
+
+      </div>
+
+      {/* Lower section: Bloqueos & Carga Real vs Planificación */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-2">
+        
+        {/* Bloqueos */}
+        <div className="border border-slate-100 rounded-xl p-5 space-y-4">
+          <h3 className="font-semibold text-slate-800 text-sm border-b pb-2 flex items-center justify-between">
+            <span>🚫 Frecuencia de Bloqueos en el Período</span>
+            <span className="text-xs font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded">Alerta</span>
+          </h3>
+          <div className="space-y-3">
+            {Object.entries(blockCounts).map(([block, count]) => {
+              const maxCount = Math.max(...Object.values(blockCounts), 1);
+              const pct = Math.round((count / maxCount) * 100);
+              return (
+                <div key={block} className="space-y-1">
+                  <div className="flex justify-between text-xs text-slate-600">
+                    <span>{block}</span>
+                    <span className="font-semibold text-slate-800">{count} veces</span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                    <div className="bg-red-500 h-2 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Carga Real vs Planificación */}
+        <div className="border border-slate-100 rounded-xl p-5 space-y-4">
+          <h3 className="font-semibold text-slate-800 text-sm border-b pb-2 flex items-center justify-between">
+            <span>📅 Carga Real vs Planificación Formal</span>
+            <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">Carga real</span>
+          </h3>
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="bg-slate-50 p-2 rounded-lg border">
+                <div className="text-[10px] text-slate-500 uppercase">Planificados</div>
+                <div className="text-lg font-bold text-slate-700">{cursosPlanificados}</div>
+              </div>
+              <div className="bg-red-50 p-2 rounded-lg border border-red-100">
+                <div className="text-[10px] text-red-500 uppercase">Urgentes nuevos</div>
+                <div className="text-lg font-bold text-red-700">{cursosUrgentesNuevos}</div>
+              </div>
+              <div className="bg-amber-50 p-2 rounded-lg border border-amber-100">
+                <div className="text-[10px] text-amber-500 uppercase">No planificados</div>
+                <div className="text-lg font-bold text-amber-700">{cursosNoPlanificadosNecesarios}</div>
+              </div>
+            </div>
+
+            <div className="bg-slate-50/50 p-3 rounded-lg border text-xs space-y-1.5 text-slate-600">
+              <div className="flex justify-between">
+                <span>Carga de Trabajo Total (Real):</span>
+                <span className="font-bold text-slate-800">{totalCursosReal} cursos</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Diferencia con Planificación Formal:</span>
+                <span className={`font-bold ${diffPlanificadoReal > 0 ? "text-red-600" : "text-slate-800"}`}>
+                  {diffPlanificadoReal > 0 ? `+${diffPlanificadoReal}` : diffPlanificadoReal} cursos
+                </span>
+              </div>
+            </div>
+
+            {diffPlanificadoReal > 0 && (
+              <div className="text-xs text-red-700 bg-red-50/50 border border-red-100 rounded-lg p-3">
+                ⚠️ <span className="font-semibold">Carga de trabajo excedida:</span> La aparición de cursos no planificados y requerimientos urgentes ha incrementado la carga operativa en un <span className="font-bold">{(diffPlanificadoReal / (cursosPlanificados || 1) * 100).toFixed(0)}%</span> por sobre la planificación inicial.
+              </div>
+            )}
+          </div>
+        </div>
+
+      </div>
+
+      {/* Export & Action Buttons */}
+      <div className="flex flex-wrap gap-3 justify-end border-t border-slate-100 pt-4">
+        <button
+          onClick={copyExecutiveSummary}
+          className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors animate-pulse"
+        >
+          📋 Copiar Resumen Ejecutivo
+        </button>
+        <button
+          onClick={exportReportJSON}
+          className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-sm font-semibold transition-colors"
+        >
+          📥 Descargar Reporte JSON
+        </button>
+        <button
+          onClick={exportReportXLSX}
+          className="px-5 py-2.5 bg-[#16A34A] hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm"
+        >
+          📥 Descargar Reporte XLSX
+        </button>
       </div>
     </div>
   );
