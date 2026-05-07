@@ -1,8 +1,6 @@
-# Control Operativo RH
+# TotalControlRH
 
-Sistema de control operativo para la gestión de RRHH y capacitaciones. Aplicación web cliente-side con persistencia local, pensada para equipos operativos que necesitan trazabilidad de tareas, plazos y procesos.
-
----
+Sistema de control operativo de RRHH — aplicación local-first construida con React + TypeScript + Tailwind CSS.
 
 ## Stack tecnológico
 
@@ -12,10 +10,9 @@ Sistema de control operativo para la gestión de RRHH y capacitaciones. Aplicaci
 | Build | Vite 7 + vite-plugin-singlefile |
 | Estilos | Tailwind CSS 4 |
 | Gráficos | Chart.js + react-chartjs-2 |
-| Exportación | xlsx (Excel) |
+| Exportación | xlsx (SheetJS) |
 | Persistencia | localStorage (sin backend) |
-
----
+| Tests | Vitest |
 
 ## Módulos
 
@@ -24,18 +21,18 @@ Sistema de control operativo para la gestión de RRHH y capacitaciones. Aplicaci
 | **Inicio** | Pantalla de bienvenida |
 | **Mi Día** | Vista diaria de tareas urgentes y pendientes |
 | **Dashboard** | KPIs y gráficos de estado general |
-| **Cursos / DNC** | Gestión de cursos de capacitación con priorización |
+| **Cursos / DNC** | Gestión de cursos de capacitación |
 | **OCs Pendientes** | Órdenes de compra y su estado |
 | **Practicantes** | Seguimiento de practicantes |
 | **Evaluaciones** | Evaluaciones psicolaborales |
 | **Diplomas / Cert / Lic** | Diplomas, certificados y licencias |
 | **Procesos Pend.** | Flujos y procesos internos |
-| **Presupuesto** | Control presupuestario (asignado vs. gastado) |
+| **Presupuesto** | Control presupuestario |
 | **Carga Semanal** | Reporte de carga de trabajo semanal |
-| **Contactos** | Directorio de stakeholders y personas clave |
-| **Configuración** | Importar/exportar datos, resetear, ajustes |
-
----
+| **Contactos** | Directorio de stakeholders |
+| **Reclutamiento** | Procesos de selección |
+| **Vales de Gas** | Control de vales de combustible |
+| **Configuración** | Importar/exportar datos, backups |
 
 ## Instalación y uso
 
@@ -47,65 +44,55 @@ Sistema de control operativo para la gestión de RRHH y capacitaciones. Aplicaci
 ### Comandos
 
 ```bash
-# Instalar dependencias
-npm install
-
-# Servidor de desarrollo (http://localhost:5173)
-npm run dev
-
-# Build de producción (genera un único archivo HTML autónomo)
-npm run build
-
-# Preview del build
-npm run preview
+npm install        # instalar dependencias
+npm run dev        # servidor de desarrollo (http://localhost:5173)
+npm run build      # build de producción (dist/index.html — archivo único)
+npm run test       # ejecutar tests (vitest)
+npm run lint       # análisis estático (eslint)
 ```
 
 ### Despliegue
 
-El build genera un **único archivo HTML** (via `vite-plugin-singlefile`) que puede distribuirse sin servidor. Simplemente abre el archivo `dist/index.html` en el navegador.
+El build genera un **único archivo HTML** autónomo. Se puede distribuir sin servidor: abre `dist/index.html` en el navegador.
 
----
+## Credenciales por defecto
 
-## Acceso
+| Usuario | Contraseña | Rol   |
+|---------|-----------|-------|
+| KataS   | Tota95    | admin |
 
-La aplicación tiene una pantalla de login básica para uso local/demo. Las credenciales están definidas directamente en `src/App.tsx`.
+Las contraseñas se verifican con SHA-256. Para cambiar credenciales o agregar usuarios, edita `src/auth/authUsers.ts` con el hash correspondiente:
 
-> **Advertencia de seguridad:** Este sistema de autenticación no es apto para entornos expuestos en red. Es solo una barrera de acceso local. No compartir el archivo HTML compilado con personas no autorizadas.
+```js
+// Calcula el hash en la consola del navegador:
+[...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('TuNuevaContraseña')))].map(b=>b.toString(16).padStart(2,'0')).join('')
+```
 
----
+La sesión expira automáticamente después de **8 horas** de inactividad.
+
+## Seguridad
+
+Ver [docs/security.md](docs/security.md) para el análisis de riesgos y controles implementados.
+
+## Arquitectura
+
+Ver [docs/architecture.md](docs/architecture.md) para el diagrama de módulos y decisiones de diseño.
+
+## Modelo de datos
+
+Ver [docs/data-model.md](docs/data-model.md) para la descripción de tipos y esquema actual.
+
+## Importación / Exportación
+
+Ver [docs/import-export.md](docs/import-export.md) para el flujo XLSX y las validaciones aplicadas.
 
 ## Gestión de datos
 
 - Los datos se guardan automáticamente en `localStorage` bajo la clave `control_operativo_kata_v5`.
-- Desde **Configuración** se puede:
-  - Exportar todo a **JSON** o **Excel (.xlsx)**
-  - Importar desde JSON (con migración automática de versiones)
-  - Descargar plantillas Excel vacías
-  - Restaurar desde backup o hacer reset completo
-
----
-
-## Estructura del proyecto
-
-```
-TotalControlRH/
-├── src/
-│   ├── main.tsx          # Punto de entrada React
-│   ├── App.tsx           # Lógica completa de la aplicación
-│   ├── index.css         # Estilos globales + tokens de diseño
-│   └── utils/
-│       └── cn.ts         # Helper para combinar clases Tailwind
-├── index.html            # HTML base
-├── vite.config.ts        # Configuración de Vite
-├── tsconfig.json         # Configuración TypeScript
-└── package.json
-```
-
----
+- Versión del esquema actual: `6` (ver `src/storage/migrations.ts`).
+- Desde **Configuración** se puede exportar a JSON/XLSX, importar, crear backups y restaurar.
 
 ## Sistema de semáforo
-
-Las entidades con fecha límite utilizan un sistema de semáforo visual:
 
 | Color | Estado |
 |-------|--------|

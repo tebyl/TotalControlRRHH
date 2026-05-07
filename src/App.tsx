@@ -1,76 +1,55 @@
 import React, { useState, useEffect, useMemo } from "react";
+import {
+  ahora,
+  duplicateRecord,
+  durMesesEntre,
+  genId,
+  getWeeksForYear,
+  hoy,
+  isClosedRecord,
+  markRecordClosed,
+  normalizeDateFromXlsx,
+  normalizeReclutamientoCampo,
+  normalizeYesNo,
+  parseXlsxMoney,
+  parseXlsxNumber,
+  semaforo,
+  toDDMMYYYY,
+} from "./utils/appHelpers";
+import type {
+  AppData,
+  BackupItem,
+  CargaSemanal,
+  Contacto,
+  Curso,
+  Diploma,
+  Evaluacion,
+  ModuloKey,
+  OC,
+  Practicante,
+  Proceso,
+  ProcesoReclutamiento,
+  ValeGas,
+  ValeGasOrg,
+} from "./domain/types";
+import { ensureBudgetRows } from "./domain/budget";
+import { createBackup, getLocalBackups, saveLocalBackups } from "./storage/backupStorage";
+import { readStorageJSON, removeStorageKey, saveAppData, STORAGE_KEY } from "./storage/localStorage";
+import { migrateData } from "./storage/migrations";
+import { createJsonBlob } from "./importExport/jsonExport";
+import { buildExportSheets } from "./importExport/xlsxExport";
+import { xlsxSheetToObjects, type XlsxParseResult } from "./importExport/xlsxImport";
+import { DataTable as Table } from "./components/tables/DataTable";
+import { DateInput } from "./components/forms/DateInput";
+import {
+  KpiCard as KpiCardUI,
+  PageHeader,
+  SectionCard,
+  KpiGroup,
+} from "./components/ui";
+import { login as authLogin, getSession, logout as authLogout, refreshSession } from "./auth/authService";
+import { logAudit } from "./audit/auditService";
 
-function formatDateCL(value?: string): string {
-  if (!value) return "";
-  if (value.includes("/")) return value;
-  const parts = value.split("-");
-  if (parts.length !== 3) return value;
-  const [year, month, day] = parts;
-  return `${day}/${month}/${year}`;
-}
-
-function parseDateCL(value: string): string {
-  const clean = value.trim();
-  const parts = clean.split("/");
-  if (parts.length !== 3) return clean;
-  const [day, month, year] = parts;
-  return `${year.padStart(4, "0")}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-}
-
-type DateInputProps = {
-  value: string;
-  onChange: (isoValue: string) => void;
-  placeholder?: string;
-};
-
-function DateInput({ value, onChange, placeholder = "dd/mm/yyyy" }: DateInputProps) {
-  const [displayValue, setDisplayValue] = useState(formatDateCL(value));
-  const [errorMsg, setErrorMsg] = useState("");
-
-  useEffect(() => {
-    setDisplayValue(formatDateCL(value));
-    setErrorMsg("");
-  }, [value]);
-
-  return (
-    <div className="w-full">
-      <input
-        type="text"
-        value={displayValue}
-        placeholder={placeholder}
-        className={`border ${errorMsg ? "border-red-400 focus:ring-red-100 focus:border-red-400" : "border-slate-300 focus:ring-blue-500 focus:border-transparent"} rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 bg-white w-full font-sans text-slate-800`}
-        inputMode="numeric"
-        maxLength={10}
-        onChange={(e) => {
-          let v = e.target.value.replace(/[^\d]/g, "");
-
-          if (v.length >= 5) {
-            v = `${v.slice(0, 2)}/${v.slice(2, 4)}/${v.slice(4, 8)}`;
-          } else if (v.length >= 3) {
-            v = `${v.slice(0, 2)}/${v.slice(2, 4)}`;
-          }
-
-          setDisplayValue(v);
-          setErrorMsg("");
-
-          if (/^\d{2}\/\d{2}\/\d{4}$/.test(v)) {
-            onChange(parseDateCL(v));
-          } else if (v === "") {
-            onChange("");
-          }
-        }}
-        onBlur={() => {
-          if (displayValue && !/^\d{2}\/\d{2}\/\d{4}$/.test(displayValue)) {
-            setErrorMsg("Formato de fecha inválido. Usa dd/mm/aaaa.");
-          } else {
-            setErrorMsg("");
-          }
-        }}
-      />
-      {errorMsg && <p className="text-[11px] text-red-500 mt-1">{errorMsg}</p>}
-    </div>
-  );
-}
 import * as XLSX from "xlsx";
 import {
   Chart as ChartJS,
@@ -226,214 +205,15 @@ function SelectContact({ value, onChange, data }: { value: string; onChange: (v:
   return <select value={value} onChange={e => onChange(e.target.value)} className="border border-[#D9E2EC] rounded-xl px-4 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:border-[#93C5FD] focus:ring-2 focus:ring-blue-100 transition-colors"><option value="">Sin responsable</option>{activeContacts.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select>;
 }
 
-function isTableRowClosed(row: any, closedState?: string): boolean {
-  if (!closedState) return false;
-  if (row.estado === closedState || row.estadoOC === closedState || row.estadoBUK === closedState || row.proceso === closedState) return true;
-  if (row.etapa === "Completado" || row.estadoBUK === "Subido") return true;
-  return ["Cerrado", "Cerrada", "Completado", "Finalizado"].includes(row.estado);
-}
-
-function Table({ columns, rows, onEdit, onDelete, onDuplicate, onMarkClosed, closedState }: { columns: { key: string; label: string; render?: (row: any) => React.ReactNode }[]; rows: any[]; onEdit: (row: any) => void; onDelete: (id: string) => void; onDuplicate?: (row: any) => void; onMarkClosed?: (id: string) => void; closedState?: string; }) {
-  if (rows.length === 0) return (
-    <div className="text-center py-12 bg-white rounded-2xl border border-[#D9E2EC]">
-      <p className="text-slate-400 text-sm mb-3">Aún no hay registros en este módulo</p>
-      <p className="text-slate-400 text-xs">Usa el botón "Agregar nuevo" para crear el primero</p>
-    </div>
-  );
-  return (
-    <div className="overflow-x-auto rounded-2xl border border-[#D9E2EC]">
-      <table className="w-full text-sm text-left table-stripe">
-        <thead><tr className="bg-[#F1F5F9] text-slate-500 text-xs font-medium tracking-wide">{columns.map(c => <th key={c.key} className="px-4 py-3 whitespace-nowrap">{c.label}</th>)}<th className="px-4 py-3 w-[180px]">Acciones</th></tr></thead>
-        <tbody>{rows.map((row: any, i: number) => (<tr key={row.id || i} className="border-t border-[#F1F5F9] hover:bg-blue-50/40 transition-colors">{columns.map(c => (<td key={c.key} className="px-4 py-3 whitespace-nowrap">{c.render ? c.render(row) : (row as any)[c.key]}</td>))}<td className="px-4 py-3 whitespace-nowrap"><div className="flex gap-1.5"><button onClick={() => onEdit(row)} className="px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors">Editar</button>{onMarkClosed && closedState && !isTableRowClosed(row, closedState) && <button onClick={() => onMarkClosed(row.id)} className="px-3 py-1.5 text-xs font-medium bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors">Cerrar</button>}{onDuplicate && <button onClick={() => onDuplicate(row)} className="px-3 py-1.5 text-xs font-medium bg-violet-50 text-violet-700 rounded-lg border border-violet-100 hover:bg-violet-100 transition-colors">Duplicar</button>}<button onClick={() => onDelete(row.id)} className="px-3 py-1.5 text-xs font-medium bg-red-50 text-red-700 rounded-lg border border-red-100 hover:bg-red-100 transition-colors">Eliminar</button></div></td></tr>))}</tbody>
-      </table>
-    </div>
-  );
-}
-
-// ──────────────────────────────────────────────
-// TYPES
-// ──────────────────────────────────────────────
-
-interface Curso { id: string; curso: string; origen: string; area: string; solicitante: string; fechaSolicitud: string; fechaRequerida: string; estado: string; prioridad: string; nivelCritico: string; requiereOC: string; numeroOC: string; proveedor: string; responsableId: string; proximaAccion: string; fechaProximaAccion: string; bloqueadoPor: string; ultimaActualizacion: string; observaciones: string; }
-interface OC { id: string; numeroOC: string; categoriaOC: string; cursoAsociado: string; proveedor: string; monto: number; fechaSolicitud: string; fechaLimite: string; estadoOC: string; prioridad: string; accionPendiente: string; responsableId: string; bloqueadoPor: string; ultimaActualizacion: string; observaciones: string; }
-interface Practicante { id: string; nombre: string; area: string; especialidad: string; fechaInicio: string; fechaTermino: string; costoMensual: number; estado: string; responsableId: string; proximoPaso: string; fechaProximaAccion: string; bloqueadoPor: string; ultimaActualizacion: string; observaciones: string; }
-interface PresupuestoItem { id: string; concepto: string; presupuestoTotal: number; gastado: number; responsableId: string; ultimaActualizacion: string; observaciones: string; montoComprometidoManual?: number; montoEjecutadoManual?: number; modoCalculo?: string; }
-interface Proceso { id: string; proceso: string; tipo: string; estadoActual: string; queFalta: string; responsableId: string; fechaLimite: string; riesgo: string; prioridad: string; proximaAccion: string; fechaProximaAccion: string; bloqueadoPor: string; ultimaActualizacion: string; observaciones: string; }
-interface Diploma { id: string; cursoAsociado: string; participante: string; tipoDocumento: string; otec: string; etapa: string; fechaSolicitudOTEC: string; fechaRecepcionDoc: string; fechaEnvioParticipante: string; fechaSubidaBUK: string; estadoBUK: string; prioridad: string; responsableId: string; proximaAccion: string; fechaProximaAccion: string; bloqueadoPor: string; ultimaActualizacion: string; observaciones: string; }
-interface CargaSemanal { id: string; semana: string; cursosPlanificados: number; cursosUrgentesNuevos: number; cursosNoPlanificados: number; ocsNuevas: number; diplomasPendientes: number; procesosBloqueados: number; comentario: string; }
-interface Contacto { id: string; nombre: string; rol: string; areaEmpresa: string; correo: string; telefono: string; relacion: string; activo: string; observaciones: string; }
-interface Evaluacion { id: string; mes: string; ano: number; cargo: string; area: string; candidato: string; rut: string; tipoEvaluacion: string; proveedor: string; fechaSolicitud: string; fechaEvaluacion: string; fechaEntregaInforme: string; estado: string; resultado: string; prioridad: string; responsableId: string; costo: number; requiereOC: string; numeroOC: string; proximaAccion: string; fechaProximaAccion: string; bloqueadoPor: string; ultimaActualizacion: string; observaciones: string; }
-
-interface ValeGas { id: string; colaborador: string; contactoId: string; area: string; periodo: string; fechaEntrega: string; totalValesAsignados: number; valesUsados: number; descuentoDiario: number; diasDescuento: number; totalDescontado: number; saldoVales: number; estado: string; responsableId: string; fechaProximaRevision: string; observaciones: string; ultimaActualizacion: string; }
-
-interface ValeGasOrg { id: string; fechaRegistro: string; periodo: string; tipoMovimiento: string; cantidadVales: number; motivo: string; responsableId: string; observaciones: string; ultimaActualizacion: string; }
-
-interface ProcesoReclutamiento {
-  id: string;
-  reclutamiento: string;
-  plantaCentro: string;
-  tipoVacante: string;
-  mesIngreso: string;
-  revisadoPPTO: string;
-  procesoBuk: string;
-  publicado: string;
-  seleccionCV: string;
-  cvSeleccionadoBuk: string;
-  entrevistaJefatura: string;
-  entrevistaGP: string;
-  testPsicolaboral: string;
-  testHogan: string;
-  seleccionado: string;
-  cartaOferta: string;
-  envioCartaOferta: string;
-  firmaCartaOferta: string;
-  fechaIngreso: string;
-  reclutador: string;
-  proceso: string;
-  reclutadorId: string;
-  prioridad: string;
-  bloqueadoPor: string;
-  proximaAccion: string;
-  fechaProximaAccion: string;
-  observaciones: string;
-  ultimaActualizacion: string;
-}
-
-interface AppData { cursos: Curso[]; ocs: OC[]; practicantes: Practicante[]; presupuesto: PresupuestoItem[]; procesos: Proceso[]; diplomas: Diploma[]; cargaSemanal: CargaSemanal[]; contactos: Contacto[]; evaluacionesPsicolaborales: Evaluacion[]; valesGas: ValeGas[]; valesGasOrganizacion: ValeGasOrg[]; reclutamiento: ProcesoReclutamiento[]; meta: { version: string; ultimaExportacion: string; actualizado: string }; }
-
 // ──────────────────────────────────────────────
 // BACKUPS
 // ──────────────────────────────────────────────
-
-interface BackupItem {
-  id: string;
-  fecha: string;
-  motivo: string;
-  data: AppData;
-  tamaño: string;
-}
-
-function getLocalBackups(): BackupItem[] {
-  try {
-    const raw = localStorage.getItem("controlOperativo_backups");
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveLocalBackups(backups: BackupItem[]): boolean {
-  try {
-    localStorage.setItem("controlOperativo_backups", JSON.stringify(backups));
-    return true;
-  } catch (e: any) {
-    if (e.name === "QuotaExceededError" || e.code === 22) {
-      return false;
-    }
-    return false;
-  }
-}
-
-function formatBytes(bytes: number, decimals = 1) {
-  if (bytes === 0) return "0 Bytes";
-  const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ["Bytes", "KB", "MB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
-}
-
-function ensureBudgetRows(presupuesto: PresupuestoItem[]): PresupuestoItem[] {
-  const baseConcepts = [
-    { key: "curso", concepto: "Cursos / Capacitaciones", modo: "Calculado desde registros" },
-    { key: "oc", concepto: "Órdenes de Compra (OC)", modo: "Calculado desde registros" },
-    { key: "practicante", concepto: "Practicantes", modo: "Calculado desde registros" },
-    { key: "evaluaci", concepto: "Evaluaciones Psicolaborales", modo: "Calculado desde registros" },
-    { key: "diploma", concepto: "Diplomas / Certificados", modo: "Manual" }
-  ];
-
-  const updated = [...(presupuesto || [])];
-  baseConcepts.forEach(bc => {
-    const exists = updated.some(p => p.concepto.toLowerCase().includes(bc.key));
-    if (!exists) {
-      updated.push({
-        id: "pres_" + bc.key + "_" + genId(),
-        concepto: bc.concepto,
-        presupuestoTotal: 0,
-        gastado: 0,
-        responsableId: "",
-        ultimaActualizacion: hoy(),
-        observaciones: "Concepto inicial base en $0",
-        montoComprometidoManual: 0,
-        montoEjecutadoManual: 0,
-        modoCalculo: bc.modo
-      });
-    }
-  });
-  return updated;
-}
-
-function createBackup(data: AppData, motivo: string): boolean {
-  const backups = getLocalBackups();
-  const stringified = JSON.stringify(data);
-  const size = formatBytes(new Blob([stringified]).size);
-
-  const newBackup: BackupItem = {
-    id: genId(),
-    fecha: new Date().toISOString(),
-    motivo,
-    data,
-    tamaño: size,
-  };
-
-  const updated = [newBackup, ...backups];
-  if (updated.length > 10) {
-    updated.splice(10);
-  }
-
-  return saveLocalBackups(updated);
-}
 
 // ──────────────────────────────────────────────
 // HELPERS
 // ──────────────────────────────────────────────
 
-const genId = (prefix = "id") => {
-  if (typeof crypto !== "undefined") {
-    if (typeof crypto.randomUUID === "function") {
-      return `${prefix}_${crypto.randomUUID()}`;
-    }
-    if (typeof crypto.getRandomValues === "function") {
-      const arr = new Uint32Array(3);
-      crypto.getRandomValues(arr);
-      return `${prefix}_${arr[0].toString(36)}-${arr[1].toString(36)}-${arr[2].toString(36)}`;
-    }
-  }
-  return `${prefix}_${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-};
-const hoy = () => new Date().toISOString().slice(0, 10);
-const ahora = () => new Date().toISOString();
-const toDDMMYYYY = (iso: string) => formatDateCL(iso);
 const fmtCLP = (n: number) => n != null ? "$" + n.toLocaleString("es-CL") : "-";
-const durMesesEntre = (ini: string, fin: string): number => {
-  if (!ini || !fin) return 0;
-  const d1 = new Date(ini);
-  const d2 = new Date(fin);
-  const m = Math.round((d2.getTime() - d1.getTime()) / (365.25 * 24 * 3600 * 1000) * 12);
-  return m > 0 ? m : 1;
-};
-
-function semaforo(fechaLimite: string): { label: string; color: string; order: number } {
-  if (!fechaLimite) return { label: "Sin fecha", color: "#9CA3AF", order: 10 };
-  const hoyDate = new Date(hoy());
-  const f = new Date(fechaLimite.slice(0, 10));
-  const diff = Math.ceil((f.getTime() - hoyDate.getTime()) / 86400000);
-  if (diff < 0) return { label: "Vencido", color: "#DC2626", order: 1 };
-  if (diff === 0) return { label: "Vence hoy", color: "#EA580C", order: 2 };
-  if (diff <= 3) return { label: "1-3 días", color: "#F59E0B", order: 3 };
-  if (diff <= 7) return { label: "4-7 días", color: "#FBBF24", order: 4 };
-  return { label: "Sin urgencia", color: "#16A34A", order: 5 };
-}
 
 const ETAPAS_COMPLETADAS_VALUES = ["Sí", "Realizado", "Realizada", "Finalizado", "Emitida", "Aceptado", "Solicitada"];
 const ETAPAS_NO_APLICA_VALUES = ["N/A"];
@@ -472,68 +252,7 @@ function calcPctRecl(r: ProcesoReclutamiento): number {
   return aplicables === 0 ? 0 : Math.round((completadas / aplicables) * 100);
 }
 
-export function normalizarReclutamientoXLSX(val: string, campo: string): string {
-  if (!val) return "";
-  const v = val.trim();
-  if (v.toUpperCase() === "SI") return "Sí";
-  if (v.toUpperCase() === "NO") return "No";
-  if (campo === "reclutamiento" && v.toLowerCase().includes("prompci")) return "Promoción interna";
-  if (campo === "proceso") return v.replace(/\s+$/, "");
-  return v;
-}
-
 // ── XLSX IMPORT HELPERS ──────────────────────────────────────────────
-
-function normalizeDateFromXlsx(value: any): string {
-  if (value === null || value === undefined || value === "") return "";
-  if (typeof value === "number") {
-    const date = new Date(Math.round((value - 25569) * 86400 * 1000));
-    if (isNaN(date.getTime())) return "";
-    const d = String(date.getDate()).padStart(2, "0");
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const y = date.getFullYear();
-    return `${y}-${m}-${d}`;
-  }
-  const s = String(value).trim();
-  if (!s) return "";
-  const dmy = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-  if (dmy) return `${dmy[3]}-${dmy[2].padStart(2,"0")}-${dmy[1].padStart(2,"0")}`;
-  const ymd = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
-  if (ymd) return `${ymd[1]}-${ymd[2].padStart(2,"0")}-${ymd[3].padStart(2,"0")}`;
-  return "";
-}
-
-function parseXlsxNumber(value: any): number {
-  if (value === null || value === undefined || value === "") return 0;
-  const n = Number(String(value).replace(/[$\.,\s]/g, "").replace(",", "."));
-  if (isNaN(n) || !isFinite(n)) return 0;
-  return n;
-}
-
-function parseXlsxMoney(value: any): number {
-  if (value === null || value === undefined || value === "") return 0;
-  const cleaned = String(value).replace(/[$\s]/g, "").replace(/\./g, "").replace(",", ".");
-  const n = Number(cleaned);
-  if (isNaN(n) || !isFinite(n)) return 0;
-  return Math.max(0, n);
-}
-
-function normalizeYesNo(value: any): string {
-  if (!value) return "";
-  const v = String(value).trim().toUpperCase();
-  if (v === "SI" || v === "SÍ" || v === "YES" || v === "S") return "Sí";
-  if (v === "NO" || v === "N") return "No";
-  return String(value).trim();
-}
-
-function normalizeReclutamientoCampo(value: any, campo: string): string {
-  if (!value) return "";
-  const v = String(value).trim();
-  if (campo === "reclutamiento" && v.toLowerCase().includes("prompci")) return "Promoción interna";
-  if (campo === "proceso") return v.replace(/\s+$/, "");
-  if (["procesoBuk", "publicado", "cvSeleccionadoBuk", "seleccionado", "firmaCartaOferta"].includes(campo)) return normalizeYesNo(v);
-  return v;
-}
 
 function resolveResponsable(nombre: string, contactos: any[], prefijo: string = "Interno"): { id: string; contactosActualizados: any[] } {
   if (!nombre || nombre.trim() === "" || nombre === "Sin responsable") return { id: "", contactosActualizados: contactos };
@@ -554,99 +273,10 @@ function resolveResponsable(nombre: string, contactos: any[], prefijo: string = 
   return { id: newContact.id, contactosActualizados: [...contactos, newContact] };
 }
 
-function xlsxSheetToObjects(ws: any): any[] {
-  if (!ws) return [];
-  try {
-    return XLSX.utils.sheet_to_json(ws, { defval: "", raw: false });
-  } catch { return []; }
-}
-
-interface XlsxParseResult {
-  hojas: Array<{
-    nombre: string;
-    modulo: string;
-    total: number;
-    validos: number;
-    advertencias: number;
-    errores: number;
-    registros: any[];
-    erroresList: string[];
-    advertenciasList: string[];
-  }>;
-  contactosNuevos: any[];
-  parsedData: Partial<AppData>;
-  tieneErroresCriticos: boolean;
-}
-
-function isClosedRecord(row: any, moduleKey: string): boolean {
-  if (!row) return false;
-  switch (moduleKey) {
-    case "cursos":
-      return ["Cerrado", "Ejecutado"].includes(row.estado);
-    case "ocs":
-      return row.estadoOC === "Cerrada" || row.estadoOC === "Emitida" || row.estadoOC === "Enviada proveedor";
-    case "practicantes":
-      return row.estado === "Finalizado";
-    case "procesos":
-      return ["Cerrado", "Finalizado", "Completado"].includes(row.estadoActual);
-    case "diplomas":
-      return row.etapa === "Completado" || row.estadoBUK === "Subido";
-    case "evaluaciones":
-    case "evaluacionesPsicolaborales":
-      return row.estado === "Cerrada";
-    default:
-      return false;
-  }
-}
-
 function getResponsableName(data: AppData, id: string): string {
   if (!id) return "Sin responsable";
   const c = data.contactos.find(x => x.id === id);
   return c ? c.nombre : "Sin responsable";
-}
-
-interface WeekInfo {
-  number: number;
-  label: string;
-  startDateStr: string;
-  endDateStr: string;
-  rangeLabel: string;
-  monthLabel: string;
-}
-
-function getWeeksForYear(year: number): WeekInfo[] {
-  const weeks: WeekInfo[] = [];
-  const monthNames = [
-    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
-  ];
-  // ISO week 1 starts on the Monday of the week containing Jan 4
-  const jan4 = new Date(year, 0, 4);
-  const dayOfWeek = jan4.getDay() || 7; // 1=Mon … 7=Sun
-  const firstMonday = new Date(jan4.getTime() - (dayOfWeek - 1) * 86400000);
-  for (let w = 1; w <= 53; w++) {
-    const monday = new Date(firstMonday.getTime() + (w - 1) * 7 * 86400000);
-    const sunday = new Date(monday.getTime() + 6 * 86400000);
-    // Stop if the week belongs entirely to the next year
-    if (monday.getFullYear() > year && w > 52) break;
-    const pad = (n: number) => n.toString().padStart(2, "0");
-    const fmt = (d: Date) => `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
-    const fmtISO = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-    const wednesday = new Date(monday.getTime() + 2 * 86400000);
-    weeks.push({
-      number: w,
-      label: `Semana ${w}`,
-      startDateStr: fmtISO(monday),
-      endDateStr: fmtISO(sunday),
-      rangeLabel: `${fmt(monday)} - ${fmt(sunday)}`,
-      monthLabel: monthNames[wednesday.getMonth()]
-    });
-  }
-  return weeks;
-}
-
-function normalizeName(name: string): string {
-  return name.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
 // ──────────────────────────────────────────────
@@ -757,154 +387,23 @@ function crearDatosEjemplo(): AppData {
   };
 }
 
-// ──────────────────────────────────────────────
-// LOCAL STORAGE & MIGRATION
-// ──────────────────────────────────────────────
-
-const STORAGE_KEY = "control_operativo_kata_v5";
-
-function migrateData(data: any): AppData {
-  const oldData: any = data || crearDatosEjemplo();
-
-  // Initialize final contacts with a copy of old ones, or an empty array
-  const finalContactos: Contacto[] = [...(oldData.contactos || [])];
-
-  // Map of normalized name to contact ID
-  const nameToIdMap = new Map<string, string>();
-
-  // Populate map with existing contacts
-  finalContactos.forEach(c => {
-    // If contact is missing active state, ensure it is set to "Sí"
-    if (!c.activo) {
-      c.activo = "Sí";
-    }
-    const norm = normalizeName(c.nombre);
-    if (norm) {
-      nameToIdMap.set(norm, c.id);
-    }
-  });
-
-  // Helper function to resolve or create a contact from raw name
-  const addContactFromName = (name: string): string => {
-    if (!name || name === "Sin responsable" || name === "") return "";
-    const norm = normalizeName(name);
-    
-    // Check if it already exists
-    if (nameToIdMap.has(norm)) {
-      return nameToIdMap.get(norm)!;
-    }
-
-    // Otherwise, create a new contact
-    const id = genId();
-    finalContactos.push({
-      id,
-      nombre: name,
-      rol: "Responsable",
-      areaEmpresa: "",
-      correo: "",
-      telefono: "",
-      relacion: "Interno",
-      activo: "Sí",
-      observaciones: "Migrado de responsable antiguo"
-    });
-    nameToIdMap.set(norm, id);
-    return id;
-  };
-
-  // Helper to migrate a single item's responsableId safely
-  const migrateResponsableId = (item: any): string => {
-    return item.responsableId || (item.responsable ? addContactFromName(item.responsable) : "");
-  };
-
-  // Migrate modules safely preserving existing responsableId
-  const cursos: Curso[] = (oldData.cursos || []).map((c: any) => ({
-    ...c,
-    id: c.id || genId(),
-    responsableId: migrateResponsableId(c)
-  }) as Curso);
-
-  const ocs: OC[] = (oldData.ocs || []).map((o: any) => ({
-    ...o,
-    id: o.id || genId(),
-    categoriaOC: o.categoriaOC || "",
-    responsableId: migrateResponsableId(o)
-  }) as OC);
-
-  const practicantes: Practicante[] = (oldData.practicantes || []).map((p: any) => ({
-    ...p,
-    id: p.id || genId(),
-    responsableId: migrateResponsableId(p)
-  }) as Practicante);
-
-  const presupuesto: PresupuestoItem[] = (oldData.presupuesto || []).map((p: any) => ({
-    ...p,
-    id: p.id || genId(),
-    responsableId: migrateResponsableId(p)
-  }) as PresupuestoItem);
-
-  const procesos: Proceso[] = (oldData.procesos || []).map((p: any) => ({
-    ...p,
-    id: p.id || genId(),
-    responsableId: migrateResponsableId(p)
-  }) as Proceso);
-
-  const diplomas: Diploma[] = (oldData.diplomas || []).map((d: any) => ({
-    ...d,
-    id: d.id || genId(),
-    responsableId: migrateResponsableId(d)
-  }) as Diploma);
-
-  const evaluacionesPsicolaborales: Evaluacion[] = (oldData.evaluacionesPsicolaborales || []).map((e: any) => ({
-    ...e,
-    id: e.id || genId(),
-    responsableId: migrateResponsableId(e)
-  }) as Evaluacion);
-
-  const valesGas: ValeGas[] = (oldData.valesGas || []).map((v: any) => ({ ...v, id: v.id || genId() }));
-  const valesGasOrganizacion: ValeGasOrg[] = (oldData.valesGasOrganizacion || []).map((v: any) => ({ ...v, id: v.id || genId() }));
-  const reclutamiento: ProcesoReclutamiento[] = (oldData.reclutamiento || []).map((r: any) => ({ ...r, id: r.id || genId(), bloqueadoPor: r.bloqueadoPor || "Sin bloqueo" }));
-
-  return {
-    cursos,
-    ocs,
-    practicantes,
-    presupuesto,
-    procesos,
-    diplomas,
-    cargaSemanal: oldData.cargaSemanal || [],
-    contactos: finalContactos,
-    evaluacionesPsicolaborales,
-    valesGas,
-    valesGasOrganizacion,
-    reclutamiento,
-    meta: {
-      version: "1.1",
-      ultimaExportacion: oldData.meta?.ultimaExportacion || "",
-      actualizado: ahora()
-    },
-  };
-}
-
 function cargarDatos(): AppData {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = migrateData(JSON.parse(raw));
-      parsed.presupuesto = ensureBudgetRows(parsed.presupuesto);
-      return parsed;
-    }
-  } catch { /* ignore */ }
+  const raw = readStorageJSON<unknown>(STORAGE_KEY);
+  if (raw) {
+    const parsed = migrateData(raw, crearDatosEjemplo());
+    parsed.presupuesto = ensureBudgetRows(parsed.presupuesto);
+    return parsed;
+  }
   const de = crearDatosEjemplo();
   de.presupuesto = ensureBudgetRows(de.presupuesto);
   return de;
 }
 
 function guardarDatos(data: AppData) {
-  data.meta.actualizado = ahora();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  saveAppData(STORAGE_KEY, data);
 }
 
-function limpiarDatos() { localStorage.removeItem(STORAGE_KEY); }
+function limpiarDatos() { removeStorageKey(STORAGE_KEY); }
 
 // ──────────────────────────────────────────────
 // COMPONENTS
@@ -974,11 +473,16 @@ function Login({ onLogin }: { onLogin: () => void }) {
   const [pass, setPass] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (user === "KataS" && pass === "Tota95") {
-      sessionStorage.setItem("kata_auth", "true");
+    setLoading(true);
+    setError("");
+    const session = await authLogin(user.trim(), pass);
+    setLoading(false);
+    if (session) {
+      logAudit("login", { detail: `Usuario ${session.username} inició sesión` });
       onLogin();
     } else {
       setError("Usuario o clave incorrectos");
@@ -1006,7 +510,7 @@ function Login({ onLogin }: { onLogin: () => void }) {
             </div>
           </div>
           {error && <p className="text-red-600 text-sm">{error}</p>}
-          <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-semibold">Ingresar</button>
+          <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-semibold disabled:opacity-60">{loading ? "Verificando…" : "Ingresar"}</button>
         </form>
         <p className="text-xs text-slate-400 text-center mt-4">Acceso local básico. Para seguridad real se requiere backend.</p>
       </div>
@@ -1018,7 +522,7 @@ function Login({ onLogin }: { onLogin: () => void }) {
 // MAIN APP
 // ──────────────────────────────────────────────
 
-type Modulo = "inicio" | "midia" | "dashboard" | "cursos" | "ocs" | "practicantes" | "presupuesto" | "procesos" | "diplomas" | "evaluaciones" | "cargaSemanal" | "contactos" | "valesGas" | "reclutamiento" | "configuracion";
+type Modulo = ModuloKey;
 
 type NavGroup = { group: string; items: { key: Modulo; label: string; icon: string }[] };
 const navGroups: NavGroup[] = [
@@ -1050,7 +554,7 @@ const navGroups: NavGroup[] = [
 ];
 
 export default function App() {
-  const [authenticated, setAuthenticated] = useState(false);
+  const [authenticated, setAuthenticated] = useState(() => getSession() !== null);
   const [data, setData] = useState<AppData>(cargarDatos);
   const [activeModulo, setActiveModulo] = useState<Modulo>("inicio");
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -1071,9 +575,30 @@ export default function App() {
 
   const toggleFocusMode = () => { const v = !focusMode; setFocusMode(v); localStorage.setItem("kata_focus_mode", String(v)); };
 
+  // Session expiry check — every 60 s verify session is still valid
   useEffect(() => {
-    if (sessionStorage.getItem("kata_auth") === "true") setAuthenticated(true);
-  }, []);
+    const interval = setInterval(() => {
+      if (authenticated && getSession() === null) {
+        logAudit("logout", { detail: "Sesión expirada automáticamente" });
+        authLogout();
+        setAuthenticated(false);
+      }
+    }, 60_000);
+    return () => clearInterval(interval);
+  }, [authenticated]);
+
+  // Refresh session on user interaction (throttled to once per minute)
+  useEffect(() => {
+    if (!authenticated) return;
+    let lastRefresh = 0;
+    const handler = () => {
+      const now = Date.now();
+      if (now - lastRefresh > 60_000) { refreshSession(); lastRefresh = now; }
+    };
+    window.addEventListener("click", handler);
+    window.addEventListener("keydown", handler);
+    return () => { window.removeEventListener("click", handler); window.removeEventListener("keydown", handler); };
+  }, [authenticated]);
 
   useEffect(() => { guardarDatos(data); }, [data]);
 
@@ -1091,8 +616,9 @@ export default function App() {
   // ── EXPORT / IMPORT ────────────────────────
 
   const exportJSON = () => {
+    logAudit("data:export", { detail: "Exportación JSON completa" });
     const backupFileName = `total-control-rh-backup-${hoy()}.json`;
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const blob = createJsonBlob(data);
     const a = document.createElement("a");
     const url = URL.createObjectURL(blob);
     a.href = url;
@@ -1119,7 +645,7 @@ export default function App() {
             toastShow("Respaldo corrupto o inválido");
             return;
           }
-          const imported = migrateData(parsed);
+          const imported = migrateData(parsed, crearDatosEjemplo());
           runBackupAndToast("importar");
           setData(imported); toastShow("Datos importados exitosamente");
         } catch { toastShow("Error al leer el archivo JSON"); }
@@ -1130,21 +656,9 @@ export default function App() {
   };
 
   const exportXLSX = () => {
+    logAudit("data:export", { detail: "Exportación XLSX completa" });
     const wb = XLSX.utils.book_new();
-    const sheets: [string, any[]][] = [
-      ["Cursos", data.cursos.map(c => ({ ...c, responsable: getResponsableName(data, c.responsableId) }))],
-      ["OCs", data.ocs.map(o => ({ ...o, responsable: getResponsableName(data, o.responsableId) }))],
-      ["Practicantes", data.practicantes.map(p => ({ ...p, responsable: getResponsableName(data, p.responsableId) }))],
-      ["Presupuesto", data.presupuesto.map(p => ({ ...p, disponible: p.presupuestoTotal - p.gastado, porcentajeUtilizado: Math.round((p.gastado / p.presupuestoTotal) * 100), responsable: getResponsableName(data, p.responsableId) }))],
-      ["Procesos", data.procesos.map(p => ({ ...p, responsable: getResponsableName(data, p.responsableId) }))],
-      ["Diplomas", data.diplomas.map(d => ({ ...d, responsable: getResponsableName(data, d.responsableId) }))],
-      ["Evaluaciones Psicolaborales", data.evaluacionesPsicolaborales.map(e => ({ ...e, responsable: getResponsableName(data, e.responsableId) }))],
-      ["Carga Semanal", data.cargaSemanal],
-      ["Contactos", data.contactos],
-      ["Vales de Gas", data.valesGas.map(v => ({ ...v, responsable: getResponsableName(data, v.responsableId) }))],
-      ["Vales Gas Organización", (data.valesGasOrganizacion || []).map(v => ({ ...v, responsable: getResponsableName(data, v.responsableId) }))],
-      ["Reclutamiento", (data.reclutamiento || []).map(r => ({ ...r, responsable: getResponsableName(data, r.reclutadorId) }))],
-    ];
+    const sheets = buildExportSheets(data, getResponsableName);
     sheets.forEach(([name, rows]) => { const ws = XLSX.utils.json_to_sheet(rows); XLSX.utils.book_append_sheet(wb, ws, name); });
     XLSX.writeFile(wb, `control_operativo_kata_v5_${hoy()}.xlsx`);
     const timeNow = ahora();
@@ -1230,6 +744,15 @@ export default function App() {
   };
 
   const parseXlsxFile = async (file: File): Promise<XlsxParseResult> => {
+    const MAX_FILE_MB = 10;
+    if (file.size > MAX_FILE_MB * 1024 * 1024) {
+      toastShow(`⚠ El archivo supera los ${MAX_FILE_MB} MB permitidos.`);
+      return { hojas: [], contactosNuevos: [], parsedData: {}, tieneErroresCriticos: true };
+    }
+    if (!file.name.match(/\.(xlsx|xls)$/i)) {
+      toastShow("⚠ Solo se aceptan archivos .xlsx o .xls");
+      return { hojas: [], contactosNuevos: [], parsedData: {}, tieneErroresCriticos: true };
+    }
     const buffer = await file.arrayBuffer();
     const wb = XLSX.read(buffer, { type: "array", cellDates: false });
 
@@ -1257,7 +780,13 @@ export default function App() {
       const conAdv = registros.filter((r: any) => r._hasWarning).length;
       if (conError > 0) result.tieneErroresCriticos = true;
       result.hojas.push({ nombre: sheetNames[0], modulo, total: rows.length, validos, advertencias: conAdv, errores: conError, registros, erroresList, advertenciasList });
-      (result.parsedData as any)[modulo] = registros.filter((r: any) => !r._hasError).map((r: any) => { const { _hasError, _hasWarning, _errorMsg, ...clean } = r; return clean; });
+      (result.parsedData as any)[modulo] = registros.filter((r: any) => !r._hasError).map((r: any) => {
+        const clean = { ...r };
+        delete clean._hasError;
+        delete clean._hasWarning;
+        delete clean._errorMsg;
+        return clean;
+      });
     };
 
     // CONTACTOS
@@ -1640,7 +1169,7 @@ export default function App() {
     }});
   };
 
-  const logout = () => { sessionStorage.removeItem("kata_auth"); setAuthenticated(false); toastShow("Sesión cerrada"); };
+  const logout = () => { logAudit("logout", { detail: "Cierre de sesión manual" }); authLogout(); setAuthenticated(false); toastShow("Sesión cerrada"); };
 
   // ── CRUD OPERATIONS ────────────────────────
 
@@ -1676,6 +1205,7 @@ export default function App() {
       }
     }
     setConfirm({ msg: "¿Eliminar este registro? Esta acción no se puede deshacer.", cb: () => {
+      logAudit("record:delete", { module: modulo, recordId: id });
       setData(d => { const nd = { ...d }; (nd as any)[modulo] = (nd as any)[modulo].filter((x: any) => x.id !== id); return nd; });
       toastShow("Registro eliminado."); setConfirm(null);
     }});
@@ -1686,27 +1216,7 @@ export default function App() {
     setData(d => {
       const nd = { ...d };
       const arr = [...(nd as any)[modulo]];
-      
-      let extraFields = {};
-      if (modulo === "cargaSemanal") {
-        extraFields = {
-          semana: item.semana ? `${item.semana} (copia)` : "",
-          comentario: item.comentario ? `${item.comentario} (Copia de registro anterior)` : "Copia de registro anterior"
-        };
-      }
-
-      const newItem = {
-        ...item,
-        id: genId(),
-        ultimaActualizacion: hoy(),
-        curso: item.curso ? `${item.curso} (copia)` : "",
-        nombre: item.nombre ? `${item.nombre} (copia)` : "",
-        proceso: item.proceso ? `${item.proceso} (copia)` : "",
-        cargo: item.cargo ? `${item.cargo} (copia)` : "",
-        semana: item.semana ? `${item.semana} (copia)` : "",
-        contacto: item.contacto ? `${item.contacto} (copia)` : "",
-        ...extraFields
-      };
+      const newItem = duplicateRecord(modulo, item, genId());
       arr.push(newItem);
       (nd as any)[modulo] = arr;
       return nd;
@@ -1715,11 +1225,13 @@ export default function App() {
   };
 
   const saveItem = (modulo: string, item: any) => {
-    runBackupAndToast(editItem ? "editar" : "crear");
+    const isEdit = !!editItem;
+    runBackupAndToast(isEdit ? "editar" : "crear");
+    logAudit(isEdit ? "record:edit" : "record:create", { module: modulo, recordId: item.id || editItem?.id });
     setData(d => {
       const nd = { ...d };
       const arr = [...(nd as any)[modulo]];
-      if (editItem) {
+      if (isEdit) {
         const idx = arr.findIndex((x: any) => x.id === editItem.id);
         if (idx >= 0) arr[idx] = { ...item, ultimaActualizacion: hoy() };
       } else {
@@ -1729,7 +1241,7 @@ export default function App() {
       return nd;
     });
     closeModal();
-    toastShow(editItem ? "Registro actualizado" : "Registro creado");
+    toastShow(isEdit ? "Registro actualizado" : "Registro creado");
   };
 
   // ── CAPTURA RÁPIDA ─────────────────────────
@@ -1861,28 +1373,7 @@ export default function App() {
       const arr = [...(nd as any)[modulo]];
       const idx = arr.findIndex((x: any) => x.id === id);
       if (idx >= 0) {
-        if (modulo === "diplomas" && closedState === "Subido") {
-          arr[idx] = {
-            ...arr[idx],
-            etapa: "Completado",
-            estadoBUK: "Subido",
-            fechaSubidaBUK: hoy(),
-            bloqueadoPor: "Sin bloqueo",
-            ultimaActualizacion: hoy()
-          };
-        } else {
-          const baseUpdate = {
-            ...arr[idx],
-            ultimaActualizacion: hoy()
-          };
-          if (modulo === "ocs") {
-            arr[idx] = { ...baseUpdate, estadoOC: closedState };
-          } else if (modulo === "reclutamiento") {
-            arr[idx] = { ...baseUpdate, proceso: closedState };
-          } else {
-            arr[idx] = { ...baseUpdate, estado: closedState };
-          }
-        }
+        arr[idx] = markRecordClosed(modulo, arr[idx], closedState);
       }
       (nd as any)[modulo] = arr;
       return nd;
@@ -1920,77 +1411,71 @@ export default function App() {
 
     data.cursos.filter(c => !isClosedRecord(c, "cursos")).forEach(c => {
       const s = semaforo(c.fechaProximaAccion || c.fechaRequerida);
-      let order = 0;
-      if (s.label === "Vencido") order = 1;
-      else if (c.prioridad === "P1 Crítico") order = 2;
-      else if (c.bloqueadoPor !== "Sin bloqueo") order = 3;
-      else if (s.label === "Vence hoy") order = 4;
-      else if (s.label === "1-3 días") order = 5;
-      else if (c.ultimaActualizacion && c.ultimaActualizacion < hace7Str) order = 8;
-      else if (c.prioridad === "P2 Alto") order = 9;
-      else if (c.prioridad === "P3 Medio") order = 10;
-      else order = 11;
+      const order = s.label === "Vencido" ? 1
+        : c.prioridad === "P1 Crítico" ? 2
+        : c.bloqueadoPor !== "Sin bloqueo" ? 3
+        : s.label === "Vence hoy" ? 4
+        : s.label === "1-3 días" ? 5
+        : c.ultimaActualizacion && c.ultimaActualizacion < hace7Str ? 8
+        : c.prioridad === "P2 Alto" ? 9
+        : c.prioridad === "P3 Medio" ? 10
+        : 11;
       bandeja.push({ order, tipo: "Curso", nombre: c.curso, prioridad: c.prioridad, estado: c.estado, bloqueadoPor: c.bloqueadoPor, proximaAccion: c.proximaAccion, fechaProximaAccion: c.fechaProximaAccion, responsableId: c.responsableId, modulo: "cursos" });
     });
 
     data.ocs.filter(o => !isClosedRecord(o, "ocs")).forEach(o => {
       const s = semaforo(o.fechaLimite);
-      let order = 0;
-      if (s.label === "Vencido") order = 1;
-      else if (o.prioridad === "P1 Crítico") order = 2;
-      else if (o.bloqueadoPor !== "Sin bloqueo") order = 3;
-      else if (s.label === "Vence hoy") order = 4;
-      else if (s.label === "1-3 días") order = 5;
-      else if (o.ultimaActualizacion && o.ultimaActualizacion < hace7Str) order = 8;
-      else order = 10;
+      const order = s.label === "Vencido" ? 1
+        : o.prioridad === "P1 Crítico" ? 2
+        : o.bloqueadoPor !== "Sin bloqueo" ? 3
+        : s.label === "Vence hoy" ? 4
+        : s.label === "1-3 días" ? 5
+        : o.ultimaActualizacion && o.ultimaActualizacion < hace7Str ? 8
+        : 10;
       bandeja.push({ order, tipo: "OC", nombre: `${o.numeroOC} - ${o.cursoAsociado}`, prioridad: o.prioridad, estado: o.estadoOC, bloqueadoPor: o.bloqueadoPor, proximaAccion: o.accionPendiente, fechaProximaAccion: o.fechaLimite, responsableId: o.responsableId, modulo: "ocs" });
     });
 
     data.diplomas.filter(d => !isClosedRecord(d, "diplomas")).forEach(d => {
       const s = semaforo(d.fechaProximaAccion);
-      let order = 0;
-      if (d.etapa === "Subir a BUK" && d.estadoBUK === "Pendiente subir") order = 6;
-      else if (s.label === "Vencido") order = 1;
-      else if (d.prioridad === "P1 Crítico") order = 2;
-      else if (d.bloqueadoPor !== "Sin bloqueo") order = 3;
-      else if (s.label === "Vence hoy") order = 4;
-      else if (s.label === "1-3 días") order = 5;
-      else order = 10;
+      const order = d.etapa === "Subir a BUK" && d.estadoBUK === "Pendiente subir" ? 6
+        : s.label === "Vencido" ? 1
+        : d.prioridad === "P1 Crítico" ? 2
+        : d.bloqueadoPor !== "Sin bloqueo" ? 3
+        : s.label === "Vence hoy" ? 4
+        : s.label === "1-3 días" ? 5
+        : 10;
       bandeja.push({ order, tipo: "Diploma/Cert/Lic", nombre: `${d.tipoDocumento} - ${d.participante}`, prioridad: d.prioridad, estado: d.etapa, bloqueadoPor: d.bloqueadoPor, proximaAccion: d.proximaAccion, fechaProximaAccion: d.fechaProximaAccion, responsableId: d.responsableId, modulo: "diplomas" });
     });
 
     data.evaluacionesPsicolaborales.filter(e => !isClosedRecord(e, "evaluacionesPsicolaborales")).forEach(e => {
       const s = semaforo(e.fechaProximaAccion || e.fechaEntregaInforme);
-      let order = 0;
-      if (s.label === "Vencido") order = 1;
-      else if (e.prioridad === "P1 Crítico") order = 2;
-      else if (e.bloqueadoPor !== "Sin bloqueo") order = 3;
-      else if (e.estado === "Realizada" && e.resultado === "Pendiente") order = 7;
-      else if (s.label === "Vence hoy") order = 4;
-      else if (s.label === "1-3 días") order = 5;
-      else order = 10;
+      const order = s.label === "Vencido" ? 1
+        : e.prioridad === "P1 Crítico" ? 2
+        : e.bloqueadoPor !== "Sin bloqueo" ? 3
+        : e.estado === "Realizada" && e.resultado === "Pendiente" ? 7
+        : s.label === "Vence hoy" ? 4
+        : s.label === "1-3 días" ? 5
+        : 10;
       bandeja.push({ order, tipo: "Evaluación Psico", nombre: `${e.cargo} - ${e.candidato}`, prioridad: e.prioridad, estado: e.estado, bloqueadoPor: e.bloqueadoPor, proximaAccion: e.proximaAccion, fechaProximaAccion: e.fechaProximaAccion, responsableId: e.responsableId, modulo: "evaluaciones" });
     });
 
     data.procesos.filter(p => !isClosedRecord(p, "procesos")).forEach(p => {
       const s = semaforo(p.fechaProximaAccion || p.fechaLimite);
-      let order = 0;
-      if (s.label === "Vencido") order = 1;
-      else if (p.prioridad === "P1 Crítico") order = 2;
-      else if (p.bloqueadoPor !== "Sin bloqueo") order = 3;
-      else if (s.label === "Vence hoy") order = 4;
-      else order = 10;
+      const order = s.label === "Vencido" ? 1
+        : p.prioridad === "P1 Crítico" ? 2
+        : p.bloqueadoPor !== "Sin bloqueo" ? 3
+        : s.label === "Vence hoy" ? 4
+        : 10;
       bandeja.push({ order, tipo: "Proceso", nombre: p.proceso, prioridad: p.prioridad, estado: p.estadoActual, bloqueadoPor: p.bloqueadoPor, proximaAccion: p.proximaAccion, fechaProximaAccion: p.fechaProximaAccion, responsableId: p.responsableId, modulo: "procesos" });
     });
 
     (data.valesGas || []).filter(v => v.estado !== "Cerrado" && v.estado !== "Detenido").forEach(v => {
       const s = semaforo(v.fechaProximaRevision);
-      let order = 0;
-      if (s.label === "Vencido") order = 1;
-      else if (v.estado === "En descuento") order = 5;
-      else if (s.label === "Vence hoy") order = 4;
-      else if (s.label === "1-3 días") order = 6;
-      else order = 11;
+      const order = s.label === "Vencido" ? 1
+        : v.estado === "En descuento" ? 5
+        : s.label === "Vence hoy" ? 4
+        : s.label === "1-3 días" ? 6
+        : 11;
       bandeja.push({ order, tipo: "Vale Gas", nombre: `${v.colaborador} - ${v.periodo}`, prioridad: "P3 Medio", estado: v.estado, bloqueadoPor: "Sin bloqueo", proximaAccion: v.observaciones || "", fechaProximaAccion: v.fechaProximaRevision, responsableId: v.responsableId, modulo: "valesGas" });
     });
 
@@ -2134,33 +1619,78 @@ El dashboard responde:
   return (
     <div className="min-h-screen bg-slate-50 flex">
       {/* Sidebar */}
-      <aside className={`${sidebarOpen ? "w-64" : "w-16"} bg-[#1E293B] text-white transition-all duration-300 flex flex-col shrink-0`}>
-        <div className="p-4 flex items-center justify-between border-b border-white/10">
-          {sidebarOpen && <span className="font-semibold text-sm leading-tight tracking-wide">Control<br />Operativo<br />RH</span>}
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-white/50 hover:text-white/80 text-base w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors">{sidebarOpen ? "◀" : "▶"}</button>
+      <aside className={`${sidebarOpen ? "w-60" : "w-[60px]"} bg-[#0F172A] text-white transition-all duration-300 flex flex-col shrink-0 border-r border-white/5`}>
+        {/* Logo / Brand */}
+        <div className={`flex items-center border-b border-white/10 ${sidebarOpen ? "px-4 py-4 gap-3" : "px-3 py-4 justify-center"}`}>
+          <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-base shrink-0 font-bold shadow-md shadow-blue-900/50">TC</div>
+          {sidebarOpen && (
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-bold text-white leading-tight">TotalControlRH</div>
+              <div className="text-[10px] text-white/40 leading-tight">Control Operativo</div>
+            </div>
+          )}
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="text-white/30 hover:text-white/70 w-6 h-6 flex items-center justify-center rounded-md hover:bg-white/10 transition-colors shrink-0"
+            aria-label={sidebarOpen ? "Contraer sidebar" : "Expandir sidebar"}
+          >
+            {sidebarOpen ? "‹" : "›"}
+          </button>
         </div>
-        <nav className="flex-1 overflow-y-auto py-1">
+
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto py-2 space-y-0.5" aria-label="Navegación principal">
           {navGroups.map((grp, gi) => (
-            <div key={gi} className={grp.group ? "mt-2" : ""}>
+            <div key={gi} className={grp.group ? "mt-3" : ""}>
               {grp.group && sidebarOpen && (
-                <div className="px-4 pt-3 pb-1 text-[10px] font-medium tracking-widest text-white/30 uppercase">{grp.group}</div>
+                <div className="px-4 pt-1 pb-1.5 text-[9px] font-bold tracking-[0.15em] text-white/25 uppercase">{grp.group}</div>
               )}
-              {grp.items.map(m => (
-                <button key={m.key} onClick={() => setActiveModulo(m.key)} className={`w-full text-left px-4 py-2.5 flex items-center gap-3 text-sm transition-colors rounded-lg mx-2 my-0.5 ${activeModulo === m.key ? "bg-blue-600/80 text-white font-medium" : "text-white/70 hover:bg-white/8 hover:text-white"}`}><span className="text-lg">{m.icon}</span>{sidebarOpen && <span>{m.label}</span>}</button>
-              ))}
+              {!grp.group && !sidebarOpen && gi > 0 && <div className="mx-3 my-2 h-px bg-white/10" />}
+              {grp.items.map(m => {
+                const active = activeModulo === m.key;
+                return (
+                  <button
+                    key={m.key}
+                    onClick={() => setActiveModulo(m.key)}
+                    title={!sidebarOpen ? m.label : undefined}
+                    aria-current={active ? "page" : undefined}
+                    className={`w-full text-left flex items-center gap-3 text-sm transition-all relative
+                      ${sidebarOpen ? "px-4 py-2.5 mx-0" : "px-0 py-2.5 mx-0 justify-center"}
+                      ${active
+                        ? "bg-blue-600/20 text-white font-semibold"
+                        : "text-white/55 hover:bg-white/6 hover:text-white/90"
+                      }`}
+                  >
+                    {/* Active indicator */}
+                    {active && (
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-blue-400 rounded-r-full" />
+                    )}
+                    <span className={`text-base leading-none ${sidebarOpen ? "" : "mx-auto"}`}>{m.icon}</span>
+                    {sidebarOpen && <span className="truncate">{m.label}</span>}
+                  </button>
+                );
+              })}
             </div>
           ))}
         </nav>
-        <div className="p-3 border-t border-white/10 space-y-1">
+
+        {/* Footer */}
+        <div className="border-t border-white/10 p-3 space-y-1">
           {sidebarOpen && (
             <label className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors">
-              <input type="checkbox" checked={focusMode} onChange={toggleFocusMode} className="sr-only peer" />
-              <div className="w-8 h-5 bg-white/20 rounded-full peer-checked:bg-blue-500 transition-colors relative after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:transition-transform peer-checked:after:translate-x-3" />
-              <span className="text-xs text-white/60">Modo enfoque</span>
+              <input type="checkbox" checked={focusMode} onChange={toggleFocusMode} className="sr-only peer" aria-label="Modo enfoque" />
+              <div className="w-8 h-4 bg-white/15 rounded-full peer-checked:bg-blue-500 transition-colors relative after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-3 after:h-3 after:bg-white after:rounded-full after:transition-transform peer-checked:after:translate-x-4 shrink-0" />
+              <span className="text-xs text-white/50">Modo enfoque</span>
             </label>
           )}
-          <button onClick={logout} className="w-full text-left px-3 py-2 text-sm text-rose-300/80 hover:text-rose-200 hover:bg-white/5 rounded-lg transition-colors">🚪 Cerrar sesión</button>
-          {sidebarOpen && <div className="text-[10px] text-white/25 pt-1">v{data.meta.version}</div>}
+          <button
+            onClick={logout}
+            className={`w-full text-left text-sm text-rose-300/70 hover:text-rose-200 hover:bg-white/5 rounded-lg transition-colors ${sidebarOpen ? "px-3 py-2" : "py-2 flex justify-center"}`}
+            title={!sidebarOpen ? "Cerrar sesión" : undefined}
+          >
+            {sidebarOpen ? "🚪 Cerrar sesión" : "🚪"}
+          </button>
+          {sidebarOpen && <div className="text-[10px] text-white/20 px-3 pt-0.5">v{data.meta.version}</div>}
         </div>
       </aside>
 
@@ -2168,48 +1698,186 @@ El dashboard responde:
       <main className={`flex-1 overflow-y-auto ${focusMode ? "p-4 max-w-4xl mx-auto" : "p-6"}`}>
         {activeModulo === "inicio" && (
           <div className="space-y-6">
-            <div className="bg-gradient-to-r from-blue-900 to-blue-700 text-white rounded-2xl p-6">
-              <h1 className="text-2xl font-bold mb-2">Control Operativo RH</h1>
-              <p className="text-blue-100 text-sm">Registra todo el mismo día · Revisa cada mañana</p>
+            {/* Hero banner */}
+            <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-blue-900 text-white rounded-2xl p-7 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/10 rounded-full -translate-y-12 translate-x-12" />
+              <div className="absolute bottom-0 left-1/3 w-32 h-32 bg-blue-400/5 rounded-full translate-y-8" />
+              <div className="relative">
+                <div className="text-xs font-semibold tracking-widest text-blue-300 uppercase mb-2">TotalControlRH</div>
+                <h1 className="text-2xl font-bold mb-2 leading-tight">Control Operativo RH</h1>
+                <p className="text-blue-200 text-sm">Registra todo el mismo día · Revisa cada mañana · Cierra lo que termines</p>
+              </div>
             </div>
-            <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 text-amber-900 text-sm font-medium">⚠️ Regla de oro: "Si no está registrado aquí, no existe para seguimiento."</div>
+
+            {/* Alerta regla de oro */}
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+              <span className="text-xl shrink-0 mt-0.5">⚠️</span>
+              <div>
+                <p className="text-sm font-semibold text-amber-900">Regla de oro</p>
+                <p className="text-sm text-amber-800 mt-0.5">"Si no está registrado aquí, no existe para seguimiento."</p>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm"><h3 className="font-bold text-slate-800 mb-2">📋 Rutina semanal sugerida</h3><ul className="text-sm text-slate-600 space-y-2"><li><span className="font-semibold text-blue-700">Lunes:</span> Revisar cursos, OCs y presupuesto.</li><li><span className="font-semibold text-blue-700">Miércoles:</span> Revisar diplomas/certificados/licencias, BUK y evaluaciones psicolaborales.</li><li><span className="font-semibold text-blue-700">Viernes:</span> Cerrar pendientes, actualizar estados y preparar semana siguiente.</li></ul></div>
-              <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm"><h3 className="font-bold text-slate-800 mb-2">🔑 Lógica del sistema</h3><ul className="text-sm text-slate-600 space-y-1"><li>• Registrar todo el mismo día.</li><li>• Actualizar estado, prioridad y bloqueo.</li><li>• Usar P1/P2/P3/P4.</li><li>• Cerrar procesos finalizados.</li><li>• Exportar respaldo semanal (JSON/XLSX).</li></ul></div>
-              <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm"><h3 className="font-bold text-slate-800 mb-2">⚡ Accesos rápidos</h3><div className="grid grid-cols-2 gap-2"><button onClick={() => { setActiveModulo("cursos"); openNew("cursos"); }} className="text-xs bg-blue-600 text-white rounded-lg px-3 py-2 hover:bg-blue-700 transition">+ Nuevo curso</button><button onClick={() => { setActiveModulo("ocs"); openNew("ocs"); }} className="text-xs bg-blue-600 text-white rounded-lg px-3 py-2 hover:bg-blue-700 transition">+ Nueva OC</button><button onClick={() => { setActiveModulo("practicantes"); openNew("practicantes"); }} className="text-xs bg-blue-600 text-white rounded-lg px-3 py-2 hover:bg-blue-700 transition">+ Nuevo practicante</button><button onClick={() => { setActiveModulo("diplomas"); openNew("diplomas"); }} className="text-xs bg-blue-600 text-white rounded-lg px-3 py-2 hover:bg-blue-700 transition">+ Nuevo diploma</button><button onClick={() => { setActiveModulo("evaluaciones"); openNew("evaluaciones"); }} className="text-xs bg-purple-600 text-white rounded-lg px-3 py-2 hover:bg-purple-700 transition">+ Nueva evaluación</button><button onClick={exportJSON} className="text-xs bg-green-600 text-white rounded-lg px-3 py-2 hover:bg-green-700 transition">📥 Exportar JSON</button><button onClick={exportXLSX} className="text-xs bg-green-600 text-white rounded-lg px-3 py-2 hover:bg-green-700 transition">📥 Exportar XLSX</button></div></div>
+              <SectionCard title="📋 Rutina semanal sugerida">
+                <ul className="text-sm text-slate-600 space-y-2.5">
+                  {[
+                    { day: "Lunes", task: "Revisar cursos, OCs y presupuesto" },
+                    { day: "Miércoles", task: "Revisar diplomas, BUK y evaluaciones psicolaborales" },
+                    { day: "Viernes", task: "Cerrar pendientes, actualizar estados y preparar semana siguiente" },
+                  ].map(({ day, task }) => (
+                    <li key={day} className="flex gap-2">
+                      <span className="inline-block w-20 shrink-0 text-xs font-bold text-blue-600 bg-blue-50 rounded px-1.5 py-0.5 h-fit mt-0.5">{day}</span>
+                      <span>{task}</span>
+                    </li>
+                  ))}
+                </ul>
+              </SectionCard>
+
+              <SectionCard title="🔑 Lógica del sistema">
+                <ul className="text-sm text-slate-600 space-y-1.5">
+                  {["Registrar todo el mismo día", "Actualizar estado, prioridad y bloqueo", "Usar P1/P2/P3/P4 correctamente", "Cerrar procesos finalizados", "Exportar respaldo semanal (JSON/XLSX)"].map(t => (
+                    <li key={t} className="flex items-start gap-2"><span className="text-emerald-500 mt-0.5 shrink-0">✓</span>{t}</li>
+                  ))}
+                </ul>
+              </SectionCard>
+
+              <SectionCard title="⚡ Accesos rápidos">
+                <div className="grid grid-cols-2 gap-2">
+                  <button onClick={() => { setActiveModulo("cursos"); openNew("cursos"); }} className="text-xs bg-blue-600 text-white rounded-xl px-3 py-2.5 hover:bg-blue-700 transition font-medium">+ Nuevo curso</button>
+                  <button onClick={() => { setActiveModulo("ocs"); openNew("ocs"); }} className="text-xs bg-blue-600 text-white rounded-xl px-3 py-2.5 hover:bg-blue-700 transition font-medium">+ Nueva OC</button>
+                  <button onClick={() => { setActiveModulo("practicantes"); openNew("practicantes"); }} className="text-xs bg-blue-600 text-white rounded-xl px-3 py-2.5 hover:bg-blue-700 transition font-medium">+ Practicante</button>
+                  <button onClick={() => { setActiveModulo("diplomas"); openNew("diplomas"); }} className="text-xs bg-blue-600 text-white rounded-xl px-3 py-2.5 hover:bg-blue-700 transition font-medium">+ Diploma</button>
+                  <button onClick={() => { setActiveModulo("evaluaciones"); openNew("evaluaciones"); }} className="text-xs bg-violet-600 text-white rounded-xl px-3 py-2.5 hover:bg-violet-700 transition font-medium">+ Evaluación</button>
+                  <button onClick={exportJSON} className="text-xs bg-emerald-600 text-white rounded-xl px-3 py-2.5 hover:bg-emerald-700 transition font-medium">📥 Exportar JSON</button>
+                  <button onClick={exportXLSX} className="text-xs bg-emerald-600 text-white rounded-xl px-3 py-2.5 hover:bg-emerald-700 transition col-span-2 font-medium">📥 Exportar XLSX</button>
+                </div>
+              </SectionCard>
             </div>
-            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm"><h3 className="font-bold text-slate-800 mb-3">📈 Resumen rápido</h3><div className="grid grid-cols-2 md:grid-cols-4 gap-3"><KpiCard label="Cursos abiertos" value={dashboardData.cursosAbiertos} color="text-blue-700" /><KpiCard label="P1 Críticos" value={dashboardData.cursosP1} color="text-red-600" /><KpiCard label="OCs pendientes" value={dashboardData.ocsPendientes} color="text-orange-600" /><KpiCard label="Pendientes BUK" value={dashboardData.diplomasBUK} color="text-red-600" /><KpiCard label="Evaluaciones abiertas" value={dashboardData.evaluacionesAbiertas} color="text-purple-600" /><KpiCard label="Informe pendiente" value={dashboardData.evaluacionesInformePendiente} color="text-orange-600" /><KpiCard label="Presupuesto usado" value={fmtCLP(dashboardData.presupuestoUsado)} color="text-purple-600" /><KpiCard label="Procesos bloqueados" value={dashboardData.procesosBloqueados} color="text-red-600" /></div></div>
+
+            {/* Resumen rápido */}
+            <SectionCard title="📈 Resumen rápido">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <KpiCardUI label="Cursos abiertos" value={dashboardData.cursosAbiertos} icon="📚" variant={dashboardData.cursosAbiertos > 5 ? "warning" : "info"} onClick={() => setActiveModulo("cursos")} />
+                <KpiCardUI label="P1 Críticos" value={dashboardData.cursosP1} icon="🔴" variant={dashboardData.cursosP1 > 0 ? "danger" : "success"} onClick={() => setActiveModulo("cursos")} />
+                <KpiCardUI label="OCs pendientes" value={dashboardData.ocsPendientes} icon="🧾" variant={dashboardData.ocsPendientes > 3 ? "warning" : "default"} onClick={() => setActiveModulo("ocs")} />
+                <KpiCardUI label="Pendientes BUK" value={dashboardData.diplomasBUK} icon="📜" variant={dashboardData.diplomasBUK > 0 ? "danger" : "success"} onClick={() => setActiveModulo("diplomas")} />
+                <KpiCardUI label="Evaluaciones abiertas" value={dashboardData.evaluacionesAbiertas} icon="🧠" variant="purple" onClick={() => setActiveModulo("evaluaciones")} />
+                <KpiCardUI label="Informe pendiente" value={dashboardData.evaluacionesInformePendiente} icon="⏳" variant={dashboardData.evaluacionesInformePendiente > 0 ? "warning" : "success"} onClick={() => setActiveModulo("evaluaciones")} />
+                <KpiCardUI label="Presupuesto usado" value={fmtCLP(dashboardData.presupuestoUsado)} icon="💰" variant="purple" onClick={() => setActiveModulo("presupuesto")} />
+                <KpiCardUI label="Procesos bloqueados" value={dashboardData.procesosBloqueados} icon="🚫" variant={dashboardData.procesosBloqueados > 0 ? "danger" : "success"} onClick={() => setActiveModulo("procesos")} />
+              </div>
+            </SectionCard>
           </div>
         )}
 
         {activeModulo === "midia" && <ModuloMiDia data={data} setActiveModulo={setActiveModulo} onCapturaRapida={() => setCaptureOpen(true)} />}
         {activeModulo === "dashboard" && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h1 className="text-xl font-bold text-slate-800">¿Qué hago primero hoy?</h1>
-              <button onClick={() => setCaptureOpen(true)} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Captura rápida</button>
+            <PageHeader
+              icon="📊"
+              title="¿Qué hago primero hoy?"
+              subtitle="Vista centralizada de estado operacional, alertas y prioridades."
+              actions={
+                <button onClick={() => setCaptureOpen(true)} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">
+                  ⚡ Captura rápida
+                </button>
+              }
+            />
+
+            {/* KPIs agrupados por área */}
+            <div className="space-y-4">
+              <KpiGroup title="Operacional">
+                <KpiCardUI label="Cursos abiertos" value={dashboardData.cursosAbiertos} icon="📚" variant={dashboardData.cursosAbiertos > 5 ? "warning" : "info"} description="Sin cerrar" onClick={() => setActiveModulo("cursos")} />
+                <KpiCardUI label="P1 Críticos" value={dashboardData.cursosP1} icon="🔴" variant={dashboardData.cursosP1 > 0 ? "danger" : "success"} description="Prioridad máxima" onClick={() => setActiveModulo("cursos")} />
+                <KpiCardUI label="OCs pendientes" value={dashboardData.ocsPendientes} icon="🧾" variant={dashboardData.ocsPendientes > 3 ? "warning" : "default"} description="En proceso" onClick={() => setActiveModulo("ocs")} />
+                <KpiCardUI label="Pendientes BUK" value={dashboardData.diplomasBUK} icon="📜" variant={dashboardData.diplomasBUK > 0 ? "danger" : "success"} description="Por subir" onClick={() => setActiveModulo("diplomas")} />
+              </KpiGroup>
+              <KpiGroup title="Personas y evaluaciones">
+                <KpiCardUI label="Evaluaciones abiertas" value={dashboardData.evaluacionesAbiertas} icon="🧠" variant="purple" description="En seguimiento" onClick={() => setActiveModulo("evaluaciones")} />
+                <KpiCardUI label="Informe pendiente" value={dashboardData.evaluacionesInformePendiente} icon="⏳" variant={dashboardData.evaluacionesInformePendiente > 0 ? "warning" : "success"} description="Realizada sin informe" onClick={() => setActiveModulo("evaluaciones")} />
+                <KpiCardUI label="Procesos bloqueados" value={dashboardData.procesosBloqueados} icon="🚫" variant={dashboardData.procesosBloqueados > 0 ? "danger" : "success"} description="Con bloqueo activo" onClick={() => setActiveModulo("procesos")} />
+                <KpiCardUI label="Sin actualizar +7d" value={dashboardData.sinActualizar} icon="🕐" variant={dashboardData.sinActualizar > 0 ? "warning" : "success"} description="Requieren revisión" />
+              </KpiGroup>
+              <KpiGroup title="Vales de gas">
+                <KpiCardUI label="Stock organización" value={dashboardData.valesGasStockOrg} icon="⛽" variant="info" description="Total registrado" onClick={() => setActiveModulo("valesGas")} />
+                <KpiCardUI label="Saldo disponible" value={dashboardData.valesGasSaldoOrg} icon="📦" variant={dashboardData.valesGasSaldoOrg < 0 ? "danger" : "success"} description="Stock − asignados" onClick={() => setActiveModulo("valesGas")} />
+                <KpiCardUI label="Vales asignados" value={dashboardData.valesGasAsignados} icon="👤" variant="default" description="A colaboradores" onClick={() => setActiveModulo("valesGas")} />
+                <KpiCardUI label="En descuento" value={dashboardData.valesGasEnDescuento} icon="💸" variant={dashboardData.valesGasEnDescuento > 0 ? "warning" : "default"} description="Activos" onClick={() => setActiveModulo("valesGas")} />
+              </KpiGroup>
+              <KpiGroup title="Reclutamiento">
+                <KpiCardUI label="Procesos abiertos" value={dashboardData.reclAbiertos} icon="👥" variant="info" description="En curso" onClick={() => setActiveModulo("reclutamiento")} />
+                <KpiCardUI label="Pausados" value={dashboardData.reclPausados} icon="⏸" variant={dashboardData.reclPausados > 0 ? "warning" : "success"} description="Con bloqueo" onClick={() => setActiveModulo("reclutamiento")} />
+                <KpiCardUI label="Bloqueados" value={dashboardData.reclBloqueados} icon="🚧" variant={dashboardData.reclBloqueados > 0 ? "danger" : "success"} description="Requieren acción" onClick={() => setActiveModulo("reclutamiento")} />
+                <KpiCardUI label="Ingresos próximos" value={dashboardData.reclIngresosProximos} icon="📅" variant={dashboardData.reclIngresosProximos > 0 ? "info" : "default"} description="En los próximos 7 días" onClick={() => setActiveModulo("reclutamiento")} />
+              </KpiGroup>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <KpiCard label="Cursos abiertos" value={dashboardData.cursosAbiertos} color="text-blue-700" />
-              <KpiCard label="P1 Críticos" value={dashboardData.cursosP1} color="text-red-600" />
-              <KpiCard label="OCs pendientes" value={dashboardData.ocsPendientes} color="text-orange-600" />
-              <KpiCard label="Pendientes BUK" value={dashboardData.diplomasBUK} color="text-red-600" />
-              <KpiCard label="Evaluaciones abiertas" value={dashboardData.evaluacionesAbiertas} color="text-purple-600" />
-              <KpiCard label="Informe pendiente" value={dashboardData.evaluacionesInformePendiente} color="text-orange-600" />
-              <KpiCard label="Procesos bloqueados" value={dashboardData.procesosBloqueados} color="text-red-600" />
-              <KpiCard label="Sin actualizar +7d" value={dashboardData.sinActualizar} color="text-orange-600" />
-              <KpiCard label="Stock organización" value={dashboardData.valesGasStockOrg} color="text-blue-700" />
-              <KpiCard label="Saldo disponible org." value={dashboardData.valesGasSaldoOrg} color={dashboardData.valesGasSaldoOrg < 0 ? "text-red-600" : "text-emerald-600"} />
-              <KpiCard label="Vales asignados" value={dashboardData.valesGasAsignados} color="text-indigo-700" />
-              <KpiCard label="En descuento" value={dashboardData.valesGasEnDescuento} color="text-orange-600" />
-              <KpiCard label="Reclut. abiertos" value={dashboardData.reclAbiertos} color="text-blue-700" />
-              <KpiCard label="Reclut. pausados" value={dashboardData.reclPausados} color="text-yellow-600" />
+
+            {/* Semáforo general */}
+            <SectionCard title="🚦 Semáforo general" subtitle="Distribución de urgencias por fecha próxima acción">
+              <div className="flex flex-wrap gap-3">
+                <SemaforoItem color="#DC2626" label="Vencido" count={dashboardData.semaforoCounts.vencido} />
+                <SemaforoItem color="#EA580C" label="Vence hoy" count={dashboardData.semaforoCounts.venceHoy} />
+                <SemaforoItem color="#F59E0B" label="1-3 días" count={dashboardData.semaforoCounts.unoATres} />
+                <SemaforoItem color="#FBBF24" label="4-7 días" count={dashboardData.semaforoCounts.cuatroASiete} />
+                <SemaforoItem color="#16A34A" label="Sin urgencia" count={dashboardData.semaforoCounts.sinUrgencia} />
+                <SemaforoItem color="#9CA3AF" label="Sin fecha" count={dashboardData.semaforoCounts.sinFecha} />
+              </div>
+            </SectionCard>
+
+            {/* Bandeja de acción */}
+            <SectionCard title="📋 Bandeja de acción priorizada" subtitle="Los 20 ítems más urgentes de todos los módulos activos" noPadding>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200">
+                      {["#","Tipo","Nombre / Proceso","Prioridad","Estado","Bloqueado por","Próxima acción","Fecha","Responsable","Módulo"].map(h => (
+                        <th key={h} className="px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dashboardData.bandeja.length === 0 ? (
+                      <tr><td colSpan={10} className="text-center py-10 text-slate-400 text-sm">No hay ítems urgentes en este momento 🎉</td></tr>
+                    ) : (
+                      dashboardData.bandeja.slice(0, 20).map((item, i) => (
+                        <tr
+                          key={i}
+                          className={`border-t border-slate-100 hover:bg-blue-50/50 transition-colors cursor-pointer ${i % 2 === 0 ? "bg-white" : "bg-slate-50/30"}`}
+                          onClick={() => setActiveModulo(item.modulo as Modulo)}
+                        >
+                          <td className="px-3 py-2.5 text-xs text-slate-400 font-medium">{i + 1}</td>
+                          <td className="px-3 py-2.5"><Badge label={item.tipo} colorClass="bg-slate-100 text-slate-600 border border-slate-200" /></td>
+                          <td className="px-3 py-2.5 font-medium text-slate-800 max-w-[200px]"><div className="truncate">{item.nombre}</div></td>
+                          <td className="px-3 py-2.5"><Badge label={item.prioridad} colorClass={prioridadColor[item.prioridad] || ""} /></td>
+                          <td className="px-3 py-2.5"><Badge label={item.estado} colorClass={estadoColor[item.estado] || ""} /></td>
+                          <td className="px-3 py-2.5">{item.bloqueadoPor !== "Sin bloqueo" ? <Badge label={item.bloqueadoPor} colorClass="bg-red-100 text-red-700 border border-red-200" /> : <span className="text-slate-300">—</span>}</td>
+                          <td className="px-3 py-2.5 text-slate-500 text-xs max-w-[160px]"><div className="truncate">{item.proximaAccion || "—"}</div></td>
+                          <td className="px-3 py-2.5">{item.fechaProximaAccion ? <SemaforoBadge fecha={item.fechaProximaAccion} /> : <span className="text-slate-300">—</span>}</td>
+                          <td className="px-3 py-2.5 text-xs text-slate-600">{getResponsableName(data, item.responsableId)}</td>
+                          <td className="px-3 py-2.5"><span className="text-xs text-blue-600 underline">{item.modulo}</span></td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </SectionCard>
+
+            {/* Gráficos */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <SectionCard title="Cursos por prioridad">
+                <div className="h-48"><Doughnut data={chartCursosPorPrioridad} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } } }} /></div>
+              </SectionCard>
+              <SectionCard title="Evaluaciones por estado">
+                <div className="h-48"><Doughnut data={chartEvaluacionesPorEstado} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } } }} /></div>
+              </SectionCard>
+              <SectionCard title="Presupuesto: usado vs disponible">
+                <div className="h-48"><Bar data={chartPresupuesto} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } }, scales: { x: { stacked: true }, y: { stacked: true } } }} /></div>
+              </SectionCard>
             </div>
-            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm"><h3 className="font-bold text-slate-800 mb-3">🚦 Semáforo general</h3><div className="flex flex-wrap gap-4"><SemaforoItem color="#DC2626" label="Vencido" count={dashboardData.semaforoCounts.vencido} /><SemaforoItem color="#EA580C" label="Vence hoy" count={dashboardData.semaforoCounts.venceHoy} /><SemaforoItem color="#F59E0B" label="1-3 días" count={dashboardData.semaforoCounts.unoATres} /><SemaforoItem color="#FBBF24" label="4-7 días" count={dashboardData.semaforoCounts.cuatroASiete} /><SemaforoItem color="#16A34A" label="Sin urgencia" count={dashboardData.semaforoCounts.sinUrgencia} /><SemaforoItem color="#9CA3AF" label="Sin fecha" count={dashboardData.semaforoCounts.sinFecha} /></div></div>
-            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm"><h3 className="font-bold text-slate-800 mb-3">📋 Bandeja de acción priorizada</h3><div className="overflow-x-auto"><table className="w-full text-sm text-left"><thead><tr className="bg-slate-100 text-slate-600 uppercase text-xs"><th className="px-3 py-2">#</th><th className="px-3 py-2">Tipo</th><th className="px-3 py-2">Nombre / Proceso</th><th className="px-3 py-2">Prioridad</th><th className="px-3 py-2">Estado</th><th className="px-3 py-2">Bloqueado por</th><th className="px-3 py-2">Próxima acción</th><th className="px-3 py-2">Fecha</th><th className="px-3 py-2">Responsable</th><th className="px-3 py-2">Módulo</th></tr></thead><tbody>{dashboardData.bandeja.slice(0, 20).map((item, i) => (<tr key={i} className="border-t border-slate-100 hover:bg-blue-50/50 transition-colors cursor-pointer" onClick={() => setActiveModulo(item.modulo as Modulo)}><td className="px-3 py-2 text-slate-400">{i + 1}</td><td className="px-3 py-2"><Badge label={item.tipo} colorClass="bg-slate-200 text-slate-700" /></td><td className="px-3 py-2 font-medium text-slate-800">{item.nombre}</td><td className="px-3 py-2"><Badge label={item.prioridad} colorClass={prioridadColor[item.prioridad] || ""} /></td><td className="px-3 py-2"><Badge label={item.estado} colorClass={estadoColor[item.estado] || ""} /></td><td className="px-3 py-2">{item.bloqueadoPor !== "Sin bloqueo" ? <Badge label={item.bloqueadoPor} colorClass="bg-red-100 text-red-700" /> : "-"}</td><td className="px-3 py-2 text-slate-600">{item.proximaAccion}</td><td className="px-3 py-2">{item.fechaProximaAccion ? <SemaforoBadge fecha={item.fechaProximaAccion} /> : "-"}</td><td className="px-3 py-2">{getResponsableName(data, item.responsableId)}</td><td className="px-3 py-2"><span className="text-xs text-blue-600 underline">{item.modulo}</span></td></tr>))}</tbody></table></div></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm"><h4 className="font-bold text-slate-800 mb-2 text-sm">Cursos por prioridad</h4><div className="h-48"><Doughnut data={chartCursosPorPrioridad} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } } }} /></div></div><div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm"><h4 className="font-bold text-slate-800 mb-2 text-sm">Evaluaciones por estado</h4><div className="h-48"><Doughnut data={chartEvaluacionesPorEstado} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } } }} /></div></div><div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm"><h4 className="font-bold text-slate-800 mb-2 text-sm">Presupuesto: usado vs disponible</h4><div className="h-48"><Bar data={chartPresupuesto} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } }, scales: { x: { stacked: true }, y: { stacked: true } } }} /></div></div></div>
-            
-            {/* 📄 Reporte Mensual Ejecutivo */}
+
+            {/* Reporte Mensual Ejecutivo */}
             <div className="border-t border-slate-200 pt-6">
               <ModuloReporteMensual data={data} toastShow={toastShow} />
             </div>
@@ -2307,12 +1975,19 @@ El dashboard responde:
 
         {/* Toast con link "Ir al módulo" cuando hay captura reciente */}
         {toast && (
-          <div className="fixed bottom-6 right-6 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-lg z-[70] text-sm flex items-center gap-3">
-            <span>{toast}</span>
+          <div className={`fixed bottom-6 right-6 z-[70] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl text-sm font-medium animate-fade-in
+            ${toast.startsWith("⚠") || toast.toLowerCase().includes("error") || toast.toLowerCase().includes("lleno")
+              ? "bg-amber-900 text-amber-100 border border-amber-700"
+              : toast.toLowerCase().includes("elimin") || toast.toLowerCase().includes("borr")
+              ? "bg-red-900 text-red-100 border border-red-700"
+              : "bg-slate-900 text-white border border-slate-700"
+            }`}
+          >
+            <span className="leading-snug">{toast}</span>
             {lastCapturedModulo && toast === "Captura guardada correctamente." && (
               <button
                 onClick={() => { setActiveModulo(lastCapturedModulo); setLastCapturedModulo(null); }}
-                className="text-blue-300 hover:text-blue-200 underline text-xs"
+                className="text-blue-300 hover:text-blue-200 underline text-xs whitespace-nowrap ml-1"
               >
                 Ir al módulo →
               </button>
@@ -2326,24 +2001,32 @@ El dashboard responde:
 
 // ── HELPER COMPONENTS ────────────────────────
 
-function KpiCard({ label, value, color }: { label: string; value: string | number; color: string }) {
-  return <div className="bg-white rounded-2xl border border-[#D9E2EC] p-4 text-center"><div className={`text-2xl font-semibold ${color}`}>{value}</div><div className="text-xs text-slate-500 mt-1.5 leading-relaxed">{label}</div></div>;
-}
 
 function SemaforoItem({ color, label, count }: { color: string; label: string; count: number }) {
   return <div className="flex items-center gap-2 bg-white rounded-xl px-4 py-2 border border-[#D9E2EC]"><div className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: color }} /><span className="text-sm text-slate-600">{label}: <strong className="text-slate-800">{count}</strong></span></div>;
 }
 
 function FilterBar({ filters, searchPlaceholder, search, setSearch }: { filters: React.ReactNode; searchPlaceholder: string; search: string; setSearch: (v: string) => void }) {
+  const [localSearch, setLocalSearch] = useState(search);
+  const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleChange = (value: string) => {
+    setLocalSearch(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setSearch(value), 300);
+  };
+
+  const handleClear = () => { setLocalSearch(""); setSearch(""); };
+
   return (
     <div className="bg-white rounded-2xl border border-[#D9E2EC] p-4 mb-5">
       <div className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-3">Filtros</div>
       <div className="flex flex-wrap gap-3 items-center">
         {filters}
         <div className="flex-1 min-w-[200px]">
-          <input type="text" placeholder={searchPlaceholder} value={search} onChange={e => setSearch(e.target.value)} className="w-full border border-[#D9E2EC] rounded-xl px-4 py-2.5 text-sm bg-white text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#93C5FD] focus:ring-2 focus:ring-blue-100 transition-colors" />
+          <input type="text" placeholder={searchPlaceholder} value={localSearch} onChange={e => handleChange(e.target.value)} className="w-full border border-[#D9E2EC] rounded-xl px-4 py-2.5 text-sm bg-white text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#93C5FD] focus:ring-2 focus:ring-blue-100 transition-colors" />
         </div>
-        {search && (<button onClick={() => setSearch("")} className="text-xs text-blue-600 hover:underline whitespace-nowrap">Limpiar filtros</button>)}
+        {(localSearch || search) && (<button onClick={handleClear} className="text-xs text-blue-600 hover:underline whitespace-nowrap">Limpiar filtros</button>)}
       </div>
     </div>
   );
@@ -2573,10 +2256,24 @@ function ModuloCursos({ data, search, setSearch, openNew, openEdit, deleteItem, 
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between"><div><h1 className="text-xl font-semibold text-slate-800">📚 Cursos / DNC</h1><p className="text-sm text-slate-500 mt-0.5">Control de cursos y capacitaciones</p></div><button onClick={() => openNew("cursos")} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Agregar nuevo</button></div>
+      <PageHeader
+        icon="📚"
+        title="Cursos / DNC"
+        subtitle="Control de cursos y capacitaciones planificadas y emergentes."
+        actions={<button onClick={() => openNew("cursos")} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Agregar nuevo</button>}
+      />
       <FilterBar search={search} setSearch={setSearch} searchPlaceholder="Buscar curso o proveedor..." filters={<><Select value={filtroPrioridad} onChange={setFiltroPrioridad} options={PRIORIDADES} placeholder="Prioridad" /><Select value={filtroEstado} onChange={setFiltroEstado} options={ESTADOS_CURSO} placeholder="Estado" /><Select value={filtroOrigen} onChange={setFiltroOrigen} options={ORIGENES_CURSO} placeholder="Origen" /><Select value={filtroSemaforo} onChange={setFiltroSemaforo} options={["Vencido", "Vence hoy", "1-3 días", "4-7 días", "Sin urgencia", "Sin fecha"]} placeholder="Semáforo" /></>} />
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"><Table columns={columns} rows={filtered} onEdit={(r: any) => openEdit("cursos", r)} onDelete={(id: string) => deleteItem("cursos", id)} onMarkClosed={(id: string) => markClosed("cursos", id, "Cerrado")} closedState="Cerrado" /></div>
-      <p className="text-xs text-slate-400 mt-1">Mostrando {filtered.length} cursos</p>
+      <Table
+        columns={columns}
+        rows={filtered}
+        onEdit={(r: any) => openEdit("cursos", r)}
+        onDelete={(id: string) => deleteItem("cursos", id)}
+        onMarkClosed={(id: string) => markClosed("cursos", id, "Cerrado")}
+        closedState="Cerrado"
+        emptyMessage="Aún no hay cursos registrados"
+        emptyHint="Crea el primero con «+ Agregar nuevo» o importa desde la plantilla XLSX."
+      />
+      <p className="text-xs text-slate-400">Mostrando {filtered.length} {filtered.length === 1 ? "curso" : "cursos"}</p>
     </div>
   );
 }
@@ -2595,11 +2292,25 @@ function ModuloOCs({ data, search, setSearch, openNew, openEdit, deleteItem, mar
   const columns = [{ key: "numeroOC", label: "N° OC", render: (r: OC) => <span className="font-semibold">{r.numeroOC}</span> }, { key: "categoriaOC", label: "Categoría", render: (r: OC) => r.categoriaOC ? <Badge label={r.categoriaOC} colorClass="bg-indigo-100 text-indigo-700" /> : <span className="text-slate-400 text-xs">-</span> }, { key: "cursoAsociado", label: "Curso / Servicio" }, { key: "proveedor", label: "Proveedor" }, { key: "monto", label: "Monto", render: (r: OC) => fmtCLP(r.monto) }, { key: "estadoOC", label: "Estado", render: (r: OC) => <Badge label={r.estadoOC} colorClass={estadoColor[r.estadoOC] || ""} /> }, { key: "prioridad", label: "Prioridad", render: (r: OC) => <Badge label={r.prioridad} colorClass={prioridadColor[r.prioridad] || ""} /> }, { key: "fechaLimite", label: "Fecha límite", render: (r: OC) => toDDMMYYYY(r.fechaLimite) }, { key: "semaforo", label: "Semáforo", render: (r: OC) => <SemaforoBadge fecha={r.fechaLimite} /> }, { key: "bloqueadoPor", label: "Bloqueo", render: (r: OC) => r.bloqueadoPor !== "Sin bloqueo" ? <Badge label={r.bloqueadoPor} colorClass="bg-red-100 text-red-700" /> : "-" }, { key: "responsable", label: "Resp.", render: (r: OC) => getResponsableName(data, r.responsableId) }];
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between"><h1 className="text-xl font-bold text-slate-800">🧾 OCs Pendientes</h1><button onClick={() => openNew("ocs")} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition">+ Nueva OC</button></div>
+    <div className="space-y-5">
+      <PageHeader
+        icon="🧾"
+        title="OCs Pendientes"
+        subtitle="Seguimiento de órdenes de compra por categoría, estado y monto."
+        actions={<button onClick={() => openNew("ocs")} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Nueva OC</button>}
+      />
       <FilterBar search={search} setSearch={setSearch} searchPlaceholder="Buscar OC, curso o proveedor..." filters={<><Select value={filtroCategoria} onChange={setFiltroCategoria} options={CATEGORIAS_OC} placeholder="Categoría" /><Select value={filtroEstado} onChange={setFiltroEstado} options={ESTADOS_OC} placeholder="Estado" /><Select value={filtroPrioridad} onChange={setFiltroPrioridad} options={PRIORIDADES} placeholder="Prioridad" /></>} />
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"><Table columns={columns} rows={filtered} onEdit={(r: any) => openEdit("ocs", r)} onDelete={(id: string) => deleteItem("ocs", id)} onMarkClosed={(id: string) => markClosed("ocs", id, "Cerrada")} closedState="Cerrada" /></div>
-      <p className="text-xs text-slate-400 mt-1">Mostrando {filtered.length} OCs</p>
+      <Table
+        columns={columns}
+        rows={filtered}
+        onEdit={(r: any) => openEdit("ocs", r)}
+        onDelete={(id: string) => deleteItem("ocs", id)}
+        onMarkClosed={(id: string) => markClosed("ocs", id, "Cerrada")}
+        closedState="Cerrada"
+        emptyMessage="Aún no hay OCs registradas"
+        emptyHint="Crea la primera con «+ Nueva OC» o importa desde la plantilla XLSX."
+      />
+      <p className="text-xs text-slate-400">Mostrando {filtered.length} {filtered.length === 1 ? "OC" : "OCs"}</p>
     </div>
   );
 }
@@ -2615,16 +2326,30 @@ function ModuloPracticantes({ data, search, setSearch, openNew, openEdit, delete
   const columns = [{ key: "nombre", label: "Nombre" }, { key: "area", label: "Área" }, { key: "especialidad", label: "Especialidad" }, { key: "duracion", label: "Duración (meses)", render: (r: Practicante) => durMeses(r.fechaInicio, r.fechaTermino) }, { key: "costoMensual", label: "Costo/mes", render: (r: Practicante) => fmtCLP(r.costoMensual) }, { key: "costoTotal", label: "Costo total", render: (r: Practicante) => r.fechaInicio && r.fechaTermino ? fmtCLP(r.costoMensual * (durMeses(r.fechaInicio, r.fechaTermino) as number)) : "-" }, { key: "estado", label: "Estado", render: (r: Practicante) => <Badge label={r.estado} colorClass={estadoColor[r.estado] || ""} /> }, { key: "fechaTermino", label: "Fecha término", render: (r: Practicante) => toDDMMYYYY(r.fechaTermino) }, { key: "semaforo", label: "Semáforo", render: (r: Practicante) => <SemaforoBadge fecha={r.fechaProximaAccion || r.fechaTermino} /> }, { key: "responsable", label: "Resp.", render: (r: Practicante) => getResponsableName(data, r.responsableId) }];
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between"><h1 className="text-xl font-bold text-slate-800">👤 Practicantes</h1><button onClick={() => openNew("practicantes")} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition">+ Nuevo practicante</button></div>
+    <div className="space-y-5">
+      <PageHeader
+        icon="👤"
+        title="Practicantes"
+        subtitle="Control de prácticas profesionales: estado, duración y costos."
+        actions={<button onClick={() => openNew("practicantes")} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Nuevo practicante</button>}
+      />
       <FilterBar search={search} setSearch={setSearch} searchPlaceholder="Buscar practicante o área..." filters={<Select value={filtroEstado} onChange={setFiltroEstado} options={ESTADOS_PRACTICANTE} placeholder="Estado" />} />
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"><Table columns={columns} rows={filtered} onEdit={(r: any) => openEdit("practicantes", r)} onDelete={(id: string) => deleteItem("practicantes", id)} onMarkClosed={(id: string) => markClosed("practicantes", id, "Finalizado")} closedState="Finalizado" /></div>
-      <p className="text-xs text-slate-400 mt-1">Mostrando {filtered.length} practicantes</p>
+      <Table
+        columns={columns}
+        rows={filtered}
+        onEdit={(r: any) => openEdit("practicantes", r)}
+        onDelete={(id: string) => deleteItem("practicantes", id)}
+        onMarkClosed={(id: string) => markClosed("practicantes", id, "Finalizado")}
+        closedState="Finalizado"
+        emptyMessage="Aún no hay practicantes registrados"
+        emptyHint="Crea el primero con «+ Nuevo practicante» o importa desde la plantilla XLSX."
+      />
+      <p className="text-xs text-slate-400">Mostrando {filtered.length} {filtered.length === 1 ? "practicante" : "practicantes"}</p>
     </div>
   );
 }
 
-function ModuloPresupuesto({ data, search, setSearch, openNew, openEdit, deleteItem }: any) {
+function ModuloPresupuesto({ data, search, setSearch, openNew: _openNew, openEdit, deleteItem: _deleteItem }: any) {
 
   // Calculate dynamic breakdowns
   const budgetBreakdown = useMemo(() => {
@@ -2930,11 +2655,23 @@ function ModuloProcesos({ data, search, setSearch, openNew, openEdit, deleteItem
   const columns = [{ key: "proceso", label: "Proceso" }, { key: "tipo", label: "Tipo", render: (r: Proceso) => <Badge label={r.tipo} colorClass="bg-slate-200 text-slate-700" /> }, { key: "estadoActual", label: "Estado" }, { key: "queFalta", label: "Qué falta" }, { key: "prioridad", label: "Prioridad", render: (r: Proceso) => <Badge label={r.prioridad} colorClass={prioridadColor[r.prioridad] || ""} /> }, { key: "riesgo", label: "Riesgo", render: (r: Proceso) => r.riesgo ? <span className="text-red-600 text-xs">{r.riesgo}</span> : "-" }, { key: "semaforo", label: "Semáforo", render: (r: Proceso) => <SemaforoBadge fecha={r.fechaProximaAccion || r.fechaLimite} /> }, { key: "bloqueadoPor", label: "Bloqueo", render: (r: Proceso) => r.bloqueadoPor !== "Sin bloqueo" ? <Badge label={r.bloqueadoPor} colorClass="bg-red-100 text-red-700" /> : "-" }, { key: "responsable", label: "Resp.", render: (r: Proceso) => getResponsableName(data, r.responsableId) }];
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between"><h1 className="text-xl font-bold text-slate-800">⏳ Procesos Pendientes</h1><button onClick={() => openNew("procesos")} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition">+ Nuevo proceso</button></div>
+    <div className="space-y-5">
+      <PageHeader
+        icon="⏳"
+        title="Procesos Pendientes"
+        subtitle="Seguimiento de procesos transversales, riesgos y bloqueos."
+        actions={<button onClick={() => openNew("procesos")} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Nuevo proceso</button>}
+      />
       <FilterBar search={search} setSearch={setSearch} searchPlaceholder="Buscar proceso..." filters={<><Select value={filtroTipo} onChange={setFiltroTipo} options={TIPOS_PROCESO} placeholder="Tipo" /><Select value={filtroPrioridad} onChange={setFiltroPrioridad} options={PRIORIDADES} placeholder="Prioridad" /></>} />
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"><Table columns={columns} rows={filtered} onEdit={(r: any) => openEdit("procesos", r)} onDelete={(id: string) => deleteItem("procesos", id)} /></div>
-      <p className="text-xs text-slate-400 mt-1">Mostrando {filtered.length} procesos</p>
+      <Table
+        columns={columns}
+        rows={filtered}
+        onEdit={(r: any) => openEdit("procesos", r)}
+        onDelete={(id: string) => deleteItem("procesos", id)}
+        emptyMessage="Aún no hay procesos pendientes"
+        emptyHint="Crea el primero con «+ Nuevo proceso» para llevar un seguimiento formal."
+      />
+      <p className="text-xs text-slate-400">Mostrando {filtered.length} {filtered.length === 1 ? "proceso" : "procesos"}</p>
     </div>
   );
 }
@@ -2952,18 +2689,41 @@ function ModuloDiplomas({ data, search, setSearch, openNew, openEdit, deleteItem
   });
   const columns = [{ key: "cursoAsociado", label: "Curso asociado" }, { key: "participante", label: "Participante" }, { key: "tipoDocumento", label: "Tipo", render: (r: Diploma) => <Badge label={r.tipoDocumento} colorClass="bg-slate-200 text-slate-700" /> }, { key: "otec", label: "OTEC" }, { key: "etapa", label: "Etapa", render: (r: Diploma) => <Badge label={r.etapa} colorClass={estadoColor[r.etapa] || ""} /> }, { key: "estadoBUK", label: "BUK", render: (r: Diploma) => <Badge label={r.estadoBUK} colorClass={estadoColor[r.estadoBUK] || ""} /> }, { key: "prioridad", label: "Prioridad", render: (r: Diploma) => <Badge label={r.prioridad} colorClass={prioridadColor[r.prioridad] || ""} /> }, { key: "semaforo", label: "Semáforo", render: (r: Diploma) => <SemaforoBadge fecha={r.fechaProximaAccion} /> }, { key: "responsable", label: "Resp.", render: (r: Diploma) => getResponsableName(data, r.responsableId) }];
 
+  const bukPendientes = data.diplomas.filter((d: Diploma) => d.estadoBUK === "Pendiente subir").length;
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between"><h1 className="text-xl font-bold text-slate-800">📜 Diplomas / Certificados / Licencias</h1><button onClick={() => openNew("diplomas")} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition">+ Nuevo documento</button></div>
-      <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">⚠️ Documentos pendientes de subir a BUK: <strong>{data.diplomas.filter((d: Diploma) => d.estadoBUK === "Pendiente subir").length}</strong></div>
+    <div className="space-y-5">
+      <PageHeader
+        icon="📜"
+        title="Diplomas / Certificados / Licencias"
+        subtitle="Seguimiento de documentos por etapa: OTEC → Participante → BUK."
+        actions={<button onClick={() => openNew("diplomas")} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Nuevo documento</button>}
+      />
+      {bukPendientes > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
+          <span className="text-xl shrink-0">⚠️</span>
+          <div>
+            <span className="text-sm font-semibold text-red-800">Atención BUK:</span>
+            <span className="text-sm text-red-700 ml-1"><strong>{bukPendientes}</strong> {bukPendientes === 1 ? "documento pendiente" : "documentos pendientes"} de subir a BUK</span>
+          </div>
+        </div>
+      )}
       <FilterBar search={search} setSearch={setSearch} searchPlaceholder="Buscar curso, participante u OTEC..." filters={<><Select value={filtroEtapa} onChange={setFiltroEtapa} options={ESTADOS_DIPLOMA} placeholder="Etapa" /><Select value={filtroBUK} onChange={setFiltroBUK} options={ESTADOS_BUK} placeholder="Estado BUK" /><Select value={filtroPrioridad} onChange={setFiltroPrioridad} options={PRIORIDADES} placeholder="Prioridad" /></>} />
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"><Table columns={columns} rows={filtered} onEdit={(r: any) => openEdit("diplomas", r)} onDelete={(id: string) => deleteItem("diplomas", id)} onMarkClosed={(id: string) => markClosed("diplomas", id, "Subido")} closedState="Subido" /></div>
-      <p className="text-xs text-slate-400 mt-1">Mostrando {filtered.length} documentos</p>
+      <Table
+        columns={columns}
+        rows={filtered}
+        onEdit={(r: any) => openEdit("diplomas", r)}
+        onDelete={(id: string) => deleteItem("diplomas", id)}
+        onMarkClosed={(id: string) => markClosed("diplomas", id, "Subido")}
+        closedState="Subido"
+        emptyMessage="Aún no hay documentos registrados"
+        emptyHint="Crea el primero con «+ Nuevo documento» para hacer seguimiento de diplomas, certificados y licencias."
+      />
+      <p className="text-xs text-slate-400">Mostrando {filtered.length} {filtered.length === 1 ? "documento" : "documentos"}</p>
     </div>
   );
 }
 
-function ModuloEvaluaciones({ data, search, setSearch, openNew, openEdit, deleteItem, duplicateItem, markClosed, getResponsableName }: any) {
+function ModuloEvaluaciones({ data, search, setSearch, openNew, openEdit, deleteItem, duplicateItem, markClosed: _markClosed, getResponsableName }: any) {
   const [filtroMes, setFiltroMes] = useState("");
   const [filtroAno, setFiltroAno] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("");
@@ -2998,12 +2758,13 @@ function ModuloEvaluaciones({ data, search, setSearch, openNew, openEdit, delete
   ];
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-slate-800">🧠 Evaluaciones Psicolaborales</h1>
-        <button onClick={() => openNew("evaluaciones")} className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-purple-700 transition">+ Nueva evaluación</button>
-      </div>
-
+    <div className="space-y-5">
+      <PageHeader
+        icon="🧠"
+        title="Evaluaciones Psicolaborales"
+        subtitle="Control de evaluaciones por candidato, cargo, estado y resultado."
+        actions={<button onClick={() => openNew("evaluaciones")} className="bg-violet-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-violet-700 transition-colors shadow-sm">+ Nueva evaluación</button>}
+      />
       <FilterBar
         search={search}
         setSearch={setSearch}
@@ -3011,23 +2772,23 @@ function ModuloEvaluaciones({ data, search, setSearch, openNew, openEdit, delete
         filters={
           <>
             <Select value={filtroMes} onChange={setFiltroMes} options={MESES} placeholder="Mes" />
-            <select value={filtroAno} onChange={e => setFiltroAno(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"><option value="">Año</option><option value="2026">2026</option><option value="2025">2025</option></select>
+            <select value={filtroAno} onChange={e => setFiltroAno(e.target.value)} className="border border-[#D9E2EC] rounded-xl px-4 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:border-[#93C5FD] focus:ring-2 focus:ring-blue-100 transition-colors"><option value="">Año</option><option value="2026">2026</option><option value="2025">2025</option></select>
             <Select value={filtroEstado} onChange={setFiltroEstado} options={ESTADOS_EVALUACION} placeholder="Estado" />
             <Select value={filtroResultado} onChange={setFiltroResultado} options={RESULTADOS_EVALUACION} placeholder="Resultado" />
             <Select value={filtroPrioridad} onChange={setFiltroPrioridad} options={PRIORIDADES} placeholder="Prioridad" />
           </>
         }
       />
-
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead><tr className="bg-slate-100 text-slate-600 uppercase text-xs">{columns.map(c => <th key={c.key} className="px-3 py-2 whitespace-nowrap">{c.label}</th>)}<th className="px-3 py-2">Acciones</th></tr></thead>
-            <tbody>{filtered.map((row: any, i: number) => (<tr key={row.id || i} className="border-t border-slate-100 hover:bg-purple-50/50 transition-colors">{columns.map(c => (<td key={c.key} className="px-3 py-2 whitespace-nowrap">{c.render ? c.render(row) : (row as any)[c.key]}</td>))}<td className="px-3 py-2 whitespace-nowrap"><div className="flex gap-1"><button onClick={() => openEdit("evaluaciones", row)} className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition">Editar</button><button onClick={() => duplicateItem("evaluacionesPsicolaborales", row)} className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition">Duplicar</button><button onClick={() => deleteItem("evaluacionesPsicolaborales", row.id)} className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition">Eliminar</button></div></td></tr>))}</tbody>
-          </table>
-        </div>
-      </div>
-      <p className="text-xs text-slate-400 mt-1">Mostrando {filtered.length} evaluaciones</p>
+      <Table
+        columns={columns}
+        rows={filtered}
+        onEdit={(r: any) => openEdit("evaluaciones", r)}
+        onDelete={(id: string) => deleteItem("evaluacionesPsicolaborales", id)}
+        onDuplicate={(r: any) => duplicateItem("evaluacionesPsicolaborales", r)}
+        emptyMessage="Aún no hay evaluaciones registradas"
+        emptyHint="Crea la primera con «+ Nueva evaluación» o importa desde la plantilla XLSX."
+      />
+      <p className="text-xs text-slate-400">Mostrando {filtered.length} {filtered.length === 1 ? "evaluación" : "evaluaciones"}</p>
     </div>
   );
 }
@@ -3037,11 +2798,24 @@ function ModuloCargaSemanal({ data, search, setSearch, openNew, openEdit, delete
   const columns = [{ key: "semana", label: "Semana" }, { key: "cursosPlanificados", label: "Planificados" }, { key: "cursosUrgentesNuevos", label: "Urgentes nuevos" }, { key: "cursosNoPlanificados", label: "No planificados" }, { key: "ocsNuevas", label: "OCs nuevas" }, { key: "diplomasPendientes", label: "Diplomas pend." }, { key: "procesosBloqueados", label: "Proc. bloqueados" }, { key: "comentario", label: "Comentario" }];
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between"><h1 className="text-xl font-bold text-slate-800">📅 Carga Semanal</h1><button onClick={() => openNew("cargaSemanal")} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition">+ Nueva semana</button></div>
+    <div className="space-y-5">
+      <PageHeader
+        icon="📅"
+        title="Carga Semanal"
+        subtitle="Registro de carga operativa real vs planificada por semana."
+        actions={<button onClick={() => openNew("cargaSemanal")} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Nueva semana</button>}
+      />
       <FilterBar search={search} setSearch={setSearch} searchPlaceholder="Buscar semana..." filters={null} />
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"><Table columns={columns} rows={filtered} onEdit={(r: any) => openEdit("cargaSemanal", r)} onDelete={(id: string) => deleteItem("cargaSemanal", id)} onDuplicate={(r: any) => duplicateItem("cargaSemanal", r)} /></div>
-      <p className="text-xs text-slate-400">{filtered.length} semanas registradas</p>
+      <Table
+        columns={columns}
+        rows={filtered}
+        onEdit={(r: any) => openEdit("cargaSemanal", r)}
+        onDelete={(id: string) => deleteItem("cargaSemanal", id)}
+        onDuplicate={(r: any) => duplicateItem("cargaSemanal", r)}
+        emptyMessage="Aún no hay semanas registradas"
+        emptyHint="Registra la primera semana para llevar estadísticas de carga operativa."
+      />
+      <p className="text-xs text-slate-400">{filtered.length} {filtered.length === 1 ? "semana registrada" : "semanas registradas"}</p>
     </div>
   );
 }
@@ -3058,12 +2832,27 @@ function ModuloContactos({ data, search, setSearch, openNew, openEdit, deleteIte
   const columns = [{ key: "nombre", label: "Nombre", render: (r: Contacto) => <span className="font-semibold">{r.nombre}</span> }, { key: "rol", label: "Rol" }, { key: "areaEmpresa", label: "Área / Empresa" }, { key: "correo", label: "Correo" }, { key: "telefono", label: "Teléfono" }, { key: "relacion", label: "Relación", render: (r: Contacto) => <Badge label={r.relacion} colorClass="bg-slate-200 text-slate-700" /> }, { key: "activo", label: "Activo", render: (r: Contacto) => <Badge label={r.activo} colorClass={r.activo === "Sí" ? "bg-green-500 text-white" : "bg-gray-400 text-white"} /> }];
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between"><h1 className="text-xl font-bold text-slate-800">📇 Contactos / Responsables</h1><button onClick={() => openNew("contactos")} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition">+ Nuevo contacto</button></div>
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">ℹ️ Todos los responsables de los módulos se asignan desde aquí. Crea contactos antes de asignarlos.</div>
-      <FilterBar search={search} setSearch={setSearch} searchPlaceholder="Buscar contacto..." filters={<><Select value={filtroRelacion} onChange={setFiltroRelacion} options={RELACIONES} placeholder="Relación" /><select value={filtroActivo} onChange={e => setFiltroActivo(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"><option value="">Activo</option><option value="Sí">Sí</option><option value="No">No</option></select></>} />
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"><Table columns={columns} rows={filtered} onEdit={(r: any) => openEdit("contactos", r)} onDelete={(id: string) => deleteItem("contactos", id)} /></div>
-      <p className="text-xs text-slate-400">{filtered.length} contactos</p>
+    <div className="space-y-5">
+      <PageHeader
+        icon="📇"
+        title="Contactos / Responsables"
+        subtitle="Base de personas: internos, OTEC, jefaturas, psicólogos y proveedores."
+        actions={<button onClick={() => openNew("contactos")} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Nuevo contacto</button>}
+      />
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
+        <span className="text-xl shrink-0">ℹ️</span>
+        <p className="text-sm text-blue-800">Todos los responsables de los módulos se asignan desde aquí. <strong>Crea el contacto antes de asignarlo</strong> en cualquier registro.</p>
+      </div>
+      <FilterBar search={search} setSearch={setSearch} searchPlaceholder="Buscar contacto..." filters={<><Select value={filtroRelacion} onChange={setFiltroRelacion} options={RELACIONES} placeholder="Relación" /><select value={filtroActivo} onChange={e => setFiltroActivo(e.target.value)} className="border border-[#D9E2EC] rounded-xl px-4 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:border-[#93C5FD] focus:ring-2 focus:ring-blue-100 transition-colors"><option value="">Activo</option><option value="Sí">Sí</option><option value="No">No</option></select></>} />
+      <Table
+        columns={columns}
+        rows={filtered}
+        onEdit={(r: any) => openEdit("contactos", r)}
+        onDelete={(id: string) => deleteItem("contactos", id)}
+        emptyMessage="Aún no hay contactos registrados"
+        emptyHint="Crea el primero con «+ Nuevo contacto». Los responsables de todos los módulos se asignan desde aquí."
+      />
+      <p className="text-xs text-slate-400">{filtered.length} {filtered.length === 1 ? "contacto" : "contactos"}</p>
     </div>
   );
 }
@@ -3079,90 +2868,117 @@ function XlsxImportPreview({ parseResult, onConfirmReplace, onConfirmMerge, onCa
   const totalAdv = parseResult.hojas.reduce((s, h) => s + h.advertencias, 0);
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-        <div className="px-6 py-4 border-b flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-800">Previsualizacion de importacion XLSX</h2>
-          <button onClick={onCancel} className="text-slate-400 hover:text-slate-600 text-xl">x</button>
+        {/* Header */}
+        <div className="sticky top-0 bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between z-10 rounded-t-2xl">
+          <div>
+            <h2 className="text-lg font-bold text-slate-800">📋 Previsualización de importación XLSX</h2>
+            <p className="text-xs text-slate-500 mt-0.5">Revisa los datos antes de confirmar la importación.</p>
+          </div>
+          <button onClick={onCancel} className="text-slate-400 hover:text-slate-600 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors text-xl">×</button>
         </div>
 
         <div className="p-6 space-y-5">
+          {/* Paso visual: stepper */}
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <div className="flex items-center gap-1.5"><div className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-bold">✓</div><span className="font-medium text-emerald-700">Plantilla descargada</span></div>
+            <div className="flex-1 h-px bg-emerald-200" />
+            <div className="flex items-center gap-1.5"><div className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-bold">✓</div><span className="font-medium text-emerald-700">Archivo cargado</span></div>
+            <div className="flex-1 h-px bg-emerald-200" />
+            <div className="flex items-center gap-1.5"><div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold">3</div><span className="font-medium text-blue-700">Revisar y confirmar</span></div>
+          </div>
+
+          {/* KPIs resumen */}
           <div className="grid grid-cols-3 gap-4">
-            <div className="bg-slate-50 rounded-xl p-4 text-center border">
+            <div className="bg-slate-50 rounded-xl p-4 text-center border border-slate-200">
               <div className="text-2xl font-bold text-slate-800">{totalRegistros}</div>
-              <div className="text-xs text-slate-500">Total registros</div>
+              <div className="text-xs text-slate-500 mt-1">Registros detectados</div>
             </div>
-            <div className={`rounded-xl p-4 text-center border ${totalErrores > 0 ? "bg-red-50 border-red-200" : "bg-green-50 border-green-200"}`}>
-              <div className={`text-2xl font-bold ${totalErrores > 0 ? "text-red-600" : "text-green-600"}`}>{totalErrores}</div>
-              <div className="text-xs text-slate-500">Errores criticos</div>
+            <div className={`rounded-xl p-4 text-center border ${totalErrores > 0 ? "bg-red-50 border-red-200" : "bg-emerald-50 border-emerald-200"}`}>
+              <div className={`text-2xl font-bold ${totalErrores > 0 ? "text-red-600" : "text-emerald-600"}`}>{totalErrores}</div>
+              <div className="text-xs text-slate-500 mt-1">Errores críticos</div>
             </div>
-            <div className={`rounded-xl p-4 text-center border ${totalAdv > 0 ? "bg-yellow-50 border-yellow-200" : "bg-slate-50"}`}>
-              <div className={`text-2xl font-bold ${totalAdv > 0 ? "text-yellow-600" : "text-slate-400"}`}>{totalAdv}</div>
-              <div className="text-xs text-slate-500">Advertencias</div>
+            <div className={`rounded-xl p-4 text-center border ${totalAdv > 0 ? "bg-amber-50 border-amber-200" : "bg-slate-50 border-slate-200"}`}>
+              <div className={`text-2xl font-bold ${totalAdv > 0 ? "text-amber-600" : "text-slate-400"}`}>{totalAdv}</div>
+              <div className="text-xs text-slate-500 mt-1">Advertencias</div>
             </div>
           </div>
 
           {parseResult.tieneErroresCriticos && (
-            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
-              Hay errores criticos. Solo se importaran los registros validos al confirmar.
+            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-start gap-2">
+              <span className="text-red-500 shrink-0">⚠️</span>
+              <div className="text-sm text-red-700">
+                <span className="font-semibold">Hay errores críticos.</span> Solo se importarán los registros válidos. Los registros con errores serán omitidos.
+              </div>
             </div>
           )}
 
-          <div className="overflow-x-auto">
+          {/* Tabla por hoja */}
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
             <table className="w-full text-sm text-left">
               <thead>
-                <tr className="bg-slate-100 text-slate-600 text-xs uppercase">
-                  <th className="px-4 py-2">Hoja / Modulo</th>
-                  <th className="px-4 py-2 text-right">Total</th>
-                  <th className="px-4 py-2 text-right">Validos</th>
-                  <th className="px-4 py-2 text-right">Advertencias</th>
-                  <th className="px-4 py-2 text-right">Errores</th>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  {["Hoja / Módulo","Total","Válidos","Advertencias","Errores"].map(h => (
+                    <th key={h} className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {parseResult.hojas.map((h, i) => (
-                  <tr key={i} className="border-t border-slate-100">
-                    <td className="px-4 py-2 font-medium text-slate-700">{h.nombre}</td>
-                    <td className="px-4 py-2 text-right">{h.total}</td>
-                    <td className="px-4 py-2 text-right text-green-600">{h.validos}</td>
-                    <td className="px-4 py-2 text-right text-yellow-600">{h.advertencias || "-"}</td>
-                    <td className="px-4 py-2 text-right text-red-600">{h.errores || "-"}</td>
+                  <tr key={i} className={`border-t border-slate-100 ${i % 2 === 0 ? "bg-white" : "bg-slate-50/40"}`}>
+                    <td className="px-4 py-2.5 font-medium text-slate-700">{h.nombre}</td>
+                    <td className="px-4 py-2.5 text-slate-600">{h.total}</td>
+                    <td className="px-4 py-2.5 text-emerald-600 font-medium">{h.validos}</td>
+                    <td className="px-4 py-2.5">{h.advertencias > 0 ? <span className="text-amber-600 font-medium">{h.advertencias}</span> : <span className="text-slate-300">—</span>}</td>
+                    <td className="px-4 py-2.5">{h.errores > 0 ? <span className="text-red-600 font-medium">{h.errores}</span> : <span className="text-slate-300">—</span>}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
 
+          {/* Detalle de errores/advertencias */}
           {parseResult.hojas.some(h => h.erroresList.length > 0 || h.advertenciasList.length > 0) && (
             <div className="space-y-2">
               {parseResult.hojas.filter(h => h.erroresList.length > 0).map((h, i) => (
-                <div key={i} className="bg-red-50 border border-red-100 rounded-xl p-3">
-                  <div className="text-xs font-bold text-red-700 mb-1">{h.nombre} — Errores:</div>
-                  {h.erroresList.map((e, j) => <div key={j} className="text-xs text-red-600">- {e}</div>)}
+                <div key={i} className="bg-red-50 border border-red-200 rounded-xl p-4">
+                  <div className="text-xs font-bold text-red-700 mb-2">❌ {h.nombre} — Errores ({h.erroresList.length})</div>
+                  <ul className="space-y-0.5">{h.erroresList.slice(0, 10).map((e, j) => <li key={j} className="text-xs text-red-600">· {e}</li>)}</ul>
+                  {h.erroresList.length > 10 && <p className="text-xs text-red-400 mt-1">… y {h.erroresList.length - 10} más</p>}
                 </div>
               ))}
               {parseResult.hojas.filter(h => h.advertenciasList.length > 0).map((h, i) => (
-                <div key={i} className="bg-yellow-50 border border-yellow-100 rounded-xl p-3">
-                  <div className="text-xs font-bold text-yellow-700 mb-1">{h.nombre} — Advertencias:</div>
-                  {h.advertenciasList.map((e, j) => <div key={j} className="text-xs text-yellow-600">- {e}</div>)}
+                <div key={i} className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                  <div className="text-xs font-bold text-amber-700 mb-2">⚠️ {h.nombre} — Advertencias ({h.advertenciasList.length})</div>
+                  <ul className="space-y-0.5">{h.advertenciasList.slice(0, 5).map((e, j) => <li key={j} className="text-xs text-amber-700">· {e}</li>)}</ul>
                 </div>
               ))}
             </div>
           )}
 
-          <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-xs text-blue-700">
-            Se creara un respaldo automatico antes de importar. Las hojas no presentes en el XLSX mantendran sus datos actuales.
+          <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex items-start gap-2 text-sm text-blue-700">
+            <span className="shrink-0">🔒</span>
+            <span>Se creará un respaldo automático antes de importar. Las hojas no presentes en el XLSX mantendrán sus datos actuales intactos.</span>
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t flex gap-3 justify-end flex-wrap">
-          <button onClick={onCancel} className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-medium hover:bg-slate-200 transition-colors">Cancelar</button>
-          <button onClick={onConfirmMerge} className="px-4 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors">
-            Fusionar con base actual
-          </button>
-          <button onClick={onConfirmReplace} className="px-4 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-medium hover:bg-orange-700 transition-colors">
-            Reemplazar base actual
-          </button>
+        {/* Footer con modos */}
+        <div className="sticky bottom-0 bg-white border-t border-slate-100 px-6 py-4 rounded-b-2xl">
+          <div className="flex gap-3 justify-end flex-wrap">
+            <button onClick={onCancel} className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-medium hover:bg-slate-200 transition-colors">
+              Cancelar
+            </button>
+            <button onClick={onConfirmMerge} className="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">
+              🔀 Fusionar con base actual
+            </button>
+            <button onClick={onConfirmReplace} className="px-5 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-medium hover:bg-orange-700 transition-colors shadow-sm">
+              ♻️ Reemplazar base actual
+            </button>
+          </div>
+          <p className="text-xs text-slate-400 mt-2 text-right">
+            <strong>Fusionar:</strong> actualiza existentes, agrega nuevos. <strong>Reemplazar:</strong> borra módulos del XLSX y recarga.
+          </p>
         </div>
       </div>
     </div>
@@ -3197,7 +3013,7 @@ function ModuloConfiguracion({
     try {
       const result = await parseXlsxFile(file);
       setXlsxParseResult(result);
-    } catch (err) {
+    } catch {
       toastShow("Error al leer el archivo XLSX. Verifica que sea un archivo válido.");
     } finally {
       setXlsxImporting(false);
@@ -3207,9 +3023,10 @@ function ModuloConfiguracion({
 
   const applyXlsxImport = (mode: "merge" | "replace") => {
     if (!xlsxParseResult) return;
+    logAudit("data:import", { detail: `Importación XLSX modo ${mode}` });
     runBackupAndToast("importar-xlsx");
     const parsed = xlsxParseResult.parsedData;
-    let newData = { ...data };
+    const newData = { ...data };
     const modules: (keyof AppData)[] = ["contactos","cursos","ocs","practicantes","presupuesto","procesos","diplomas","evaluacionesPsicolaborales","cargaSemanal","valesGas","valesGasOrganizacion","reclutamiento"];
     modules.forEach(mod => {
       if (!(mod in parsed)) return;
@@ -3282,104 +3099,120 @@ function ModuloConfiguracion({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-slate-800">⚙️ Configuración y Respaldos</h1>
+      <PageHeader
+        icon="⚙️"
+        title="Configuración y Respaldos"
+        subtitle="Gestión de datos, exportación, importación y respaldos del sistema."
+      />
 
-      {/* Alerta Semanal */}
-      <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-sm text-blue-800 flex items-start gap-3 shadow-sm">
-        <span className="text-lg">📢</span>
+      {/* Alerta semanal */}
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
+        <span className="text-xl shrink-0">📢</span>
         <div>
-          <p className="font-semibold">Recomendación operativa semanal:</p>
-          <p className="text-xs text-blue-600 mt-1">Descarga un respaldo JSON al menos 1 vez por semana y guárdalo de manera segura en tu carpeta /backups.</p>
+          <p className="text-sm font-semibold text-blue-900">Recomendación semanal</p>
+          <p className="text-sm text-blue-700 mt-0.5">Descarga un respaldo JSON al menos 1 vez por semana y guárdalo de manera segura en tu carpeta de backups.</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Contador */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-          <h3 className="font-bold text-slate-800 mb-3">📊 Contador de registros</h3>
-          <div className="space-y-2">
-            {Object.entries(counts).map(([k, v]) => (
-              <div key={k} className="flex justify-between text-sm">
-                <span className="text-slate-600 capitalize">{k.replace(/([A-Z])/g, " $").trim()}</span>
-                <span className="font-semibold text-slate-800">{v}</span>
-              </div>
-            ))}
-            <hr className="my-2" />
-            <div className="flex justify-between text-sm font-bold">
-              <span>Total registros</span>
-              <span>{Object.values(counts).reduce((a, b) => a + b, 0)}</span>
+      {/* Flujo XLSX — destacado */}
+      <SectionCard title="📊 Importación / Exportación XLSX" subtitle="Conecta el sistema con Excel. Descarga la plantilla, complétala e importa." headerRight={
+        <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded font-medium">Recomendado</span>
+      }>
+        <input ref={xlsxFileInputRef} type="file" accept=".xlsx" className="hidden" onChange={handleXlsxFileSelect} />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+            <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center text-lg">1️⃣</div>
+            <div>
+              <p className="text-sm font-semibold text-slate-700">Descargar plantilla</p>
+              <p className="text-xs text-slate-500 mt-0.5">Plantilla oficial con todos los módulos y ejemplos incluidos.</p>
             </div>
-          </div>
-        </div>
-
-        {/* Info de Últimos Respaldos */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-          <h3 className="font-bold text-slate-800 mb-3">💾 Estado de Respaldos</h3>
-          <div className="space-y-3">
-            <div className="text-xs space-y-1.5 text-slate-600">
-              <p>🔄 Último respaldo automático local: <span className="font-semibold text-slate-800">{lastLocalBackupDate ? new Date(lastLocalBackupDate).toLocaleString("es-CL") : "Ninguno todavía"}</span></p>
-              <p>📥 Última descarga de respaldo JSON: <span className="font-semibold text-slate-800">{lastJSONExport ? new Date(lastJSONExport).toLocaleString("es-CL") : "Nunca"}</span></p>
-              <p>📥 Última descarga de reporte XLSX: <span className="font-semibold text-slate-800">{lastXLSXExport ? new Date(lastXLSXExport).toLocaleString("es-CL") : "Nunca"}</span></p>
-              <p>⏱️ Última actualización de datos: <span className="font-semibold text-slate-800">{new Date(data.meta.actualizado).toLocaleString("es-CL")}</span></p>
-              <p>⚙️ Versión del sistema: <span className="font-semibold text-slate-800">{data.meta.version}</span></p>
-            </div>
-            <div className="flex flex-wrap gap-2 pt-2">
-              <button onClick={exportJSON} className="bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-green-700 transition">📥 Exportar JSON</button>
-              <button onClick={importJSON} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-blue-700 transition">📤 Importar JSON</button>
-              <button onClick={exportXLSX} className="bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-green-700 transition">📥 Exportar XLSX</button>
-              <button onClick={exportLimpia} className="bg-slate-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-slate-700 transition">📋 Plantilla limpia</button>
-            </div>
-          </div>
-        </div>
-
-        {/* Instrucciones */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-          <h3 className="font-bold text-slate-800 mb-3">📖 Instrucciones de uso</h3>
-          <p className="text-sm text-slate-600 mb-3">Guía completa para usar el sistema correctamente.</p>
-          <button onClick={showInstructions} className="bg-amber-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-amber-600 transition">Ver instrucciones de uso</button>
-        </div>
-
-        {/* Base de datos XLSX */}
-        <div className="bg-white rounded-xl border border-indigo-200 p-5 shadow-sm col-span-1 md:col-span-2">
-          <h3 className="font-bold text-slate-800 mb-1">📊 Base de datos XLSX</h3>
-          <p className="text-sm text-slate-500 mb-4">Importa o exporta toda la base de datos desde/hacia un archivo Excel. Descarga primero la plantilla oficial para conocer el formato correcto.</p>
-          <input
-            ref={xlsxFileInputRef}
-            type="file"
-            accept=".xlsx"
-            className="hidden"
-            onChange={handleXlsxFileSelect}
-          />
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={downloadXlsxTemplate}
-              className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-indigo-700 transition"
-            >
+            <button onClick={downloadXlsxTemplate} className="w-full bg-indigo-600 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-indigo-700 transition">
               📋 Descargar plantilla XLSX
             </button>
+          </div>
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+            <div className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center text-lg">2️⃣</div>
+            <div>
+              <p className="text-sm font-semibold text-slate-700">Importar base XLSX</p>
+              <p className="text-xs text-slate-500 mt-0.5">Sube tu archivo, previsualiza los datos y elige modo: fusionar o reemplazar.</p>
+            </div>
             <button
               onClick={() => xlsxFileInputRef.current?.click()}
               disabled={xlsxImporting}
-              className="bg-teal-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-teal-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-teal-600 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-teal-700 transition disabled:opacity-50"
             >
-              {xlsxImporting ? "Procesando..." : "📤 Importar base desde XLSX"}
+              {xlsxImporting ? "⏳ Procesando..." : "📤 Subir e importar XLSX"}
             </button>
           </div>
-          <p className="text-xs text-slate-400 mt-3">Modos disponibles al importar: <strong>Fusionar</strong> (agrega/actualiza sin borrar) o <strong>Reemplazar</strong> (sobreescribe los módulos presentes en el archivo).</p>
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+            <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center text-lg">3️⃣</div>
+            <div>
+              <p className="text-sm font-semibold text-slate-700">Exportar datos</p>
+              <p className="text-xs text-slate-500 mt-0.5">Descarga todos los módulos en un archivo Excel con todos los registros actuales.</p>
+            </div>
+            <button onClick={exportXLSX} className="w-full bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-emerald-700 transition">
+              📥 Exportar XLSX completo
+            </button>
+          </div>
         </div>
+        <p className="text-xs text-slate-400 mt-3">Modos al importar: <strong>Fusionar</strong> agrega/actualiza sin borrar · <strong>Reemplazar</strong> sobreescribe los módulos presentes en el archivo.</p>
+      </SectionCard>
 
-        {/* Datos de Ejemplo */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-          <h3 className="font-bold text-slate-800 mb-3">🔄 Datos de ejemplo</h3>
-          <p className="text-sm text-slate-600 mb-3">Restaura los datos de ejemplo para previsualizar el sistema.</p>
-          <button onClick={restaurarEjemplos} className="bg-amber-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-amber-600 transition">Restaurar datos de ejemplo</button>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Estado respaldos */}
+        <SectionCard title="💾 Estado de respaldos">
+          <div className="space-y-2 text-xs text-slate-600">
+            <div className="flex justify-between py-1 border-b border-slate-100"><span>Último respaldo local</span><span className="font-semibold text-slate-800">{lastLocalBackupDate ? new Date(lastLocalBackupDate).toLocaleString("es-CL") : "Ninguno"}</span></div>
+            <div className="flex justify-between py-1 border-b border-slate-100"><span>Última descarga JSON</span><span className="font-semibold text-slate-800">{lastJSONExport ? new Date(lastJSONExport).toLocaleString("es-CL") : "Nunca"}</span></div>
+            <div className="flex justify-between py-1 border-b border-slate-100"><span>Última descarga XLSX</span><span className="font-semibold text-slate-800">{lastXLSXExport ? new Date(lastXLSXExport).toLocaleString("es-CL") : "Nunca"}</span></div>
+            <div className="flex justify-between py-1 border-b border-slate-100"><span>Última actualización</span><span className="font-semibold text-slate-800">{new Date(data.meta.actualizado).toLocaleString("es-CL")}</span></div>
+            <div className="flex justify-between py-1"><span>Versión</span><span className="font-semibold text-slate-800">v{data.meta.version}</span></div>
+          </div>
+          <div className="flex flex-wrap gap-2 pt-4 border-t border-slate-100 mt-3">
+            <button onClick={exportJSON} className="bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-emerald-700 transition">📥 Exportar JSON</button>
+            <button onClick={importJSON} className="bg-blue-600 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-blue-700 transition">📤 Importar JSON</button>
+            <button onClick={exportLimpia} className="bg-slate-500 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-slate-600 transition">📋 Plantilla limpia</button>
+          </div>
+        </SectionCard>
 
-        {/* Zona de peligro */}
-        <div className="bg-white rounded-xl border border-red-200 p-5 shadow-sm">
-          <h3 className="font-bold text-red-700 mb-3">⚠️ Zona de peligro</h3>
-          <p className="text-sm text-slate-600 mb-3">Elimina todos los datos. Requiere doble confirmación.</p>
-          <button onClick={limpiarTodo} className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700 transition">Limpiar todos los datos</button>
+        {/* Contador */}
+        <SectionCard title="📊 Registros por módulo">
+          <div className="space-y-1.5">
+            {Object.entries(counts).map(([k, v]) => (
+              <div key={k} className="flex justify-between items-center text-sm py-1 border-b border-slate-50">
+                <span className="text-slate-600 capitalize">{k.replace(/([A-Z])/g, " $1").trim()}</span>
+                <span className={`font-bold text-sm px-2 py-0.5 rounded-lg ${v > 0 ? "bg-blue-50 text-blue-700" : "text-slate-400"}`}>{v}</span>
+              </div>
+            ))}
+            <div className="flex justify-between text-sm font-bold pt-2">
+              <span className="text-slate-700">Total</span>
+              <span className="text-slate-800">{Object.values(counts).reduce((a, b) => a + b, 0)}</span>
+            </div>
+          </div>
+        </SectionCard>
+
+        {/* Instrucciones */}
+        <SectionCard title="📖 Guía de uso">
+          <p className="text-sm text-slate-600 mb-4">Consulta las instrucciones completas de uso del sistema, rutina semanal y buenas prácticas.</p>
+          <button onClick={showInstructions} className="bg-amber-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-amber-600 transition-colors shadow-sm">
+            Ver instrucciones de uso
+          </button>
+        </SectionCard>
+
+        {/* Acciones de datos */}
+        <div className="space-y-3">
+          <SectionCard title="🔄 Datos de ejemplo">
+            <p className="text-sm text-slate-600 mb-3">Restaura datos de ejemplo para previsualizar el sistema.</p>
+            <button onClick={restaurarEjemplos} className="bg-amber-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-amber-600 transition-colors">
+              Restaurar datos de ejemplo
+            </button>
+          </SectionCard>
+          <SectionCard title="⚠️ Zona de peligro">
+            <p className="text-sm text-slate-600 mb-3">Elimina <strong>todos</strong> los datos permanentemente. Requiere doble confirmación.</p>
+            <button onClick={limpiarTodo} className="bg-red-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-red-700 transition-colors">
+              Limpiar todos los datos
+            </button>
+          </SectionCard>
         </div>
       </div>
 
@@ -3578,7 +3411,7 @@ function FormPracticantes({ data, editItem, closeModal, saveItem }: any) {
   );
 }
 
-function FormPresupuesto({ data, editItem, closeModal, saveItem }: any) {
+function FormPresupuesto({ data: _data, editItem, closeModal, saveItem }: any) {
   const { form, set } = useForm({ concepto: "", presupuestoTotal: 0, observaciones: "" }, editItem);
   const [vErr, setVErr] = useState<VError>({});
 
@@ -3734,7 +3567,7 @@ function FormEvaluaciones({ data, editItem, closeModal, saveItem }: any) {
   );
 }
 
-function FormCargaSemanal({ data, editItem, closeModal, saveItem }: any) {
+function FormCargaSemanal({ data: _data, editItem, closeModal, saveItem }: any) {
   const { form, set } = useForm({ semana: "", cursosPlanificados: 0, cursosUrgentesNuevos: 0, cursosNoPlanificados: 0, ocsNuevas: 0, diplomasPendientes: 0, procesosBloqueados: 0, comentario: "" }, editItem);
   const [vErr, setVErr] = useState<VError>({});
   const save = () => {
@@ -4547,13 +4380,11 @@ function ModuloValesGas({ data, search, setSearch, openNew, openEdit, deleteItem
 
   return (
     <div className="space-y-6">
-      {/* Encabezado */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-slate-800">⛽ Vales de Gas</h1>
-          <p className="text-xs text-slate-500 mt-0.5">Control integral de vales de gas — organización y colaboradores</p>
-        </div>
-      </div>
+      <PageHeader
+        icon="⛽"
+        title="Vales de Gas"
+        subtitle="Control integral de stock organizacional y distribución a colaboradores."
+      />
 
       {/* ── BLOQUE 1: RESUMEN GENERAL ── */}
       <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3">
@@ -4866,24 +4697,23 @@ function ModuloReclutamiento({ data, search, setSearch, openNew, openEdit, delet
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div><h1 className="text-xl font-bold text-slate-800">👥 Reclutamiento</h1><p className="text-sm text-slate-500">Control de procesos de reclutamiento y selección</p></div>
-        <button onClick={() => openNew("reclutamiento")} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition font-semibold">+ Nuevo proceso</button>
-      </div>
+      <PageHeader
+        icon="👥"
+        title="Reclutamiento"
+        subtitle="Control de procesos de reclutamiento y selección de personal."
+        actions={<button onClick={() => openNew("reclutamiento")} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Nuevo proceso</button>}
+      />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+      <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
         {[
-          { label: "Total", val: total, color: "bg-slate-50 text-slate-700" },
-          { label: "Abiertos", val: abiertos, color: "bg-green-50 text-green-700" },
-          { label: "Cerrados", val: cerrados, color: "bg-slate-100 text-slate-600" },
-          { label: "Pausados", val: pausados, color: "bg-yellow-50 text-yellow-700" },
-          { label: "Desistidos", val: desistidos, color: "bg-red-50 text-red-700" },
-          { label: "Bloqueados", val: bloqueados, color: "bg-orange-50 text-orange-700" },
+          { label: "Total", val: total, variant: "default" as const },
+          { label: "Abiertos", val: abiertos, variant: "success" as const },
+          { label: "Cerrados", val: cerrados, variant: "default" as const },
+          { label: "Pausados", val: pausados, variant: "warning" as const },
+          { label: "Desistidos", val: desistidos, variant: "danger" as const },
+          { label: "Bloqueados", val: bloqueados, variant: bloqueados > 0 ? "danger" as const : "default" as const },
         ].map(k => (
-          <div key={k.label} className={`rounded-xl p-3 text-center border ${k.color}`}>
-            <div className="text-xs font-medium opacity-70">{k.label}</div>
-            <div className="text-2xl font-bold">{k.val}</div>
-          </div>
+          <KpiCardUI key={k.label} label={k.label} value={k.val} variant={k.variant} />
         ))}
       </div>
 
@@ -4895,14 +4725,17 @@ function ModuloReclutamiento({ data, search, setSearch, openNew, openEdit, delet
         <Select value={filtroPrioridad} onChange={setFiltroPrioridad} options={PRIORIDADES} placeholder="Prioridad" />
       </>} />
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <Table columns={columns} rows={filtered}
-          onEdit={(r: any) => openEdit("reclutamiento", r)}
-          onDelete={(id: string) => deleteItem("reclutamiento", id)}
-          onDuplicate={duplicateItem ? (id: string) => duplicateItem("reclutamiento", id) : undefined}
-          onMarkClosed={(id: string) => markClosed("reclutamiento", id, "Cerrado")}
-          closedState="Cerrado" />
-      </div>
+      <Table
+        columns={columns}
+        rows={filtered}
+        onEdit={(r: any) => openEdit("reclutamiento", r)}
+        onDelete={(id: string) => deleteItem("reclutamiento", id)}
+        onDuplicate={duplicateItem ? (r: any) => duplicateItem("reclutamiento", r) : undefined}
+        onMarkClosed={(id: string) => markClosed("reclutamiento", id, "Cerrado")}
+        closedState="Cerrado"
+        emptyMessage="Aún no hay procesos de reclutamiento"
+        emptyHint="Crea el primero con «+ Nuevo proceso» o importa desde la plantilla XLSX."
+      />
       <p className="text-xs text-slate-400">Mostrando {filtered.length} de {total} procesos</p>
     </div>
   );

@@ -1,67 +1,29 @@
-import { describe, it, expect, vi } from "vitest";
-
-// ── Helpers copiados del módulo (sin importar App.tsx completo) ──
-
-function formatDateCL(value?: string): string {
-  if (!value) return "";
-  if (value.includes("/")) return value;
-  const parts = value.split("-");
-  if (parts.length !== 3) return value;
-  const [year, month, day] = parts;
-  return `${day}/${month}/${year}`;
-}
-
-function parseDateCL(value: string): string {
-  const clean = value.trim();
-  const parts = clean.split("/");
-  if (parts.length !== 3) return clean;
-  const [day, month, year] = parts;
-  return `${year.padStart(4, "0")}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-}
-
-function semaforo(fechaLimite: string): { label: string; color: string; order: number } {
-  const hoyStr = new Date().toISOString().slice(0, 10);
-  if (!fechaLimite) return { label: "Sin fecha", color: "#9CA3AF", order: 10 };
-  const hoyDate = new Date(hoyStr);
-  const f = new Date(fechaLimite.slice(0, 10));
-  const diff = Math.ceil((f.getTime() - hoyDate.getTime()) / 86400000);
-  if (diff < 0) return { label: "Vencido", color: "#DC2626", order: 1 };
-  if (diff === 0) return { label: "Vence hoy", color: "#EA580C", order: 2 };
-  if (diff <= 3) return { label: "1-3 días", color: "#F59E0B", order: 3 };
-  if (diff <= 7) return { label: "4-7 días", color: "#FBBF24", order: 4 };
-  return { label: "Sin urgencia", color: "#16A34A", order: 5 };
-}
-
-function durMesesEntre(ini: string, fin: string): number {
-  if (!ini || !fin) return 0;
-  const d1 = new Date(ini);
-  const d2 = new Date(fin);
-  const m = Math.round((d2.getTime() - d1.getTime()) / (365.25 * 24 * 3600 * 1000) * 12);
-  return m > 0 ? m : 1;
-}
-
-function getWeeksForYear(year: number) {
-  const jan4 = new Date(year, 0, 4);
-  const dayOfWeek = jan4.getDay() || 7;
-  const firstMonday = new Date(jan4.getTime() - (dayOfWeek - 1) * 86400000);
-  const weeks = [];
-  for (let w = 1; w <= 53; w++) {
-    const monday = new Date(firstMonday.getTime() + (w - 1) * 7 * 86400000);
-    if (monday.getFullYear() > year && w > 52) break;
-    weeks.push({ number: w, label: `Semana ${w}` });
-  }
-  return weeks;
-}
-
-// ── Tests ──
+import { describe, expect, it } from "vitest";
+import {
+  createDataToSave,
+  duplicateRecord,
+  durMesesEntre,
+  formatDateCL,
+  getWeeksForYear,
+  isTableRowClosed,
+  markRecordClosed,
+  normalizeDateFromXlsx,
+  parseDateCL,
+  semaforo,
+} from "../utils/appHelpers";
+import { getStatusField } from "../domain/moduleConfig";
+import { ensureBudgetRows } from "../domain/budget";
+import { migrateData } from "../storage/migrations";
 
 describe("formatDateCL", () => {
   it("convierte ISO a dd/mm/yyyy", () => {
     expect(formatDateCL("2026-05-15")).toBe("15/05/2026");
   });
+
   it("devuelve el mismo valor si ya tiene /", () => {
     expect(formatDateCL("15/05/2026")).toBe("15/05/2026");
   });
+
   it("devuelve string vacío para valor vacío", () => {
     expect(formatDateCL("")).toBe("");
     expect(formatDateCL(undefined)).toBe("");
@@ -72,11 +34,14 @@ describe("parseDateCL", () => {
   it("convierte dd/mm/yyyy a ISO", () => {
     expect(parseDateCL("15/05/2026")).toBe("2026-05-15");
   });
-  it("rellena zeros en día y mes cortos", () => {
+
+  it("rellena ceros en día y mes cortos", () => {
     expect(parseDateCL("5/3/2026")).toBe("2026-03-05");
   });
-  it("devuelve el input si no tiene formato válido", () => {
-    expect(parseDateCL("sinformato")).toBe("sinformato");
+
+  it("rechaza fechas calendario inválidas", () => {
+    expect(parseDateCL("31/02/2026")).toBe("");
+    expect(normalizeDateFromXlsx("99/99/2026")).toBe("");
   });
 });
 
@@ -86,15 +51,15 @@ describe("semaforo", () => {
   });
 
   it("detecta fecha vencida", () => {
-    expect(semaforo("2000-01-01").label).toBe("Vencido");
+    expect(semaforo("2026-05-01", "2026-05-07").label).toBe("Vencido");
   });
 
   it("detecta sin urgencia para fecha futura lejana", () => {
-    expect(semaforo("2099-12-31").label).toBe("Sin urgencia");
+    expect(semaforo("2026-05-30", "2026-05-07").label).toBe("Sin urgencia");
   });
 
   it("el orden de vencido es menor que sin urgencia", () => {
-    expect(semaforo("2000-01-01").order).toBeLessThan(semaforo("2099-12-31").order);
+    expect(semaforo("2026-05-01", "2026-05-07").order).toBeLessThan(semaforo("2026-05-30", "2026-05-07").order);
   });
 });
 
@@ -102,10 +67,12 @@ describe("durMesesEntre", () => {
   it("calcula meses entre dos fechas", () => {
     expect(durMesesEntre("2026-01-01", "2026-07-01")).toBeCloseTo(6, 0);
   });
+
   it("retorna 0 si alguna fecha está vacía", () => {
     expect(durMesesEntre("", "2026-07-01")).toBe(0);
     expect(durMesesEntre("2026-01-01", "")).toBe(0);
   });
+
   it("retorna mínimo 1 si las fechas son iguales", () => {
     expect(durMesesEntre("2026-01-01", "2026-01-01")).toBe(1);
   });
@@ -118,15 +85,76 @@ describe("getWeeksForYear", () => {
     expect(weeks[0].label).toBe("Semana 1");
   });
 
-  it("la primera semana siempre es Semana 1", () => {
-    const weeks2025 = getWeeksForYear(2025);
-    const weeks2026 = getWeeksForYear(2026);
-    expect(weeks2025[0].number).toBe(1);
-    expect(weeks2026[0].number).toBe(1);
+  it("no genera más de 53 semanas", () => {
+    expect(getWeeksForYear(2026).length).toBeLessThanOrEqual(53);
+  });
+});
+
+describe("operaciones de registros", () => {
+  it("obtiene el campo de estado desde configuración central", () => {
+    expect(getStatusField("ocs")).toBe("estadoOC");
+    expect(getStatusField("reclutamiento")).toBe("proceso");
   });
 
-  it("no genera más de 53 semanas", () => {
-    const weeks = getWeeksForYear(2026);
-    expect(weeks.length).toBeLessThanOrEqual(53);
+  it("cierra una OC usando estadoOC", () => {
+    const oc = { id: "oc1", estadoOC: "Solicitada", estado: "no usar", ultimaActualizacion: "2026-05-01" };
+    const closed = markRecordClosed("ocs", oc, "Cerrada", "2026-05-07");
+    expect(closed.estadoOC).toBe("Cerrada");
+    expect(closed.estado).toBe("no usar");
+    expect(isTableRowClosed(closed, "Cerrada")).toBe(true);
+  });
+
+  it("cierra un proceso de reclutamiento usando proceso", () => {
+    const reclutamiento = { id: "r1", proceso: "Abierto", ultimaActualizacion: "2026-05-01" };
+    const closed = markRecordClosed("reclutamiento", reclutamiento, "Cerrado", "2026-05-07");
+    expect(closed.proceso).toBe("Cerrado");
+    expect(isTableRowClosed(closed, "Cerrado")).toBe(true);
+  });
+
+  it("duplica una evaluación psicolaboral con nuevo ID y cargo descriptivo", () => {
+    const evaluacion = { id: "e1", cargo: "Analista", estado: "Solicitada", resultado: "Pendiente", ultimaActualizacion: "2026-05-01" };
+    const duplicated = duplicateRecord("evaluacionesPsicolaborales", evaluacion, "e2", "2026-05-07");
+    expect(duplicated.id).toBe("e2");
+    expect(duplicated.cargo).toBe("Analista (copia)");
+    expect(duplicated.estado).toBe("Solicitada");
+  });
+
+  it("duplica un reclutamiento sin alterar proceso", () => {
+    const reclutamiento = { id: "r1", proceso: "Abierto", observaciones: "Original", plantaCentro: "Planta Bio Bio", ultimaActualizacion: "2026-05-01" };
+    const duplicated = duplicateRecord("reclutamiento", reclutamiento, "r2", "2026-05-07");
+    expect(duplicated.id).toBe("r2");
+    expect(duplicated.proceso).toBe("Abierto");
+    expect(duplicated.observaciones).toBe("Original (Copia de registro anterior)");
+  });
+
+  it("crea una copia inmutable para guardar datos", () => {
+    const data = { cursos: [], meta: { version: "1.1", actualizado: "old" } };
+    const saved = createDataToSave(data, "2026-05-07T10:00:00.000Z");
+    expect(saved).not.toBe(data);
+    expect(saved.meta).not.toBe(data.meta);
+    expect(saved.meta.actualizado).toBe("2026-05-07T10:00:00.000Z");
+    expect(data.meta.actualizado).toBe("old");
+  });
+});
+
+describe("presupuesto y migración", () => {
+  it("asegura filas base de presupuesto sin borrar las existentes", () => {
+    const rows = ensureBudgetRows([{ id: "p1", concepto: "Practicantes", presupuestoTotal: 100, gastado: 0, responsableId: "", ultimaActualizacion: "2026-05-01", observaciones: "" }]);
+    expect(rows.some((row) => row.concepto === "Practicantes")).toBe(true);
+    expect(rows.some((row) => row.concepto.includes("Órdenes de Compra"))).toBe(true);
+  });
+
+  it("migra responsable antiguo a contacto y responsableId", () => {
+    const fallback = {
+      cursos: [], ocs: [], practicantes: [], presupuesto: [], procesos: [], diplomas: [], cargaSemanal: [],
+      contactos: [], evaluacionesPsicolaborales: [], valesGas: [], valesGasOrganizacion: [], reclutamiento: [],
+      meta: { version: "1.1", ultimaExportacion: "", actualizado: "" },
+    };
+    const migrated = migrateData({
+      cursos: [{ id: "c1", curso: "Excel", responsable: "Ana", estado: "Pendiente revisar" }],
+      meta: {},
+    }, fallback);
+    expect(migrated.contactos[0].nombre).toBe("Ana");
+    expect(migrated.cursos[0].responsableId).toBe(migrated.contactos[0].id);
   });
 });
