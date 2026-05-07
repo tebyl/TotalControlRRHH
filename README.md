@@ -1,4 +1,4 @@
-# Control Operativo Kata V5
+# Control Operativo RH
 
 Sistema de control operativo para la gestión de RRHH y capacitaciones. Aplicación web cliente-side con persistencia local, pensada para equipos operativos que necesitan trazabilidad de tareas, plazos y procesos.
 

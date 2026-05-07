@@ -93,18 +93,48 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tool
 const PRIORIDADES = ["P1 Crítico", "P2 Alto", "P3 Medio", "P4 Bajo"];
 const ESTADOS_CURSO = ["Pendiente revisar", "En cotización", "En aprobación", "Programado", "Ejecutado", "Cerrado", "Detenido"];
 const ESTADOS_OC = ["Pendiente crear", "Solicitada", "En aprobación", "Emitida", "Enviada proveedor", "Cerrada", "Detenida"];
+const CATEGORIAS_OC = ["Curso / Capacitación", "Evento", "Actividad de bienestar", "Kit de bienvenida", "Artículos / Insumos", "Evaluación psicolaboral", "Servicio profesional", "Uniformes / EPP", "Tecnología / Software", "Otro"];
 const ESTADOS_PRACTICANTE = ["Por buscar", "En reclutamiento", "Seleccionado", "Activo", "Finalizado", "Detenido"];
 const ESTADOS_DIPLOMA = ["Pedir a la OTEC", "Enviar o pedir al participante", "Subir a BUK", "Completado", "Detenido"];
 const ESTADOS_BUK = ["Pendiente subir", "Subido", "Rechazado", "No aplica"];
 const ESTADOS_EVALUACION = ["Pendiente solicitar", "Solicitada", "Agendada", "Realizada", "Informe recibido", "En revisión", "Cerrada", "Detenida"];
 const RESULTADOS_EVALUACION = ["Recomendado", "Recomendado con observaciones", "No recomendado", "Pendiente", "No aplica"];
-const TIPOS_EVALUACION = ["Psicolaboral", "Referencias laborales", "Evaluación técnica", "Evaluación mixta", "Otro"];
+const TIPOS_EVALUACION = ["Psicolaboral", "Referencias laborales", "Evaluación técnica", "Evaluación mixta","Hogan", "Otro"];
 const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-const ORIGENES_CURSO = ["DNC", "Carta Gantt", "Urgente no planificado", "No planificado necesario", "Emergente por operación", "Requerimiento legal", "Solicitud jefatura", "Reprogramado", "Otro"];
+const ORIGENES_CURSO = ["DNC", "Carta Gantt", "Urgente no planificado", "Academia Molineria","No planificado necesario", "Emergente por operación", "Requerimiento legal", "Solicitud jefatura", "Reprogramado", "Otro"];
 const BLOQUEOS = ["Sin bloqueo", "Falta aprobación", "Falta OC", "Falta cotización", "Falta OTEC", "Falta participante", "Falta jefatura", "Falta presupuesto", "Falta subir a BUK", "Falta candidato", "Falta proveedor", "Falta informe", "Otro"];
 const RELACIONES = ["Interno", "OTEC", "Participante", "Jefatura", "Compras", "Finanzas", "RRHH", "BUK", "Psicólogo / Proveedor evaluación", "Otro"];
 const TIPOS_PROCESO = ["Curso", "OC", "Presupuesto", "Practicante", "Reclutamiento", "Diploma / certificado / licencia", "BUK", "Otro"];
 const TIPOS_DOCUMENTO = ["Diploma", "Certificado", "Licencia", "Otro"];
+const ESTADOS_VALE_GAS = ["Pendiente entregar", "Entregado", "En descuento", "Cerrado", "Detenido"];
+const TIPOS_MOVIMIENTO_VALES = ["Ingreso de vales", "Ajuste positivo", "Ajuste negativo", "Corrección inventario", "Otro"];
+const TIPOS_RECLUTAMIENTO = ["Interno", "Externo", "Promoción interna", "Reemplazo interno", "Otro", "Por definir"];
+const PLANTAS_CENTROS = ["Planta Bio Bio", "Planta Freire", "Planta Perquenco", "Perquenco Carretera", "Planta Lautaro", "Lautaro Copeval", "Planta Rio Bueno", "Planta Victoria", "Casa Matriz", "Otro"];
+const TIPOS_VACANTE = ["Cosecha", "Reemplazo", "Fijo", "Temporal", "Práctica", "Proyecto", "Otro", "Por definir"];
+const ESTADOS_PROCESO_RECLUTAMIENTO = ["Abierto", "Cerrado", "Pausado", "Desistido"];
+const OPTS_SI_NO = ["Sí", "No", "Pendiente", "N/A"];
+const OPTS_ENTREVISTA = ["Pendiente", "Agendada", "Realizada", "N/A"];
+const OPTS_TEST = ["Pendiente", "Solicitado", "Realizado", "N/A"];
+const OPTS_SELECCION_CV = ["Pendiente", "En proceso", "Finalizado", "N/A"];
+const OPTS_CARTA_OFERTA = ["Pendiente", "Solicitada", "Emitida", "N/A"];
+const OPTS_ENVIO_CARTA = ["Pendiente", "Realizado", "N/A"];
+const OPTS_PROCESO_BUK = ["Sí", "No", "Confidencial", "Pendiente", "N/A"];
+const OPTS_REVISADO_PPTO = ["Pendiente", "Aceptado", "Rechazado", "N/A"];
+const ETAPAS_RECLUTAMIENTO = [
+  { key: "revisadoPPTO", label: "Revisado PPTO" },
+  { key: "procesoBuk", label: "Proceso en BUK" },
+  { key: "publicado", label: "Publicado" },
+  { key: "seleccionCV", label: "Selección de CV" },
+  { key: "cvSeleccionadoBuk", label: "CV Seleccionado en BUK" },
+  { key: "entrevistaJefatura", label: "Entrevista Jefatura" },
+  { key: "entrevistaGP", label: "Entrevista GP" },
+  { key: "testPsicolaboral", label: "Test Psicolaboral" },
+  { key: "testHogan", label: "Test Hogan" },
+  { key: "seleccionado", label: "Seleccionado" },
+  { key: "cartaOferta", label: "Carta Oferta" },
+  { key: "envioCartaOferta", label: "Envío carta oferta" },
+  { key: "firmaCartaOferta", label: "Firma Carta Oferta" },
+];
 
 // ──────────────────────────────────────────────
 // FORM COMPONENTS (Global)
@@ -196,6 +226,13 @@ function SelectContact({ value, onChange, data }: { value: string; onChange: (v:
   return <select value={value} onChange={e => onChange(e.target.value)} className="border border-[#D9E2EC] rounded-xl px-4 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:border-[#93C5FD] focus:ring-2 focus:ring-blue-100 transition-colors"><option value="">Sin responsable</option>{activeContacts.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select>;
 }
 
+function isTableRowClosed(row: any, closedState?: string): boolean {
+  if (!closedState) return false;
+  if (row.estado === closedState || row.estadoOC === closedState || row.estadoBUK === closedState || row.proceso === closedState) return true;
+  if (row.etapa === "Completado" || row.estadoBUK === "Subido") return true;
+  return ["Cerrado", "Cerrada", "Completado", "Finalizado"].includes(row.estado);
+}
+
 function Table({ columns, rows, onEdit, onDelete, onDuplicate, onMarkClosed, closedState }: { columns: { key: string; label: string; render?: (row: any) => React.ReactNode }[]; rows: any[]; onEdit: (row: any) => void; onDelete: (id: string) => void; onDuplicate?: (row: any) => void; onMarkClosed?: (id: string) => void; closedState?: string; }) {
   if (rows.length === 0) return (
     <div className="text-center py-12 bg-white rounded-2xl border border-[#D9E2EC]">
@@ -207,7 +244,7 @@ function Table({ columns, rows, onEdit, onDelete, onDuplicate, onMarkClosed, clo
     <div className="overflow-x-auto rounded-2xl border border-[#D9E2EC]">
       <table className="w-full text-sm text-left table-stripe">
         <thead><tr className="bg-[#F1F5F9] text-slate-500 text-xs font-medium tracking-wide">{columns.map(c => <th key={c.key} className="px-4 py-3 whitespace-nowrap">{c.label}</th>)}<th className="px-4 py-3 w-[180px]">Acciones</th></tr></thead>
-        <tbody>{rows.map((row: any, i: number) => (<tr key={row.id || i} className="border-t border-[#F1F5F9] hover:bg-blue-50/40 transition-colors">{columns.map(c => (<td key={c.key} className="px-4 py-3 whitespace-nowrap">{c.render ? c.render(row) : (row as any)[c.key]}</td>))}<td className="px-4 py-3 whitespace-nowrap"><div className="flex gap-1.5"><button onClick={() => onEdit(row)} className="px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors">Editar</button>{onMarkClosed && closedState && row.estado !== "Cerrado" && row.estado !== "Cerrada" && row.estado !== "Completado" && row.estado !== "Finalizado" && <button onClick={() => onMarkClosed(row.id)} className="px-3 py-1.5 text-xs font-medium bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors">Cerrar</button>}{onDuplicate && <button onClick={() => onDuplicate(row)} className="px-3 py-1.5 text-xs font-medium bg-violet-50 text-violet-700 rounded-lg border border-violet-100 hover:bg-violet-100 transition-colors">Duplicar</button>}<button onClick={() => onDelete(row.id)} className="px-3 py-1.5 text-xs font-medium bg-red-50 text-red-700 rounded-lg border border-red-100 hover:bg-red-100 transition-colors">Eliminar</button></div></td></tr>))}</tbody>
+        <tbody>{rows.map((row: any, i: number) => (<tr key={row.id || i} className="border-t border-[#F1F5F9] hover:bg-blue-50/40 transition-colors">{columns.map(c => (<td key={c.key} className="px-4 py-3 whitespace-nowrap">{c.render ? c.render(row) : (row as any)[c.key]}</td>))}<td className="px-4 py-3 whitespace-nowrap"><div className="flex gap-1.5"><button onClick={() => onEdit(row)} className="px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors">Editar</button>{onMarkClosed && closedState && !isTableRowClosed(row, closedState) && <button onClick={() => onMarkClosed(row.id)} className="px-3 py-1.5 text-xs font-medium bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors">Cerrar</button>}{onDuplicate && <button onClick={() => onDuplicate(row)} className="px-3 py-1.5 text-xs font-medium bg-violet-50 text-violet-700 rounded-lg border border-violet-100 hover:bg-violet-100 transition-colors">Duplicar</button>}<button onClick={() => onDelete(row.id)} className="px-3 py-1.5 text-xs font-medium bg-red-50 text-red-700 rounded-lg border border-red-100 hover:bg-red-100 transition-colors">Eliminar</button></div></td></tr>))}</tbody>
       </table>
     </div>
   );
@@ -217,8 +254,8 @@ function Table({ columns, rows, onEdit, onDelete, onDuplicate, onMarkClosed, clo
 // TYPES
 // ──────────────────────────────────────────────
 
-interface Curso { id: string; curso: string; origen: string; area: string; solicitante: string; fechaSolicitud: string; fechaRequerida: string; estado: string; prioridad: string; nivelCritico: string; requiereOC: string; numeroOC: string; proveedor: string; montoEstimado: number; responsableId: string; proximaAccion: string; fechaProximaAccion: string; bloqueadoPor: string; ultimaActualizacion: string; observaciones: string; }
-interface OC { id: string; numeroOC: string; cursoAsociado: string; proveedor: string; monto: number; fechaSolicitud: string; fechaLimite: string; estadoOC: string; prioridad: string; accionPendiente: string; responsableId: string; bloqueadoPor: string; ultimaActualizacion: string; observaciones: string; }
+interface Curso { id: string; curso: string; origen: string; area: string; solicitante: string; fechaSolicitud: string; fechaRequerida: string; estado: string; prioridad: string; nivelCritico: string; requiereOC: string; numeroOC: string; proveedor: string; responsableId: string; proximaAccion: string; fechaProximaAccion: string; bloqueadoPor: string; ultimaActualizacion: string; observaciones: string; }
+interface OC { id: string; numeroOC: string; categoriaOC: string; cursoAsociado: string; proveedor: string; monto: number; fechaSolicitud: string; fechaLimite: string; estadoOC: string; prioridad: string; accionPendiente: string; responsableId: string; bloqueadoPor: string; ultimaActualizacion: string; observaciones: string; }
 interface Practicante { id: string; nombre: string; area: string; especialidad: string; fechaInicio: string; fechaTermino: string; costoMensual: number; estado: string; responsableId: string; proximoPaso: string; fechaProximaAccion: string; bloqueadoPor: string; ultimaActualizacion: string; observaciones: string; }
 interface PresupuestoItem { id: string; concepto: string; presupuestoTotal: number; gastado: number; responsableId: string; ultimaActualizacion: string; observaciones: string; montoComprometidoManual?: number; montoEjecutadoManual?: number; modoCalculo?: string; }
 interface Proceso { id: string; proceso: string; tipo: string; estadoActual: string; queFalta: string; responsableId: string; fechaLimite: string; riesgo: string; prioridad: string; proximaAccion: string; fechaProximaAccion: string; bloqueadoPor: string; ultimaActualizacion: string; observaciones: string; }
@@ -227,7 +264,42 @@ interface CargaSemanal { id: string; semana: string; cursosPlanificados: number;
 interface Contacto { id: string; nombre: string; rol: string; areaEmpresa: string; correo: string; telefono: string; relacion: string; activo: string; observaciones: string; }
 interface Evaluacion { id: string; mes: string; ano: number; cargo: string; area: string; candidato: string; rut: string; tipoEvaluacion: string; proveedor: string; fechaSolicitud: string; fechaEvaluacion: string; fechaEntregaInforme: string; estado: string; resultado: string; prioridad: string; responsableId: string; costo: number; requiereOC: string; numeroOC: string; proximaAccion: string; fechaProximaAccion: string; bloqueadoPor: string; ultimaActualizacion: string; observaciones: string; }
 
-interface AppData { cursos: Curso[]; ocs: OC[]; practicantes: Practicante[]; presupuesto: PresupuestoItem[]; procesos: Proceso[]; diplomas: Diploma[]; cargaSemanal: CargaSemanal[]; contactos: Contacto[]; evaluacionesPsicolaborales: Evaluacion[]; meta: { version: string; ultimaExportacion: string; actualizado: string }; }
+interface ValeGas { id: string; colaborador: string; contactoId: string; area: string; periodo: string; fechaEntrega: string; totalValesAsignados: number; valesUsados: number; descuentoDiario: number; diasDescuento: number; totalDescontado: number; saldoVales: number; estado: string; responsableId: string; fechaProximaRevision: string; observaciones: string; ultimaActualizacion: string; }
+
+interface ValeGasOrg { id: string; fechaRegistro: string; periodo: string; tipoMovimiento: string; cantidadVales: number; motivo: string; responsableId: string; observaciones: string; ultimaActualizacion: string; }
+
+interface ProcesoReclutamiento {
+  id: string;
+  reclutamiento: string;
+  plantaCentro: string;
+  tipoVacante: string;
+  mesIngreso: string;
+  revisadoPPTO: string;
+  procesoBuk: string;
+  publicado: string;
+  seleccionCV: string;
+  cvSeleccionadoBuk: string;
+  entrevistaJefatura: string;
+  entrevistaGP: string;
+  testPsicolaboral: string;
+  testHogan: string;
+  seleccionado: string;
+  cartaOferta: string;
+  envioCartaOferta: string;
+  firmaCartaOferta: string;
+  fechaIngreso: string;
+  reclutador: string;
+  proceso: string;
+  reclutadorId: string;
+  prioridad: string;
+  bloqueadoPor: string;
+  proximaAccion: string;
+  fechaProximaAccion: string;
+  observaciones: string;
+  ultimaActualizacion: string;
+}
+
+interface AppData { cursos: Curso[]; ocs: OC[]; practicantes: Practicante[]; presupuesto: PresupuestoItem[]; procesos: Proceso[]; diplomas: Diploma[]; cargaSemanal: CargaSemanal[]; contactos: Contacto[]; evaluacionesPsicolaborales: Evaluacion[]; valesGas: ValeGas[]; valesGasOrganizacion: ValeGasOrg[]; reclutamiento: ProcesoReclutamiento[]; meta: { version: string; ultimaExportacion: string; actualizado: string }; }
 
 // ──────────────────────────────────────────────
 // BACKUPS
@@ -363,6 +435,149 @@ function semaforo(fechaLimite: string): { label: string; color: string; order: n
   return { label: "Sin urgencia", color: "#16A34A", order: 5 };
 }
 
+const ETAPAS_COMPLETADAS_VALUES = ["Sí", "Realizado", "Realizada", "Finalizado", "Emitida", "Aceptado", "Solicitada"];
+const ETAPAS_NO_APLICA_VALUES = ["N/A"];
+
+function calcReclutamientoAvance(r: ProcesoReclutamiento): { pct: number; etapaActual: string } {
+  if (r.proceso === "Cerrado") return { pct: 100, etapaActual: "Cerrado" };
+  if (r.proceso === "Desistido") return { pct: 0, etapaActual: "Desistido" };
+  if (r.proceso === "Pausado") return { pct: calcPctRecl(r), etapaActual: "Pausado — revisar bloqueo" };
+  let completadas = 0;
+  let aplicables = 0;
+  let etapaActual = "Listo para ingreso";
+  let encontradaPendiente = false;
+  for (const etapa of ETAPAS_RECLUTAMIENTO) {
+    const val = (r as any)[etapa.key] || "";
+    if (ETAPAS_NO_APLICA_VALUES.includes(val)) continue;
+    aplicables++;
+    if (ETAPAS_COMPLETADAS_VALUES.includes(val)) {
+      completadas++;
+    } else if (!encontradaPendiente) {
+      etapaActual = etapa.label;
+      encontradaPendiente = true;
+    }
+  }
+  const pct = aplicables === 0 ? 0 : Math.round((completadas / aplicables) * 100);
+  return { pct, etapaActual: encontradaPendiente ? etapaActual : "Listo para ingreso" };
+}
+
+function calcPctRecl(r: ProcesoReclutamiento): number {
+  let completadas = 0, aplicables = 0;
+  for (const etapa of ETAPAS_RECLUTAMIENTO) {
+    const val = (r as any)[etapa.key] || "";
+    if (ETAPAS_NO_APLICA_VALUES.includes(val)) continue;
+    aplicables++;
+    if (ETAPAS_COMPLETADAS_VALUES.includes(val)) completadas++;
+  }
+  return aplicables === 0 ? 0 : Math.round((completadas / aplicables) * 100);
+}
+
+export function normalizarReclutamientoXLSX(val: string, campo: string): string {
+  if (!val) return "";
+  const v = val.trim();
+  if (v.toUpperCase() === "SI") return "Sí";
+  if (v.toUpperCase() === "NO") return "No";
+  if (campo === "reclutamiento" && v.toLowerCase().includes("prompci")) return "Promoción interna";
+  if (campo === "proceso") return v.replace(/\s+$/, "");
+  return v;
+}
+
+// ── XLSX IMPORT HELPERS ──────────────────────────────────────────────
+
+function normalizeDateFromXlsx(value: any): string {
+  if (value === null || value === undefined || value === "") return "";
+  if (typeof value === "number") {
+    const date = new Date(Math.round((value - 25569) * 86400 * 1000));
+    if (isNaN(date.getTime())) return "";
+    const d = String(date.getDate()).padStart(2, "0");
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const y = date.getFullYear();
+    return `${y}-${m}-${d}`;
+  }
+  const s = String(value).trim();
+  if (!s) return "";
+  const dmy = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (dmy) return `${dmy[3]}-${dmy[2].padStart(2,"0")}-${dmy[1].padStart(2,"0")}`;
+  const ymd = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+  if (ymd) return `${ymd[1]}-${ymd[2].padStart(2,"0")}-${ymd[3].padStart(2,"0")}`;
+  return "";
+}
+
+function parseXlsxNumber(value: any): number {
+  if (value === null || value === undefined || value === "") return 0;
+  const n = Number(String(value).replace(/[$\.,\s]/g, "").replace(",", "."));
+  if (isNaN(n) || !isFinite(n)) return 0;
+  return n;
+}
+
+function parseXlsxMoney(value: any): number {
+  if (value === null || value === undefined || value === "") return 0;
+  const cleaned = String(value).replace(/[$\s]/g, "").replace(/\./g, "").replace(",", ".");
+  const n = Number(cleaned);
+  if (isNaN(n) || !isFinite(n)) return 0;
+  return Math.max(0, n);
+}
+
+function normalizeYesNo(value: any): string {
+  if (!value) return "";
+  const v = String(value).trim().toUpperCase();
+  if (v === "SI" || v === "SÍ" || v === "YES" || v === "S") return "Sí";
+  if (v === "NO" || v === "N") return "No";
+  return String(value).trim();
+}
+
+function normalizeReclutamientoCampo(value: any, campo: string): string {
+  if (!value) return "";
+  const v = String(value).trim();
+  if (campo === "reclutamiento" && v.toLowerCase().includes("prompci")) return "Promoción interna";
+  if (campo === "proceso") return v.replace(/\s+$/, "");
+  if (["procesoBuk", "publicado", "cvSeleccionadoBuk", "seleccionado", "firmaCartaOferta"].includes(campo)) return normalizeYesNo(v);
+  return v;
+}
+
+function resolveResponsable(nombre: string, contactos: any[], prefijo: string = "Interno"): { id: string; contactosActualizados: any[] } {
+  if (!nombre || nombre.trim() === "" || nombre === "Sin responsable") return { id: "", contactosActualizados: contactos };
+  const normalized = nombre.trim().toLowerCase();
+  const existing = contactos.find((c: any) => c.nombre?.toLowerCase() === normalized);
+  if (existing) return { id: existing.id, contactosActualizados: contactos };
+  const newContact = {
+    id: `contacto_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
+    nombre: nombre.trim(),
+    rol: prefijo === "RRHH" ? "Reclutador" : "Responsable",
+    areaEmpresa: "",
+    correo: "",
+    telefono: "",
+    relacion: prefijo === "RRHH" ? "RRHH" : "Interno",
+    activo: "Sí",
+    observaciones: "Creado automáticamente al importar XLSX"
+  };
+  return { id: newContact.id, contactosActualizados: [...contactos, newContact] };
+}
+
+function xlsxSheetToObjects(ws: any): any[] {
+  if (!ws) return [];
+  try {
+    return XLSX.utils.sheet_to_json(ws, { defval: "", raw: false });
+  } catch { return []; }
+}
+
+interface XlsxParseResult {
+  hojas: Array<{
+    nombre: string;
+    modulo: string;
+    total: number;
+    validos: number;
+    advertencias: number;
+    errores: number;
+    registros: any[];
+    erroresList: string[];
+    advertenciasList: string[];
+  }>;
+  contactosNuevos: any[];
+  parsedData: Partial<AppData>;
+  tieneErroresCriticos: boolean;
+}
+
 function isClosedRecord(row: any, moduleKey: string): boolean {
   if (!row) return false;
   switch (moduleKey) {
@@ -452,13 +667,13 @@ function crearDatosEjemplo(): AppData {
 
   return {
     cursos: [
-      { id: genId(), curso: "Liderazgo y Gestión de Equipos", origen: "DNC", area: "Operaciones", solicitante: "María Silva", fechaSolicitud: d(-30), fechaRequerida: d(-5), estado: "Pendiente revisar", prioridad: "P1 Crítico", nivelCritico: "Crítico", requiereOC: "Sí", numeroOC: "OC-0045", proveedor: "OTEC ProCaps", montoEstimado: 1200000, responsableId: anaId, proximaAccion: "Revisar cotización pendiente", fechaProximaAccion: d(-2), bloqueadoPor: "Falta cotización", ultimaActualizacion: d(-15), observaciones: "Curso DNC planificado Q1" },
-      { id: genId(), curso: "Manejo de Extintores", origen: "Requerimiento legal", area: "Prevención", solicitante: "Juan Pérez", fechaSolicitud: d(-7), fechaRequerida: d(5), estado: "En cotización", prioridad: "P1 Crítico", nivelCritico: "Alto", requiereOC: "Sí", numeroOC: "", proveedor: "", montoEstimado: 800000, responsableId: anaId, proximaAccion: "Esperar cotización OTEC", fechaProximaAccion: d(2), bloqueadoPor: "Falta cotización", ultimaActualizacion: d(-3), observaciones: "Requerimiento legal urgente" },
-      { id: genId(), curso: "Excel Avanzado", origen: "Urgente no planificado", area: "Administración", solicitante: "Carla Rojas", fechaSolicitud: d(-1), fechaRequerida: d(10), estado: "En aprobación", prioridad: "P2 Alto", nivelCritico: "Medio", requiereOC: "No", numeroOC: "", proveedor: "OTEC Digital", montoEstimado: 450000, responsableId: anaId, proximaAccion: "Confirmar participantes", fechaProximaAccion: d(7), bloqueadoPor: "Sin bloqueo", ultimaActualizacion: d(-1), observaciones: "Urgente, jefatura solicitó" },
+      { id: genId(), curso: "Liderazgo y Gestión de Equipos", origen: "DNC", area: "Operaciones", solicitante: "María Silva", fechaSolicitud: d(-30), fechaRequerida: d(-5), estado: "Pendiente revisar", prioridad: "P1 Crítico", nivelCritico: "Crítico", requiereOC: "Sí", numeroOC: "OC-0045", proveedor: "OTEC ProCaps", responsableId: anaId, proximaAccion: "Revisar cotización pendiente", fechaProximaAccion: d(-2), bloqueadoPor: "Falta cotización", ultimaActualizacion: d(-15), observaciones: "Curso DNC planificado Q1" },
+      { id: genId(), curso: "Manejo de Extintores", origen: "Requerimiento legal", area: "Prevención", solicitante: "Juan Pérez", fechaSolicitud: d(-7), fechaRequerida: d(5), estado: "En cotización", prioridad: "P1 Crítico", nivelCritico: "Alto", requiereOC: "Sí", numeroOC: "", proveedor: "", responsableId: anaId, proximaAccion: "Esperar cotización OTEC", fechaProximaAccion: d(2), bloqueadoPor: "Falta cotización", ultimaActualizacion: d(-3), observaciones: "Requerimiento legal urgente" },
+      { id: genId(), curso: "Excel Avanzado", origen: "Urgente no planificado", area: "Administración", solicitante: "Carla Rojas", fechaSolicitud: d(-1), fechaRequerida: d(10), estado: "En aprobación", prioridad: "P2 Alto", nivelCritico: "Medio", requiereOC: "No", numeroOC: "", proveedor: "OTEC Digital", responsableId: anaId, proximaAccion: "Confirmar participantes", fechaProximaAccion: d(7), bloqueadoPor: "Sin bloqueo", ultimaActualizacion: d(-1), observaciones: "Urgente, jefatura solicitó" },
     ],
     ocs: [
-      { id: genId(), numeroOC: "OC-0045", cursoAsociado: "Liderazgo y Gestión de Equipos", proveedor: "OTEC ProCaps", monto: 1200000, fechaSolicitud: d(-25), fechaLimite: d(-5), estadoOC: "En aprobación", prioridad: "P1 Crítico", accionPendiente: "Seguir con compras", responsableId: anaId, bloqueadoPor: "Falta aprobación", ultimaActualizacion: d(-10), observaciones: "Urgente aprobar" },
-      { id: genId(), numeroOC: "OC-0052", cursoAsociado: "Norma ISO 9001:2025", proveedor: "OTEC CalidadPlus", monto: 2500000, fechaSolicitud: d(-15), fechaLimite: d(10), estadoOC: "Solicitada", prioridad: "P3 Medio", accionPendiente: "Esperar emisión", responsableId: anaId, bloqueadoPor: "Sin bloqueo", ultimaActualizacion: d(-2), observaciones: "En proceso normal" },
+      { id: genId(), numeroOC: "OC-0045", categoriaOC: "Curso / Capacitación", cursoAsociado: "Liderazgo y Gestión de Equipos", proveedor: "OTEC ProCaps", monto: 1200000, fechaSolicitud: d(-25), fechaLimite: d(-5), estadoOC: "En aprobación", prioridad: "P1 Crítico", accionPendiente: "Seguir con compras", responsableId: anaId, bloqueadoPor: "Falta aprobación", ultimaActualizacion: d(-10), observaciones: "Urgente aprobar" },
+      { id: genId(), numeroOC: "OC-0052", categoriaOC: "Curso / Capacitación", cursoAsociado: "Norma ISO 9001:2025", proveedor: "OTEC CalidadPlus", monto: 2500000, fechaSolicitud: d(-15), fechaLimite: d(10), estadoOC: "Solicitada", prioridad: "P3 Medio", accionPendiente: "Esperar emisión", responsableId: anaId, bloqueadoPor: "Sin bloqueo", ultimaActualizacion: d(-2), observaciones: "En proceso normal" },
     ],
     practicantes: [
       { id: genId(), nombre: "Camila Vega", area: "Operaciones", especialidad: "Ing. Industrial", fechaInicio: d(-60), fechaTermino: d(120), costoMensual: 350000, estado: "Activo", responsableId: anaId, proximoPaso: "Evaluación de desempeño", fechaProximaAccion: d(14), bloqueadoPor: "Sin bloqueo", ultimaActualizacion: d(-1), observaciones: "Buen desempeño" },
@@ -490,6 +705,53 @@ function crearDatosEjemplo(): AppData {
       { id: genId(), mes: "Diciembre", ano: 2025, cargo: "Analista de Compras", area: "Compras", candidato: "Patricia López", rut: "18.234.567-8", tipoEvaluacion: "Psicolaboral", proveedor: "Psic. Laura González", fechaSolicitud: d(-45), fechaEvaluacion: d(-30), fechaEntregaInforme: d(-25), estado: "Cerrada", resultado: "Recomendado", prioridad: "P3 Medio", responsableId: anaId, costo: 150000, requiereOC: "No", numeroOC: "", proximaAccion: "", fechaProximaAccion: "", bloqueadoPor: "Sin bloqueo", ultimaActualizacion: d(-25), observaciones: "Evaluación aprobada" },
       { id: genId(), mes: "Enero", ano: 2026, cargo: "Prevencionista de Riesgos", area: "Prevención", candidato: "Fernando Ruiz", rut: "11.111.222-3", tipoEvaluacion: "Psicolaboral", proveedor: "Psic. Laura González", fechaSolicitud: d(-10), fechaEvaluacion: "", fechaEntregaInforme: "", estado: "Solicitada", resultado: "Pendiente", prioridad: "P2 Alto", responsableId: anaId, costo: 150000, requiereOC: "Sí", numeroOC: "", proximaAccion: "Gestionar OC", fechaProximaAccion: d(2), bloqueadoPor: "Falta OC", ultimaActualizacion: d(-3), observaciones: "Bloqueada por falta de OC" },
       { id: genId(), mes: "Diciembre", ano: 2025, cargo: "Operador", area: "Operaciones", candidato: "Carlos Vega", rut: "19.876.543-2", tipoEvaluacion: "Psicolaboral", proveedor: "Psic. Laura González", fechaSolicitud: d(-40), fechaEvaluacion: d(-20), fechaEntregaInforme: d(-18), estado: "En revisión", resultado: "No recomendado", prioridad: "P2 Alto", responsableId: anaId, costo: 150000, requiereOC: "No", numeroOC: "", proximaAccion: "Revisar con RRHH", fechaProximaAccion: d(5), bloqueadoPor: "Sin bloqueo", ultimaActualizacion: d(-10), observaciones: "No recomendado, revisar alternativa" },
+    ],
+    valesGas: [
+      { id: genId(), colaborador: "Juan Pérez", contactoId: "", area: "Operaciones", periodo: "Mayo 2026", fechaEntrega: d(-5), totalValesAsignados: 10, valesUsados: 3, descuentoDiario: 1, diasDescuento: 3, totalDescontado: 3, saldoVales: 7, estado: "En descuento", responsableId: anaId, fechaProximaRevision: d(7), observaciones: "Descuento iniciado", ultimaActualizacion: d(-1) },
+      { id: genId(), colaborador: "Ana Soto", contactoId: "", area: "Administración", periodo: "Mayo 2026", fechaEntrega: d(-10), totalValesAsignados: 5, valesUsados: 5, descuentoDiario: 0, diasDescuento: 0, totalDescontado: 0, saldoVales: 0, estado: "Cerrado", responsableId: anaId, fechaProximaRevision: "", observaciones: "Vales completamente usados", ultimaActualizacion: d(-2) },
+      { id: genId(), colaborador: "Luis Rojas", contactoId: "", area: "Prevención", periodo: "Mayo 2026", fechaEntrega: d(3), totalValesAsignados: 8, valesUsados: 0, descuentoDiario: 0, diasDescuento: 0, totalDescontado: 0, saldoVales: 8, estado: "Pendiente entregar", responsableId: anaId, fechaProximaRevision: d(3), observaciones: "Pendiente entregar vales", ultimaActualizacion: d(-1) },
+    ],
+    valesGasOrganizacion: [
+      { id: genId(), fechaRegistro: d(-10), periodo: "Mayo 2026", tipoMovimiento: "Ingreso de vales", cantidadVales: 100, motivo: "Compra mensual de vales", responsableId: anaId, observaciones: "Vales comprados para el mes", ultimaActualizacion: d(-10) },
+      { id: genId(), fechaRegistro: d(-3), periodo: "Mayo 2026", tipoMovimiento: "Ajuste positivo", cantidadVales: 20, motivo: "Ajuste por diferencia de inventario", responsableId: anaId, observaciones: "Ajuste corregido en revisión semanal", ultimaActualizacion: d(-3) },
+    ],
+    reclutamiento: [
+      {
+        id: genId(),
+        reclutamiento: "Interno", plantaCentro: "Planta Bio Bio", tipoVacante: "Cosecha",
+        mesIngreso: "Enero", revisadoPPTO: "Gloria", procesoBuk: "Sí", publicado: "Sí",
+        seleccionCV: "En proceso", cvSeleccionadoBuk: "Sí", entrevistaJefatura: "Agendada",
+        entrevistaGP: "Agendada", testPsicolaboral: "Solicitado", testHogan: "Solicitado",
+        seleccionado: "Sí", cartaOferta: "Solicitada", envioCartaOferta: "Realizado",
+        firmaCartaOferta: "Sí", fechaIngreso: "", reclutador: "Gloria", proceso: "Abierto",
+        reclutadorId: "", prioridad: "P2 Alto", bloqueadoPor: "Sin bloqueo",
+        proximaAccion: "Confirmar fecha ingreso", fechaProximaAccion: d(3),
+        observaciones: "Proceso avanzado", ultimaActualizacion: d(0)
+      },
+      {
+        id: genId(),
+        reclutamiento: "Externo", plantaCentro: "Planta Freire", tipoVacante: "Reemplazo",
+        mesIngreso: "Febrero", revisadoPPTO: "Hernan", procesoBuk: "No", publicado: "No",
+        seleccionCV: "Finalizado", cvSeleccionadoBuk: "No", entrevistaJefatura: "Realizada",
+        entrevistaGP: "Realizada", testPsicolaboral: "Realizado", testHogan: "Realizado",
+        seleccionado: "No", cartaOferta: "N/A", envioCartaOferta: "Pendiente",
+        firmaCartaOferta: "No", fechaIngreso: "", reclutador: "Matías", proceso: "Cerrado",
+        reclutadorId: "", prioridad: "P3 Medio", bloqueadoPor: "Sin bloqueo",
+        proximaAccion: "", fechaProximaAccion: "",
+        observaciones: "Candidato desistió", ultimaActualizacion: d(-5)
+      },
+      {
+        id: genId(),
+        reclutamiento: "Promoción interna", plantaCentro: "Planta Perquenco", tipoVacante: "Fijo",
+        mesIngreso: "Marzo", revisadoPPTO: "Pendiente", procesoBuk: "Confidencial", publicado: "",
+        seleccionCV: "", cvSeleccionadoBuk: "", entrevistaJefatura: "Pendiente",
+        entrevistaGP: "Pendiente", testPsicolaboral: "Pendiente", testHogan: "Pendiente",
+        seleccionado: "", cartaOferta: "Pendiente", envioCartaOferta: "N/A",
+        firmaCartaOferta: "Pendiente", fechaIngreso: "", reclutador: "Katalina", proceso: "Pausado",
+        reclutadorId: "", prioridad: "P2 Alto", bloqueadoPor: "Falta aprobación",
+        proximaAccion: "Esperar aprobación PPTO", fechaProximaAccion: d(7),
+        observaciones: "En espera de presupuesto", ultimaActualizacion: d(-2)
+      }
     ],
     meta: { version: "1.1", ultimaExportacion: "", actualizado: ahora() },
   };
@@ -564,6 +826,7 @@ function migrateData(data: any): AppData {
   const ocs: OC[] = (oldData.ocs || []).map((o: any) => ({
     ...o,
     id: o.id || genId(),
+    categoriaOC: o.categoriaOC || "",
     responsableId: migrateResponsableId(o)
   }) as OC);
 
@@ -597,6 +860,10 @@ function migrateData(data: any): AppData {
     responsableId: migrateResponsableId(e)
   }) as Evaluacion);
 
+  const valesGas: ValeGas[] = (oldData.valesGas || []).map((v: any) => ({ ...v, id: v.id || genId() }));
+  const valesGasOrganizacion: ValeGasOrg[] = (oldData.valesGasOrganizacion || []).map((v: any) => ({ ...v, id: v.id || genId() }));
+  const reclutamiento: ProcesoReclutamiento[] = (oldData.reclutamiento || []).map((r: any) => ({ ...r, id: r.id || genId(), bloqueadoPor: r.bloqueadoPor || "Sin bloqueo" }));
+
   return {
     cursos,
     ocs,
@@ -607,6 +874,9 @@ function migrateData(data: any): AppData {
     cargaSemanal: oldData.cargaSemanal || [],
     contactos: finalContactos,
     evaluacionesPsicolaborales,
+    valesGas,
+    valesGasOrganizacion,
+    reclutamiento,
     meta: {
       version: "1.1",
       ultimaExportacion: oldData.meta?.ultimaExportacion || "",
@@ -641,7 +911,7 @@ function limpiarDatos() { localStorage.removeItem(STORAGE_KEY); }
 // ──────────────────────────────────────────────
 
 const prioridadColor: Record<string, string> = { "P1 Crítico": "bg-red-100 text-red-800 border border-red-200", "P2 Alto": "bg-orange-100 text-orange-800 border border-orange-200", "P3 Medio": "bg-amber-50 text-amber-800 border border-amber-200", "P4 Bajo": "bg-green-100 text-green-800 border border-green-200" };
-const estadoColor: Record<string, string> = { "Pendiente revisar": "bg-slate-100 text-slate-700 border border-slate-200", "En cotización": "bg-sky-50 text-sky-700 border border-sky-200", "En aprobación": "bg-indigo-50 text-indigo-700 border border-indigo-200", Programado: "bg-blue-50 text-blue-700 border border-blue-200", Ejecutado: "bg-teal-50 text-teal-700 border border-teal-200", Cerrado: "bg-emerald-50 text-emerald-700 border border-emerald-200", Detenido: "bg-stone-100 text-stone-700 border border-stone-200", "Pendiente crear": "bg-slate-100 text-slate-700 border border-slate-200", Solicitada: "bg-sky-50 text-sky-700 border border-sky-200", Emitida: "bg-teal-50 text-teal-700 border border-teal-200", "Enviada proveedor": "bg-indigo-50 text-indigo-700 border border-indigo-200", Cerrada: "bg-emerald-50 text-emerald-700 border border-emerald-200", "Por buscar": "bg-slate-100 text-slate-700 border border-slate-200", "En reclutamiento": "bg-sky-50 text-sky-700 border border-sky-200", Seleccionado: "bg-indigo-50 text-indigo-700 border border-indigo-200", Activo: "bg-teal-50 text-teal-700 border border-teal-200", Finalizado: "bg-emerald-50 text-emerald-700 border border-emerald-200", "Pedir a la OTEC": "bg-amber-50 text-amber-800 border border-amber-200", "Enviar o pedir al participante": "bg-orange-50 text-orange-700 border border-orange-200", "Subir a BUK": "bg-red-100 text-red-800 border border-red-200", Completado: "bg-emerald-50 text-emerald-700 border border-emerald-200", "Pendiente subir": "bg-red-100 text-red-800 border border-red-200", Subido: "bg-emerald-50 text-emerald-700 border border-emerald-200", Rechazado: "bg-red-50 text-red-700 border border-red-200", "No aplica": "bg-slate-100 text-slate-600 border border-slate-200", "Pendiente solicitar": "bg-slate-100 text-slate-700 border border-slate-200", Agendada: "bg-sky-50 text-sky-700 border border-sky-200", Realizada: "bg-indigo-50 text-indigo-700 border border-indigo-200", "Informe recibido": "bg-teal-50 text-teal-700 border border-teal-200", "En revisión": "bg-orange-50 text-orange-700 border border-orange-200", "Recomendado": "bg-emerald-50 text-emerald-700 border border-emerald-200", "Recomendado con observaciones": "bg-amber-50 text-amber-800 border border-amber-200", "No recomendado": "bg-red-50 text-red-700 border border-red-200" };
+const estadoColor: Record<string, string> = { "Pendiente revisar": "bg-slate-100 text-slate-700 border border-slate-200", "En cotización": "bg-sky-50 text-sky-700 border border-sky-200", "En aprobación": "bg-indigo-50 text-indigo-700 border border-indigo-200", Programado: "bg-blue-50 text-blue-700 border border-blue-200", Ejecutado: "bg-teal-50 text-teal-700 border border-teal-200", Cerrado: "bg-emerald-50 text-emerald-700 border border-emerald-200", Detenido: "bg-stone-100 text-stone-700 border border-stone-200", "Pendiente crear": "bg-slate-100 text-slate-700 border border-slate-200", Solicitada: "bg-sky-50 text-sky-700 border border-sky-200", Emitida: "bg-teal-50 text-teal-700 border border-teal-200", "Enviada proveedor": "bg-indigo-50 text-indigo-700 border border-indigo-200", Cerrada: "bg-emerald-50 text-emerald-700 border border-emerald-200", "Por buscar": "bg-slate-100 text-slate-700 border border-slate-200", "En reclutamiento": "bg-sky-50 text-sky-700 border border-sky-200", Seleccionado: "bg-indigo-50 text-indigo-700 border border-indigo-200", Activo: "bg-teal-50 text-teal-700 border border-teal-200", Finalizado: "bg-emerald-50 text-emerald-700 border border-emerald-200", "Pedir a la OTEC": "bg-amber-50 text-amber-800 border border-amber-200", "Enviar o pedir al participante": "bg-orange-50 text-orange-700 border border-orange-200", "Subir a BUK": "bg-red-100 text-red-800 border border-red-200", Completado: "bg-emerald-50 text-emerald-700 border border-emerald-200", "Pendiente subir": "bg-red-100 text-red-800 border border-red-200", Subido: "bg-emerald-50 text-emerald-700 border border-emerald-200", Rechazado: "bg-red-50 text-red-700 border border-red-200", "No aplica": "bg-slate-100 text-slate-600 border border-slate-200", "Pendiente solicitar": "bg-slate-100 text-slate-700 border border-slate-200", Agendada: "bg-sky-50 text-sky-700 border border-sky-200", Realizada: "bg-indigo-50 text-indigo-700 border border-indigo-200", "Informe recibido": "bg-teal-50 text-teal-700 border border-teal-200", "En revisión": "bg-orange-50 text-orange-700 border border-orange-200", "Recomendado": "bg-emerald-50 text-emerald-700 border border-emerald-200", "Recomendado con observaciones": "bg-amber-50 text-amber-800 border border-amber-200", "No recomendado": "bg-red-50 text-red-700 border border-red-200", "Pendiente entregar": "bg-slate-100 text-slate-700 border border-slate-200", "Entregado": "bg-blue-50 text-blue-700 border border-blue-200", "En descuento": "bg-orange-100 text-orange-800 border border-orange-200" };
 
 function Badge({ label, colorClass }: { label: string; colorClass?: string }) {
   return <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium tracking-wide ${colorClass || "bg-slate-100 text-slate-700 border border-slate-200"}`}>{label}</span>;
@@ -748,7 +1018,7 @@ function Login({ onLogin }: { onLogin: () => void }) {
 // MAIN APP
 // ──────────────────────────────────────────────
 
-type Modulo = "inicio" | "midia" | "dashboard" | "cursos" | "ocs" | "practicantes" | "presupuesto" | "procesos" | "diplomas" | "evaluaciones" | "cargaSemanal" | "contactos" | "configuracion";
+type Modulo = "inicio" | "midia" | "dashboard" | "cursos" | "ocs" | "practicantes" | "presupuesto" | "procesos" | "diplomas" | "evaluaciones" | "cargaSemanal" | "contactos" | "valesGas" | "reclutamiento" | "configuracion";
 
 type NavGroup = { group: string; items: { key: Modulo; label: string; icon: string }[] };
 const navGroups: NavGroup[] = [
@@ -763,6 +1033,7 @@ const navGroups: NavGroup[] = [
   { group: "Personas", items: [
     { key: "practicantes", label: "Practicantes", icon: "👤" },
     { key: "evaluaciones", label: "Evaluaciones", icon: "🧠" },
+    { key: "reclutamiento", label: "Reclutamiento", icon: "👥" },
     { key: "contactos", label: "Contactos", icon: "📇" },
   ]},
   { group: "Documentos", items: [
@@ -770,6 +1041,7 @@ const navGroups: NavGroup[] = [
   ]},
   { group: "Finanzas", items: [
     { key: "presupuesto", label: "Presupuesto", icon: "💰" },
+    { key: "valesGas", label: "Vales de Gas", icon: "⛽" },
     { key: "cargaSemanal", label: "Carga Semanal", icon: "📅" },
   ]},
   { group: "Sistema", items: [
@@ -869,6 +1141,9 @@ export default function App() {
       ["Evaluaciones Psicolaborales", data.evaluacionesPsicolaborales.map(e => ({ ...e, responsable: getResponsableName(data, e.responsableId) }))],
       ["Carga Semanal", data.cargaSemanal],
       ["Contactos", data.contactos],
+      ["Vales de Gas", data.valesGas.map(v => ({ ...v, responsable: getResponsableName(data, v.responsableId) }))],
+      ["Vales Gas Organización", (data.valesGasOrganizacion || []).map(v => ({ ...v, responsable: getResponsableName(data, v.responsableId) }))],
+      ["Reclutamiento", (data.reclutamiento || []).map(r => ({ ...r, responsable: getResponsableName(data, r.reclutadorId) }))],
     ];
     sheets.forEach(([name, rows]) => { const ws = XLSX.utils.json_to_sheet(rows); XLSX.utils.book_append_sheet(wb, ws, name); });
     XLSX.writeFile(wb, `control_operativo_kata_v5_${hoy()}.xlsx`);
@@ -882,8 +1157,8 @@ export default function App() {
   const exportLimpia = () => {
     const wb = XLSX.utils.book_new();
     const headers: Record<string, string[]> = {
-      Cursos: ["id","curso","origen","area","solicitante","fechaSolicitud","fechaRequerida","estado","prioridad","nivelCritico","requiereOC","numeroOC","proveedor","montoEstimado","responsable","proximaAccion","fechaProximaAccion","bloqueadoPor","ultimaActualizacion","observaciones"],
-      OCs: ["id","numeroOC","cursoAsociado","proveedor","monto","fechaSolicitud","fechaLimite","estadoOC","prioridad","accionPendiente","responsable","bloqueadoPor","ultimaActualizacion","observaciones"],
+      Cursos: ["id","curso","origen","area","solicitante","fechaSolicitud","fechaRequerida","estado","prioridad","nivelCritico","requiereOC","numeroOC","proveedor","responsable","proximaAccion","fechaProximaAccion","bloqueadoPor","ultimaActualizacion","observaciones"],
+      OCs: ["id","numeroOC","categoriaOC","cursoAsociado","proveedor","monto","fechaSolicitud","fechaLimite","estadoOC","prioridad","accionPendiente","responsable","bloqueadoPor","ultimaActualizacion","observaciones"],
       Practicantes: ["id","nombre","area","especialidad","fechaInicio","fechaTermino","costoMensual","estado","responsable","proximoPaso","fechaProximaAccion","bloqueadoPor","ultimaActualizacion","observaciones"],
       Presupuesto: ["id","concepto","presupuestoTotal","gastado","responsable","ultimaActualizacion","observaciones"],
       Procesos: ["id","proceso","tipo","estadoActual","queFalta","responsable","fechaLimite","riesgo","prioridad","proximaAccion","fechaProximaAccion","bloqueadoPor","ultimaActualizacion","observaciones"],
@@ -891,10 +1166,468 @@ export default function App() {
       "Evaluaciones Psicolaborales": ["id","mes","ano","cargo","area","candidato","rut","tipoEvaluacion","proveedor","fechaSolicitud","fechaEvaluacion","fechaEntregaInforme","estado","resultado","prioridad","responsable","costo","requiereOC","numeroOC","proximaAccion","fechaProximaAccion","bloqueadoPor","ultimaActualizacion","observaciones"],
       "Carga Semanal": ["id","semana","cursosPlanificados","cursosUrgentesNuevos","cursosNoPlanificados","ocsNuevas","diplomasPendientes","procesosBloqueados","comentario"],
       Contactos: ["id","nombre","rol","areaEmpresa","correo","telefono","relacion","activo","observaciones"],
+      "Vales de Gas": ["id","colaborador","contactoId","area","periodo","fechaEntrega","totalValesAsignados","valesUsados","saldoVales","descuentoDiario","diasDescuento","totalDescontado","estado","responsable","fechaProximaRevision","observaciones","ultimaActualizacion"],
+      "Vales Gas Organización": ["id","fechaRegistro","periodo","tipoMovimiento","cantidadVales","motivo","responsable","observaciones","ultimaActualizacion"],
+      "Reclutamiento": ["id","reclutamiento","plantaCentro","tipoVacante","mesIngreso","revisadoPPTO","procesoBuk","publicado","seleccionCV","cvSeleccionadoBuk","entrevistaJefatura","entrevistaGP","testPsicolaboral","testHogan","seleccionado","cartaOferta","envioCartaOferta","firmaCartaOferta","fechaIngreso","reclutador","proceso","prioridad","bloqueadoPor","proximaAccion","fechaProximaAccion","observaciones","ultimaActualizacion"],
     };
     Object.entries(headers).forEach(([name, cols]) => { const ws = XLSX.utils.aoa_to_sheet([cols]); XLSX.utils.book_append_sheet(wb, ws, name); });
     XLSX.writeFile(wb, `plantilla_limpia_kata_v5.xlsx`);
     toastShow("Plantilla limpia descargada");
+  };
+
+  const downloadXlsxTemplate = () => {
+    const wb = XLSX.utils.book_new();
+    const readmeData = [
+      ["TotalControlRH — Plantilla oficial de carga XLSX"],
+      [""],
+      ["INSTRUCCIONES:"],
+      ["1. No cambiar nombres de hojas."],
+      ["2. No cambiar encabezados de columnas."],
+      ["3. Completar una fila por registro."],
+      ["4. Las fechas deben ir en formato dd/mm/yyyy."],
+      ["5. Los montos deben ir como números (sin puntos de miles ni símbolos $)."],
+      ["6. Las columnas ID pueden dejarse vacías; la app generará IDs automáticamente."],
+      ["7. Si se deja responsable vacío, se usará 'Sin responsable'."],
+      ["8. Antes de importar, se recomienda exportar un respaldo JSON."],
+      ["9. Cada hoja corresponde a un módulo de la app."],
+      ["10. Modo fusión: registros con ID existente se actualizan; sin ID se crean como nuevos."],
+      ["11. Modo reemplazo: módulos presentes en el XLSX reemplazan la información actual."],
+      ["12. Las hojas no incluidas en el XLSX no serán modificadas."],
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(readmeData), "README");
+
+    const sheets: Record<string, string[]> = {
+      "Contactos": ["ID","Nombre","Rol","Área / Empresa","Correo","Teléfono","Relación","Activo","Observaciones"],
+      "Cursos": ["ID","Curso / Capacitación","Origen","Área","Solicitante","Fecha solicitud","Fecha requerida","Estado","Prioridad","Nivel crítico","Requiere OC","N° OC asociada","Proveedor / OTEC","Responsable","Próxima acción","Fecha próxima acción","Bloqueado por","Observaciones"],
+      "OCs": ["ID","N° OC","Categoría OC","Curso / Servicio asociado","Proveedor","Monto","Fecha solicitud","Fecha límite","Estado OC","Prioridad","Acción pendiente","Responsable","Bloqueado por","Observaciones"],
+      "Practicantes": ["ID","Nombre","Área","Especialidad","Fecha inicio","Fecha término","Costo mensual","Estado","Responsable","Próximo paso","Fecha próxima acción","Bloqueado por","Observaciones"],
+      "Presupuesto": ["ID","Área / Módulo","Presupuesto asignado","Monto comprometido manual","Monto ejecutado manual","Modo cálculo","Observaciones"],
+      "Procesos Pendientes": ["ID","Proceso","Tipo","Estado actual","Qué falta","Responsable","Fecha límite","Riesgo si no se hace","Prioridad","Próxima acción","Fecha próxima acción","Bloqueado por","Observaciones"],
+      "Diplomas BUK": ["ID","Curso asociado","Participante","Tipo documento","OTEC / proveedor","Etapa","Fecha solicitud a OTEC","Fecha recepción documento","Fecha envío al participante","Fecha subida a BUK","Estado BUK","Prioridad","Responsable","Próxima acción","Fecha próxima acción","Bloqueado por","Observaciones"],
+      "Evaluaciones Psicolaborales": ["ID","Mes","Año","Cargo","Área","Candidato","RUT candidato","Tipo evaluación","Proveedor / Psicólogo","Fecha solicitud","Fecha evaluación","Fecha entrega informe","Estado","Resultado","Prioridad","Responsable","Costo","Requiere OC","N° OC asociada","Próxima acción","Fecha próxima acción","Bloqueado por","Observaciones"],
+      "Carga Semanal": ["ID","Semana","Año","Cursos planificados","Cursos urgentes nuevos","Cursos no planificados necesarios","OCs nuevas","Diplomas pendientes","Procesos bloqueados","Comentario"],
+      "Vales de Gas Colaboradores": ["ID","Colaborador","Contacto asociado","Área","Periodo","Fecha entrega","Vales asignados al colaborador","Vales entregados / utilizados","Descuento diario","Días descuento","Estado","Responsable","Fecha próxima revisión","Observaciones"],
+      "Vales Gas Organización": ["ID","Fecha registro","Periodo","Tipo movimiento","Cantidad vales","Motivo","Responsable","Observaciones","Última actualización"],
+      "Reclutamiento": ["ID","Reclutamiento","Planta o Centro","Tipo de vacante","Mes ingreso","Revisado PPTO","Proceso en BUK","Publicado","Selección de CV","CV Seleccionado en BUK","Entrevista Jefatura","Entrevista GP","Test Psicolaboral","Test Hogan","Seleccionado","Carta Oferta","Envio carta Oferta","Firma Carta Oferta","Fecha Ingreso","Reclutador","Proceso","Prioridad","Bloqueado por","Próxima acción","Fecha próxima acción","Observaciones","Última actualización"],
+    };
+
+    const reclEjemplos = [
+      ["","Interno","Planta Bio Bio","Cosecha","Enero","Gloria","Sí","Sí","En proceso","Sí","Agendada","Agendada","Solicitado","Solicitado","Sí","Solicitada","Realizado","Sí","","Gloria","Abierto","P2 Alto","Sin bloqueo","Confirmar fecha ingreso","","Proceso avanzado",""],
+      ["","Externo","Planta Freire","Reemplazo","Febrero","Hernan","No","No","Finalizado","No","Realizada","Realizada","Realizado","Realizado","No","N/A","Pendiente","No","","Matías","Cerrado","P3 Medio","Sin bloqueo","","","Candidato desistió",""],
+      ["","Promoción interna","Planta Perquenco","Fijo","Marzo","Pendiente","Confidencial","","","","Pendiente","Pendiente","Pendiente","Pendiente","","Pendiente","N/A","Pendiente","","Katalina","Pausado","P2 Alto","Falta aprobación","Esperar aprobación PPTO","","En espera de presupuesto",""],
+    ];
+
+    Object.entries(sheets).forEach(([sheetName, headers]) => {
+      const rows: any[][] = [headers];
+      if (sheetName === "Reclutamiento") {
+        reclEjemplos.forEach(r => rows.push(r));
+      }
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), sheetName);
+    });
+
+    XLSX.writeFile(wb, "Plantilla_TotalControlRH.xlsx");
+    toastShow("Plantilla XLSX descargada");
+  };
+
+  const parseXlsxFile = async (file: File): Promise<XlsxParseResult> => {
+    const buffer = await file.arrayBuffer();
+    const wb = XLSX.read(buffer, { type: "array", cellDates: false });
+
+    const result: XlsxParseResult = {
+      hojas: [], contactosNuevos: [], parsedData: {}, tieneErroresCriticos: false
+    };
+
+    let contactosActualizados = [...data.contactos];
+
+    const getSheet = (names: string[]): any => {
+      for (const n of names) {
+        const found = wb.SheetNames.find((s: string) => s.trim().toLowerCase() === n.toLowerCase());
+        if (found) return wb.Sheets[found];
+      }
+      return null;
+    };
+
+    const processSheet = (sheetNames: string[], modulo: string, processor: (rows: any[]) => { registros: any[]; erroresList: string[]; advertenciasList: string[] }) => {
+      const ws = getSheet(sheetNames);
+      if (!ws) return;
+      const rows = xlsxSheetToObjects(ws).filter((r: any) => Object.values(r).some((v: any) => v !== "" && v !== null && v !== undefined));
+      const { registros, erroresList, advertenciasList } = processor(rows);
+      const validos = registros.filter((r: any) => !r._hasError).length;
+      const conError = registros.filter((r: any) => r._hasError).length;
+      const conAdv = registros.filter((r: any) => r._hasWarning).length;
+      if (conError > 0) result.tieneErroresCriticos = true;
+      result.hojas.push({ nombre: sheetNames[0], modulo, total: rows.length, validos, advertencias: conAdv, errores: conError, registros, erroresList, advertenciasList });
+      (result.parsedData as any)[modulo] = registros.filter((r: any) => !r._hasError).map((r: any) => { const { _hasError, _hasWarning, _errorMsg, ...clean } = r; return clean; });
+    };
+
+    // CONTACTOS
+    processSheet(["Contactos"], "contactos", (rows) => {
+      const registros: any[] = []; const erroresList: string[] = []; const advertenciasList: string[] = [];
+      rows.forEach((row: any, i: number) => {
+        const nombre = String(row["Nombre"] || "").trim();
+        if (!nombre) { erroresList.push(`Fila ${i+2}: Nombre obligatorio`); registros.push({ ...row, _hasError: true, _errorMsg: "Nombre obligatorio" }); return; }
+        const existing = contactosActualizados.find((c: any) => c.nombre?.toLowerCase() === nombre.toLowerCase());
+        registros.push({
+          id: String(row["ID"] || existing?.id || `contacto_${Date.now()}_${i}`),
+          nombre, rol: String(row["Rol"] || ""), areaEmpresa: String(row["Área / Empresa"] || ""),
+          correo: String(row["Correo"] || ""), telefono: String(row["Teléfono"] || ""),
+          relacion: String(row["Relación"] || "Interno"), activo: normalizeYesNo(row["Activo"]) || "Sí",
+          observaciones: String(row["Observaciones"] || ""), _hasError: false, _hasWarning: false
+        });
+      });
+      return { registros, erroresList, advertenciasList };
+    });
+
+    // CURSOS
+    processSheet(["Cursos"], "cursos", (rows) => {
+      const registros: any[] = []; const erroresList: string[] = []; const advertenciasList: string[] = [];
+      rows.forEach((row: any, i: number) => {
+        const curso = String(row["Curso / Capacitación"] || row["Curso"] || "").trim();
+        if (!curso) { erroresList.push(`Fila ${i+2}: Curso/Capacitación obligatorio`); registros.push({ ...row, _hasError: true }); return; }
+        const respNombre = String(row["Responsable"] || "");
+        const { id: respId, contactosActualizados: ca } = resolveResponsable(respNombre, contactosActualizados);
+        contactosActualizados = ca;
+        registros.push({
+          id: String(row["ID"] || `curso_${Date.now()}_${i}`), curso,
+          origen: String(row["Origen"] || ""), area: String(row["Área"] || ""),
+          solicitante: String(row["Solicitante"] || ""),
+          fechaSolicitud: normalizeDateFromXlsx(row["Fecha solicitud"]),
+          fechaRequerida: normalizeDateFromXlsx(row["Fecha requerida"]),
+          estado: String(row["Estado"] || "Pendiente revisar"),
+          prioridad: String(row["Prioridad"] || "P3 Medio"),
+          nivelCritico: String(row["Nivel crítico"] || "Medio"),
+          requiereOC: String(row["Requiere OC"] || "No"),
+          numeroOC: String(row["N° OC asociada"] || ""),
+          proveedor: String(row["Proveedor / OTEC"] || ""),
+          responsableId: respId,
+          proximaAccion: String(row["Próxima acción"] || ""),
+          fechaProximaAccion: normalizeDateFromXlsx(row["Fecha próxima acción"]),
+          bloqueadoPor: String(row["Bloqueado por"] || "Sin bloqueo"),
+          ultimaActualizacion: new Date().toISOString().split("T")[0],
+          observaciones: String(row["Observaciones"] || ""),
+          _hasError: false, _hasWarning: false
+        });
+      });
+      return { registros, erroresList, advertenciasList };
+    });
+
+    // OCs
+    processSheet(["OCs"], "ocs", (rows) => {
+      const registros: any[] = []; const erroresList: string[] = []; const advertenciasList: string[] = [];
+      rows.forEach((row: any, i: number) => {
+        const numeroOC = String(row["N° OC"] || "").trim();
+        const cursoAsociado = String(row["Curso / Servicio asociado"] || "").trim();
+        if (!numeroOC && !cursoAsociado) { erroresList.push(`Fila ${i+2}: N° OC o Curso asociado obligatorio`); registros.push({ ...row, _hasError: true }); return; }
+        const respNombre = String(row["Responsable"] || "");
+        const { id: respId, contactosActualizados: ca } = resolveResponsable(respNombre, contactosActualizados);
+        contactosActualizados = ca;
+        const monto = parseXlsxMoney(row["Monto"]);
+        registros.push({
+          id: String(row["ID"] || `oc_${Date.now()}_${i}`), numeroOC, cursoAsociado,
+          categoriaOC: String(row["Categoría OC"] || ""),
+          proveedor: String(row["Proveedor"] || ""), monto,
+          fechaSolicitud: normalizeDateFromXlsx(row["Fecha solicitud"]),
+          fechaLimite: normalizeDateFromXlsx(row["Fecha límite"]),
+          estadoOC: String(row["Estado OC"] || "Pendiente crear"),
+          prioridad: String(row["Prioridad"] || "P3 Medio"),
+          accionPendiente: String(row["Acción pendiente"] || ""),
+          responsableId: respId,
+          bloqueadoPor: String(row["Bloqueado por"] || "Sin bloqueo"),
+          ultimaActualizacion: new Date().toISOString().split("T")[0],
+          observaciones: String(row["Observaciones"] || ""),
+          _hasError: false, _hasWarning: false
+        });
+      });
+      return { registros, erroresList, advertenciasList };
+    });
+
+    // PRACTICANTES
+    processSheet(["Practicantes"], "practicantes", (rows) => {
+      const registros: any[] = []; const erroresList: string[] = []; const advertenciasList: string[] = [];
+      rows.forEach((row: any, i: number) => {
+        const nombre = String(row["Nombre"] || "").trim();
+        if (!nombre) { erroresList.push(`Fila ${i+2}: Nombre obligatorio`); registros.push({ ...row, _hasError: true }); return; }
+        const respNombre = String(row["Responsable"] || "");
+        const { id: respId, contactosActualizados: ca } = resolveResponsable(respNombre, contactosActualizados);
+        contactosActualizados = ca;
+        registros.push({
+          id: String(row["ID"] || `prac_${Date.now()}_${i}`), nombre,
+          area: String(row["Área"] || ""), especialidad: String(row["Especialidad"] || ""),
+          fechaInicio: normalizeDateFromXlsx(row["Fecha inicio"]),
+          fechaTermino: normalizeDateFromXlsx(row["Fecha término"]),
+          costoMensual: parseXlsxMoney(row["Costo mensual"]),
+          estado: String(row["Estado"] || "Por buscar"), responsableId: respId,
+          proximoPaso: String(row["Próximo paso"] || ""),
+          fechaProximaAccion: normalizeDateFromXlsx(row["Fecha próxima acción"]),
+          bloqueadoPor: String(row["Bloqueado por"] || "Sin bloqueo"),
+          ultimaActualizacion: new Date().toISOString().split("T")[0],
+          observaciones: String(row["Observaciones"] || ""),
+          _hasError: false, _hasWarning: false
+        });
+      });
+      return { registros, erroresList, advertenciasList };
+    });
+
+    // PRESUPUESTO
+    processSheet(["Presupuesto"], "presupuesto", (rows) => {
+      const registros: any[] = []; const erroresList: string[] = []; const advertenciasList: string[] = [];
+      rows.forEach((row: any, i: number) => {
+        const concepto = String(row["Área / Módulo"] || "").trim();
+        if (!concepto) { erroresList.push(`Fila ${i+2}: Área/Módulo obligatorio`); registros.push({ ...row, _hasError: true }); return; }
+        const total = parseXlsxMoney(row["Presupuesto asignado"]);
+        const comprometido = parseXlsxMoney(row["Monto comprometido manual"]);
+        const ejecutado = parseXlsxMoney(row["Monto ejecutado manual"]);
+        const hasNeg = total < 0 || comprometido < 0 || ejecutado < 0;
+        registros.push({
+          id: String(row["ID"] || `pres_${Date.now()}_${i}`), concepto,
+          presupuestoTotal: Math.max(0, total),
+          montoComprometidoManual: Math.max(0, comprometido),
+          montoEjecutadoManual: Math.max(0, ejecutado),
+          gastado: Math.max(0, ejecutado),
+          modoCalculo: String(row["Modo cálculo"] || "Manual"),
+          observaciones: String(row["Observaciones"] || ""),
+          ultimaActualizacion: new Date().toISOString().split("T")[0],
+          _hasError: hasNeg, _hasWarning: false,
+          _errorMsg: hasNeg ? "Montos no pueden ser negativos" : ""
+        });
+        if (hasNeg) erroresList.push(`Fila ${i+2}: Montos negativos no permitidos`);
+      });
+      return { registros, erroresList, advertenciasList };
+    });
+
+    // PROCESOS
+    processSheet(["Procesos Pendientes", "Procesos"], "procesos", (rows) => {
+      const registros: any[] = []; const erroresList: string[] = []; const advertenciasList: string[] = [];
+      rows.forEach((row: any, i: number) => {
+        const proceso = String(row["Proceso"] || "").trim();
+        if (!proceso) { erroresList.push(`Fila ${i+2}: Proceso obligatorio`); registros.push({ ...row, _hasError: true }); return; }
+        const respNombre = String(row["Responsable"] || "");
+        const { id: respId, contactosActualizados: ca } = resolveResponsable(respNombre, contactosActualizados);
+        contactosActualizados = ca;
+        registros.push({
+          id: String(row["ID"] || `proc_${Date.now()}_${i}`), proceso,
+          tipo: String(row["Tipo"] || "Otro"),
+          estadoActual: String(row["Estado actual"] || "Pendiente"),
+          queFalta: String(row["Qué falta"] || ""),
+          responsableId: respId,
+          fechaLimite: normalizeDateFromXlsx(row["Fecha límite"]),
+          riesgo: String(row["Riesgo si no se hace"] || ""),
+          prioridad: String(row["Prioridad"] || "P3 Medio"),
+          proximaAccion: String(row["Próxima acción"] || ""),
+          fechaProximaAccion: normalizeDateFromXlsx(row["Fecha próxima acción"]),
+          bloqueadoPor: String(row["Bloqueado por"] || "Sin bloqueo"),
+          ultimaActualizacion: new Date().toISOString().split("T")[0],
+          observaciones: String(row["Observaciones"] || ""),
+          _hasError: false, _hasWarning: false
+        });
+      });
+      return { registros, erroresList, advertenciasList };
+    });
+
+    // DIPLOMAS
+    processSheet(["Diplomas BUK", "Diplomas"], "diplomas", (rows) => {
+      const registros: any[] = []; const erroresList: string[] = []; const advertenciasList: string[] = [];
+      rows.forEach((row: any, i: number) => {
+        const participante = String(row["Participante"] || "").trim();
+        const cursoAsociado = String(row["Curso asociado"] || "").trim();
+        if (!participante && !cursoAsociado) { erroresList.push(`Fila ${i+2}: Participante o Curso asociado obligatorio`); registros.push({ ...row, _hasError: true }); return; }
+        const respNombre = String(row["Responsable"] || "");
+        const { id: respId, contactosActualizados: ca } = resolveResponsable(respNombre, contactosActualizados);
+        contactosActualizados = ca;
+        registros.push({
+          id: String(row["ID"] || `dip_${Date.now()}_${i}`), cursoAsociado, participante,
+          tipoDocumento: String(row["Tipo documento"] || "Diploma"),
+          otec: String(row["OTEC / proveedor"] || ""),
+          etapa: String(row["Etapa"] || "Pedir a la OTEC"),
+          fechaSolicitudOTEC: normalizeDateFromXlsx(row["Fecha solicitud a OTEC"]),
+          fechaRecepcionDoc: normalizeDateFromXlsx(row["Fecha recepción documento"]),
+          fechaEnvioParticipante: normalizeDateFromXlsx(row["Fecha envío al participante"]),
+          fechaSubidaBUK: normalizeDateFromXlsx(row["Fecha subida a BUK"]),
+          estadoBUK: String(row["Estado BUK"] || "Pendiente subir"),
+          prioridad: String(row["Prioridad"] || "P3 Medio"), responsableId: respId,
+          proximaAccion: String(row["Próxima acción"] || ""),
+          fechaProximaAccion: normalizeDateFromXlsx(row["Fecha próxima acción"]),
+          bloqueadoPor: String(row["Bloqueado por"] || "Sin bloqueo"),
+          ultimaActualizacion: new Date().toISOString().split("T")[0],
+          observaciones: String(row["Observaciones"] || ""),
+          _hasError: false, _hasWarning: false
+        });
+      });
+      return { registros, erroresList, advertenciasList };
+    });
+
+    // EVALUACIONES
+    processSheet(["Evaluaciones Psicolaborales", "Evaluaciones"], "evaluacionesPsicolaborales", (rows) => {
+      const registros: any[] = []; const erroresList: string[] = []; const advertenciasList: string[] = [];
+      rows.forEach((row: any, i: number) => {
+        const cargo = String(row["Cargo"] || "").trim();
+        if (!cargo) { erroresList.push(`Fila ${i+2}: Cargo obligatorio`); registros.push({ ...row, _hasError: true }); return; }
+        const respNombre = String(row["Responsable"] || "");
+        const { id: respId, contactosActualizados: ca } = resolveResponsable(respNombre, contactosActualizados);
+        contactosActualizados = ca;
+        registros.push({
+          id: String(row["ID"] || `eval_${Date.now()}_${i}`),
+          mes: String(row["Mes"] || ""), ano: parseXlsxNumber(row["Año"]) || new Date().getFullYear(),
+          cargo, area: String(row["Área"] || ""), candidato: String(row["Candidato"] || ""),
+          rut: String(row["RUT candidato"] || ""),
+          tipoEvaluacion: String(row["Tipo evaluación"] || "Psicolaboral"),
+          proveedor: String(row["Proveedor / Psicólogo"] || ""),
+          fechaSolicitud: normalizeDateFromXlsx(row["Fecha solicitud"]),
+          fechaEvaluacion: normalizeDateFromXlsx(row["Fecha evaluación"]),
+          fechaEntregaInforme: normalizeDateFromXlsx(row["Fecha entrega informe"]),
+          estado: String(row["Estado"] || "Pendiente solicitar"),
+          resultado: String(row["Resultado"] || "Pendiente"),
+          prioridad: String(row["Prioridad"] || "P3 Medio"), responsableId: respId,
+          costo: parseXlsxMoney(row["Costo"]),
+          requiereOC: String(row["Requiere OC"] || "No"),
+          numeroOC: String(row["N° OC asociada"] || ""),
+          proximaAccion: String(row["Próxima acción"] || ""),
+          fechaProximaAccion: normalizeDateFromXlsx(row["Fecha próxima acción"]),
+          bloqueadoPor: String(row["Bloqueado por"] || "Sin bloqueo"),
+          ultimaActualizacion: new Date().toISOString().split("T")[0],
+          observaciones: String(row["Observaciones"] || ""),
+          _hasError: false, _hasWarning: false
+        });
+      });
+      return { registros, erroresList, advertenciasList };
+    });
+
+    // CARGA SEMANAL
+    processSheet(["Carga Semanal"], "cargaSemanal", (rows) => {
+      const registros: any[] = []; const erroresList: string[] = []; const advertenciasList: string[] = [];
+      rows.forEach((row: any, i: number) => {
+        const semana = String(row["Semana"] || "").trim();
+        if (!semana) { erroresList.push(`Fila ${i+2}: Semana obligatoria`); registros.push({ ...row, _hasError: true }); return; }
+        registros.push({
+          id: String(row["ID"] || `carga_${Date.now()}_${i}`), semana,
+          cursosPlanificados: parseXlsxNumber(row["Cursos planificados"]),
+          cursosUrgentesNuevos: parseXlsxNumber(row["Cursos urgentes nuevos"]),
+          cursosNoPlanificados: parseXlsxNumber(row["Cursos no planificados necesarios"]),
+          ocsNuevas: parseXlsxNumber(row["OCs nuevas"]),
+          diplomasPendientes: parseXlsxNumber(row["Diplomas pendientes"]),
+          procesosBloqueados: parseXlsxNumber(row["Procesos bloqueados"]),
+          comentario: String(row["Comentario"] || ""),
+          _hasError: false, _hasWarning: false
+        });
+      });
+      return { registros, erroresList, advertenciasList };
+    });
+
+    // VALES GAS COLABORADORES
+    processSheet(["Vales de Gas Colaboradores", "Vales de Gas"], "valesGas", (rows) => {
+      const registros: any[] = []; const erroresList: string[] = []; const advertenciasList: string[] = [];
+      rows.forEach((row: any, i: number) => {
+        const colaborador = String(row["Colaborador"] || "").trim();
+        const area = String(row["Área"] || "").trim();
+        const periodo = String(row["Periodo"] || "").trim();
+        const hasErr = !colaborador || !area || !periodo;
+        if (hasErr) { erroresList.push(`Fila ${i+2}: Colaborador, Área y Periodo son obligatorios`); registros.push({ ...row, _hasError: true }); return; }
+        const asignados = parseXlsxNumber(row["Vales asignados al colaborador"] || row["Total vales asignados"]);
+        const usados = parseXlsxNumber(row["Vales entregados / utilizados"] || row["Vales usados"]);
+        const descDiario = parseXlsxNumber(row["Descuento diario"]);
+        const diasDesc = parseXlsxNumber(row["Días descuento"]);
+        const saldo = Math.max(0, asignados - usados);
+        const totalDesc = descDiario * diasDesc;
+        const hasWarn = usados > asignados;
+        if (hasWarn) advertenciasList.push(`Fila ${i+2}: Vales utilizados (${usados}) > asignados (${asignados})`);
+        const respNombre = String(row["Responsable"] || "");
+        const { id: respId, contactosActualizados: ca } = resolveResponsable(respNombre, contactosActualizados);
+        contactosActualizados = ca;
+        registros.push({
+          id: String(row["ID"] || `valegas_${Date.now()}_${i}`), colaborador,
+          contactoId: String(row["Contacto asociado"] || ""), area, periodo,
+          fechaEntrega: normalizeDateFromXlsx(row["Fecha entrega"]),
+          totalValesAsignados: asignados, valesUsados: usados, saldoVales: saldo,
+          descuentoDiario: descDiario, diasDescuento: diasDesc, totalDescontado: totalDesc,
+          estado: String(row["Estado"] || "Pendiente entregar"), responsableId: respId,
+          fechaProximaRevision: normalizeDateFromXlsx(row["Fecha próxima revisión"]),
+          ultimaActualizacion: new Date().toISOString().split("T")[0],
+          observaciones: String(row["Observaciones"] || ""),
+          _hasError: false, _hasWarning: hasWarn
+        });
+      });
+      return { registros, erroresList, advertenciasList };
+    });
+
+    // VALES GAS ORGANIZACIÓN
+    processSheet(["Vales Gas Organización", "Vales Gas Organizacion"], "valesGasOrganizacion", (rows) => {
+      const registros: any[] = []; const erroresList: string[] = []; const advertenciasList: string[] = [];
+      rows.forEach((row: any, i: number) => {
+        const fechaRegistro = normalizeDateFromXlsx(row["Fecha registro"]);
+        const periodo = String(row["Periodo"] || "").trim();
+        const tipoMovimiento = String(row["Tipo movimiento"] || "").trim();
+        const cantidad = parseXlsxNumber(row["Cantidad vales"]);
+        const hasErr = !fechaRegistro || !periodo || !tipoMovimiento || cantidad <= 0;
+        if (hasErr) { erroresList.push(`Fila ${i+2}: Fecha, Periodo, Tipo movimiento y Cantidad (>0) son obligatorios`); registros.push({ ...row, _hasError: true }); return; }
+        const respNombre = String(row["Responsable"] || "");
+        const { id: respId, contactosActualizados: ca } = resolveResponsable(respNombre, contactosActualizados);
+        contactosActualizados = ca;
+        registros.push({
+          id: String(row["ID"] || `valegasorg_${Date.now()}_${i}`), fechaRegistro, periodo,
+          tipoMovimiento, cantidadVales: cantidad,
+          motivo: String(row["Motivo"] || ""), responsableId: respId,
+          observaciones: String(row["Observaciones"] || ""),
+          ultimaActualizacion: normalizeDateFromXlsx(row["Última actualización"]) || new Date().toISOString().split("T")[0],
+          _hasError: false, _hasWarning: false
+        });
+      });
+      return { registros, erroresList, advertenciasList };
+    });
+
+    // RECLUTAMIENTO
+    processSheet(["Reclutamiento", "Hoja1", "RECLUTAMIENTO", "Reclutamiento RRHH"], "reclutamiento", (rows) => {
+      const registros: any[] = []; const erroresList: string[] = []; const advertenciasList: string[] = [];
+      rows.forEach((row: any, i: number) => {
+        const plantaCentro = String(row["Planta o Centro"] || "").trim();
+        const tipoVacante = String(row["Tipo de vacante"] || "").trim();
+        const mesIngreso = String(row["Mes ingreso"] || "").trim();
+        const proceso = normalizeReclutamientoCampo(row["Proceso"], "proceso");
+        const hasErr = !plantaCentro || !tipoVacante || !mesIngreso || !proceso;
+        if (hasErr) { erroresList.push(`Fila ${i+2}: Planta, Tipo vacante, Mes ingreso y Proceso son obligatorios`); registros.push({ ...row, _hasError: true }); return; }
+        const reclutadorNombre = String(row["Reclutador"] || "").trim();
+        let reclutadorId = "";
+        if (reclutadorNombre) {
+          const { id, contactosActualizados: ca } = resolveResponsable(reclutadorNombre, contactosActualizados, "RRHH");
+          reclutadorId = id; contactosActualizados = ca;
+        }
+        const reclutamientoVal = normalizeReclutamientoCampo(row["Reclutamiento"], "reclutamiento");
+        const hasWarn = proceso === "Pausado" && (!row["Bloqueado por"] || row["Bloqueado por"] === "Sin bloqueo");
+        if (hasWarn) advertenciasList.push(`Fila ${i+2}: Proceso Pausado sin bloqueo definido`);
+        registros.push({
+          id: String(row["ID"] || `recl_${Date.now()}_${i}`),
+          reclutamiento: reclutamientoVal, plantaCentro, tipoVacante, mesIngreso,
+          revisadoPPTO: String(row["Revisado PPTO"] || ""),
+          procesoBuk: normalizeReclutamientoCampo(row["Proceso en BUK"], "procesoBuk"),
+          publicado: normalizeReclutamientoCampo(row["Publicado"], "publicado"),
+          seleccionCV: String(row["Selección de CV"] || ""),
+          cvSeleccionadoBuk: normalizeReclutamientoCampo(row["CV Seleccionado en BUK"], "cvSeleccionadoBuk"),
+          entrevistaJefatura: String(row["Entrevista Jefatura"] || ""),
+          entrevistaGP: String(row["Entrevista GP"] || ""),
+          testPsicolaboral: String(row["Test Psicolaboral"] || ""),
+          testHogan: String(row["Test Hogan"] || ""),
+          seleccionado: normalizeReclutamientoCampo(row["Seleccionado"], "seleccionado"),
+          cartaOferta: String(row["Carta Oferta"] || ""),
+          envioCartaOferta: String(row["Envio carta Oferta"] || row["Envío carta oferta"] || ""),
+          firmaCartaOferta: normalizeReclutamientoCampo(row["Firma Carta Oferta"], "firmaCartaOferta"),
+          fechaIngreso: normalizeDateFromXlsx(row["Fecha Ingreso"] || row["Fecha ingreso"]),
+          reclutador: reclutadorNombre, proceso, reclutadorId,
+          prioridad: String(row["Prioridad"] || "P3 Medio"),
+          bloqueadoPor: String(row["Bloqueado por"] || "Sin bloqueo"),
+          proximaAccion: String(row["Próxima acción"] || ""),
+          fechaProximaAccion: normalizeDateFromXlsx(row["Fecha próxima acción"]),
+          observaciones: String(row["Observaciones"] || ""),
+          ultimaActualizacion: normalizeDateFromXlsx(row["Última actualización"]) || new Date().toISOString().split("T")[0],
+          _hasError: false, _hasWarning: hasWarn
+        });
+      });
+      return { registros, erroresList, advertenciasList };
+    });
+
+    result.contactosNuevos = contactosActualizados.filter((c: any) =>
+      !data.contactos.find((existing: any) => existing.id === c.id)
+    );
+
+    return result;
   };
 
   const restaurarEjemplos = () => {
@@ -903,7 +1636,7 @@ export default function App() {
 
   const limpiarTodo = () => {
     setConfirm({ msg: "⚠️ ¿Eliminar TODOS los datos? Esta acción no se puede deshacer.", cb: () => {
-      setConfirm({ msg: "🚨 ÚLTIMA CONFIRMACIÓN: Se borrará todo definitivamente. ¿Continuar?", cb: () => { runBackupAndToast("limpiar"); limpiarDatos(); setData({ ...crearDatosEjemplo(), cursos: [], ocs: [], practicantes: [], presupuesto: [], procesos: [], diplomas: [], cargaSemanal: [], contactos: [], evaluacionesPsicolaborales: [] }); toastShow("Todos los datos eliminados"); setConfirm(null); } });
+      setConfirm({ msg: "🚨 ÚLTIMA CONFIRMACIÓN: Se borrará todo definitivamente. ¿Continuar?", cb: () => { runBackupAndToast("limpiar"); limpiarDatos(); setData({ ...crearDatosEjemplo(), cursos: [], ocs: [], practicantes: [], presupuesto: [], procesos: [], diplomas: [], cargaSemanal: [], contactos: [], evaluacionesPsicolaborales: [], valesGas: [], valesGasOrganizacion: [], reclutamiento: [] }); toastShow("Todos los datos eliminados"); setConfirm(null); } });
     }});
   };
 
@@ -1045,7 +1778,7 @@ export default function App() {
       case "OC":
         target = { modulo: "ocs", dataKey: "ocs" };
         newItem = {
-          ...baseFields, numeroOC: capture.nombre, cursoAsociado: "", proveedor: "", monto: 0,
+          ...baseFields, numeroOC: capture.nombre, categoriaOC: "", cursoAsociado: "", proveedor: "", monto: 0,
           fechaSolicitud: today, fechaLimite: capture.fechaProximaAccion || "", estadoOC: "Pendiente crear",
           accionPendiente: capture.proximaAccion,
         };
@@ -1075,11 +1808,37 @@ export default function App() {
           estado: "Pendiente solicitar", resultado: "Pendiente", costo: 0, requiereOC: "No", numeroOC: "",
         };
         break;
+      case "Vale de Gas":
+        target = { modulo: "valesGas", dataKey: "valesGas" };
+        newItem = {
+          ...baseFields, colaborador: capture.nombre, contactoId: "", area: "", periodo: "",
+          fechaEntrega: today, totalValesAsignados: 0, valesUsados: 0, descuentoDiario: 0,
+          diasDescuento: 0, totalDescontado: 0, saldoVales: 0, estado: "Pendiente entregar",
+          fechaProximaRevision: capture.fechaProximaAccion || "",
+        };
+        break;
       case "Proceso Pendiente":
         target = { modulo: "procesos", dataKey: "procesos" };
         newItem = {
           ...baseFields, proceso: capture.nombre, tipo: "Otro", estadoActual: "Pendiente revisar",
           queFalta: capture.proximaAccion, fechaLimite: capture.fechaProximaAccion || "", riesgo: "",
+        };
+        break;
+      case "Reclutamiento":
+        target = { modulo: "reclutamiento", dataKey: "reclutamiento" };
+        newItem = {
+          ...baseFields,
+          reclutamiento: "Por definir",
+          plantaCentro: capture.nombre || "",
+          tipoVacante: "Por definir",
+          mesIngreso: new Date().toLocaleString("es-CL", { month: "long" }).replace(/^\w/, (c: string) => c.toUpperCase()),
+          revisadoPPTO: "", procesoBuk: "", publicado: "", seleccionCV: "",
+          cvSeleccionadoBuk: "", entrevistaJefatura: "", entrevistaGP: "",
+          testPsicolaboral: "", testHogan: "", seleccionado: "", cartaOferta: "",
+          envioCartaOferta: "", firmaCartaOferta: "", fechaIngreso: "",
+          reclutador: "", proceso: "Abierto",
+          proximaAccion: capture.proximaAccion || "",
+          fechaProximaAccion: capture.fechaProximaAccion || "",
         };
         break;
       default:
@@ -1112,11 +1871,17 @@ export default function App() {
             ultimaActualizacion: hoy()
           };
         } else {
-          arr[idx] = {
+          const baseUpdate = {
             ...arr[idx],
-            estado: closedState,
             ultimaActualizacion: hoy()
           };
+          if (modulo === "ocs") {
+            arr[idx] = { ...baseUpdate, estadoOC: closedState };
+          } else if (modulo === "reclutamiento") {
+            arr[idx] = { ...baseUpdate, proceso: closedState };
+          } else {
+            arr[idx] = { ...baseUpdate, estado: closedState };
+          }
         }
       }
       (nd as any)[modulo] = arr;
@@ -1141,6 +1906,13 @@ export default function App() {
     const presupuestoTotal = data.presupuesto.reduce((s, p) => s + p.presupuestoTotal, 0);
     const procesosBloqueados = data.procesos.filter(p => p.bloqueadoPor !== "Sin bloqueo" && !isClosedRecord(p, "procesos")).length;
     const sinActualizar = [...data.cursos, ...data.procesos, ...data.diplomas, ...data.evaluacionesPsicolaborales].filter((x: any) => x.ultimaActualizacion && x.ultimaActualizacion < hace7Str && !["Cerrado", "Cerrada", "Completado", "Finalizado", "Subido"].includes(x.estado || x.etapa)).length;
+    const valesGasActivos = (data.valesGas || []).filter(v => v.estado !== "Cerrado" && v.estado !== "Detenido").length;
+    const valesGasEnDescuento = (data.valesGas || []).filter(v => v.estado === "En descuento").length;
+    const valesGasSaldoTotal = (data.valesGas || []).reduce((s, v) => s + (v.saldoVales || 0), 0);
+    const valesGasVencidos = (data.valesGas || []).filter(v => v.fechaProximaRevision && semaforo(v.fechaProximaRevision).label === "Vencido" && v.estado !== "Cerrado").length;
+    const valesGasStockOrg = (data.valesGasOrganizacion || []).reduce((s, v) => v.tipoMovimiento === "Ajuste negativo" ? s - (v.cantidadVales || 0) : s + (v.cantidadVales || 0), 0);
+    const valesGasAsignados = (data.valesGas || []).reduce((s, v) => s + (v.totalValesAsignados || 0), 0);
+    const valesGasSaldoOrg = valesGasStockOrg - valesGasAsignados;
 
     // Bandeja priorizada
     interface ItemBandeja { order: number; tipo: string; nombre: string; prioridad: string; estado: string; bloqueadoPor: string; proximaAccion: string; fechaProximaAccion: string; responsableId: string; modulo: string; }
@@ -1211,6 +1983,34 @@ export default function App() {
       bandeja.push({ order, tipo: "Proceso", nombre: p.proceso, prioridad: p.prioridad, estado: p.estadoActual, bloqueadoPor: p.bloqueadoPor, proximaAccion: p.proximaAccion, fechaProximaAccion: p.fechaProximaAccion, responsableId: p.responsableId, modulo: "procesos" });
     });
 
+    (data.valesGas || []).filter(v => v.estado !== "Cerrado" && v.estado !== "Detenido").forEach(v => {
+      const s = semaforo(v.fechaProximaRevision);
+      let order = 0;
+      if (s.label === "Vencido") order = 1;
+      else if (v.estado === "En descuento") order = 5;
+      else if (s.label === "Vence hoy") order = 4;
+      else if (s.label === "1-3 días") order = 6;
+      else order = 11;
+      bandeja.push({ order, tipo: "Vale Gas", nombre: `${v.colaborador} - ${v.periodo}`, prioridad: "P3 Medio", estado: v.estado, bloqueadoPor: "Sin bloqueo", proximaAccion: v.observaciones || "", fechaProximaAccion: v.fechaProximaRevision, responsableId: v.responsableId, modulo: "valesGas" });
+    });
+
+    (data.reclutamiento || []).filter((r: ProcesoReclutamiento) => !["Cerrado", "Desistido"].includes(r.proceso)).forEach((r: ProcesoReclutamiento) => {
+      const fechaRef = r.fechaProximaAccion || r.fechaIngreso;
+      const s = semaforo(fechaRef);
+      const order = s.order + (r.prioridad === "P1 Crítico" ? -0.5 : 0);
+      if (s.order <= 3 || r.proceso === "Pausado" || (r.bloqueadoPor && r.bloqueadoPor !== "Sin bloqueo")) {
+        bandeja.push({ order, tipo: "Reclutamiento", nombre: `${r.reclutamiento || "Proceso"} - ${r.plantaCentro}`, prioridad: r.prioridad, estado: r.proceso, bloqueadoPor: r.bloqueadoPor, proximaAccion: r.proximaAccion, fechaProximaAccion: fechaRef, responsableId: r.reclutadorId, modulo: "reclutamiento" });
+      }
+    });
+
+    // Alertas de reclutamiento
+    const reclAbiertos = (data.reclutamiento || []).filter((r: any) => r.proceso === "Abierto").length;
+    const reclPausados = (data.reclutamiento || []).filter((r: any) => r.proceso === "Pausado").length;
+    const reclBloqueados = (data.reclutamiento || []).filter((r: any) => !["Cerrado","Desistido"].includes(r.proceso) && r.bloqueadoPor && r.bloqueadoPor !== "Sin bloqueo").length;
+    const reclSinReclutador = (data.reclutamiento || []).filter((r: any) => !r.reclutador && !r.reclutadorId).length;
+    const hoy7 = new Date(); hoy7.setDate(hoy7.getDate() + 7);
+    const reclIngresosProximos = (data.reclutamiento || []).filter((r: any) => { if (!r.fechaIngreso) return false; const df = new Date(r.fechaIngreso); return df >= new Date() && df <= hoy7; }).length;
+
     bandeja.sort((a, b) => a.order - b.order);
 
     const semaforoCounts = { vencido: 0, venceHoy: 0, unoATres: 0, cuatroASiete: 0, sinUrgencia: 0, sinFecha: 0 };
@@ -1225,7 +2025,7 @@ export default function App() {
       else semaforoCounts.sinFecha++;
     });
 
-    return { cursosAbiertos, cursosP1, ocsPendientes, diplomasBUK, evaluacionesAbiertas, evaluacionesInformePendiente, presupuestoUsado, presupuestoTotal, procesosBloqueados, sinActualizar, bandeja, semaforoCounts };
+    return { cursosAbiertos, cursosP1, ocsPendientes, diplomasBUK, evaluacionesAbiertas, evaluacionesInformePendiente, presupuestoUsado, presupuestoTotal, procesosBloqueados, sinActualizar, bandeja, semaforoCounts, valesGasActivos, valesGasEnDescuento, valesGasSaldoTotal, valesGasVencidos, valesGasStockOrg, valesGasAsignados, valesGasSaldoOrg, reclAbiertos, reclPausados, reclBloqueados, reclSinReclutador, reclIngresosProximos };
   }, [data]);
 
   // ── CHARTS ─────────────────────────────────
@@ -1336,7 +2136,7 @@ El dashboard responde:
       {/* Sidebar */}
       <aside className={`${sidebarOpen ? "w-64" : "w-16"} bg-[#1E293B] text-white transition-all duration-300 flex flex-col shrink-0`}>
         <div className="p-4 flex items-center justify-between border-b border-white/10">
-          {sidebarOpen && <span className="font-semibold text-sm leading-tight tracking-wide">Control<br />Operativo<br />Kata V5</span>}
+          {sidebarOpen && <span className="font-semibold text-sm leading-tight tracking-wide">Control<br />Operativo<br />RH</span>}
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-white/50 hover:text-white/80 text-base w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors">{sidebarOpen ? "◀" : "▶"}</button>
         </div>
         <nav className="flex-1 overflow-y-auto py-1">
@@ -1369,7 +2169,7 @@ El dashboard responde:
         {activeModulo === "inicio" && (
           <div className="space-y-6">
             <div className="bg-gradient-to-r from-blue-900 to-blue-700 text-white rounded-2xl p-6">
-              <h1 className="text-2xl font-bold mb-2">Control Operativo Kata V5</h1>
+              <h1 className="text-2xl font-bold mb-2">Control Operativo RH</h1>
               <p className="text-blue-100 text-sm">Registra todo el mismo día · Revisa cada mañana</p>
             </div>
             <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 text-amber-900 text-sm font-medium">⚠️ Regla de oro: "Si no está registrado aquí, no existe para seguimiento."</div>
@@ -1398,6 +2198,12 @@ El dashboard responde:
               <KpiCard label="Informe pendiente" value={dashboardData.evaluacionesInformePendiente} color="text-orange-600" />
               <KpiCard label="Procesos bloqueados" value={dashboardData.procesosBloqueados} color="text-red-600" />
               <KpiCard label="Sin actualizar +7d" value={dashboardData.sinActualizar} color="text-orange-600" />
+              <KpiCard label="Stock organización" value={dashboardData.valesGasStockOrg} color="text-blue-700" />
+              <KpiCard label="Saldo disponible org." value={dashboardData.valesGasSaldoOrg} color={dashboardData.valesGasSaldoOrg < 0 ? "text-red-600" : "text-emerald-600"} />
+              <KpiCard label="Vales asignados" value={dashboardData.valesGasAsignados} color="text-indigo-700" />
+              <KpiCard label="En descuento" value={dashboardData.valesGasEnDescuento} color="text-orange-600" />
+              <KpiCard label="Reclut. abiertos" value={dashboardData.reclAbiertos} color="text-blue-700" />
+              <KpiCard label="Reclut. pausados" value={dashboardData.reclPausados} color="text-yellow-600" />
             </div>
             <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm"><h3 className="font-bold text-slate-800 mb-3">🚦 Semáforo general</h3><div className="flex flex-wrap gap-4"><SemaforoItem color="#DC2626" label="Vencido" count={dashboardData.semaforoCounts.vencido} /><SemaforoItem color="#EA580C" label="Vence hoy" count={dashboardData.semaforoCounts.venceHoy} /><SemaforoItem color="#F59E0B" label="1-3 días" count={dashboardData.semaforoCounts.unoATres} /><SemaforoItem color="#FBBF24" label="4-7 días" count={dashboardData.semaforoCounts.cuatroASiete} /><SemaforoItem color="#16A34A" label="Sin urgencia" count={dashboardData.semaforoCounts.sinUrgencia} /><SemaforoItem color="#9CA3AF" label="Sin fecha" count={dashboardData.semaforoCounts.sinFecha} /></div></div>
             <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm"><h3 className="font-bold text-slate-800 mb-3">📋 Bandeja de acción priorizada</h3><div className="overflow-x-auto"><table className="w-full text-sm text-left"><thead><tr className="bg-slate-100 text-slate-600 uppercase text-xs"><th className="px-3 py-2">#</th><th className="px-3 py-2">Tipo</th><th className="px-3 py-2">Nombre / Proceso</th><th className="px-3 py-2">Prioridad</th><th className="px-3 py-2">Estado</th><th className="px-3 py-2">Bloqueado por</th><th className="px-3 py-2">Próxima acción</th><th className="px-3 py-2">Fecha</th><th className="px-3 py-2">Responsable</th><th className="px-3 py-2">Módulo</th></tr></thead><tbody>{dashboardData.bandeja.slice(0, 20).map((item, i) => (<tr key={i} className="border-t border-slate-100 hover:bg-blue-50/50 transition-colors cursor-pointer" onClick={() => setActiveModulo(item.modulo as Modulo)}><td className="px-3 py-2 text-slate-400">{i + 1}</td><td className="px-3 py-2"><Badge label={item.tipo} colorClass="bg-slate-200 text-slate-700" /></td><td className="px-3 py-2 font-medium text-slate-800">{item.nombre}</td><td className="px-3 py-2"><Badge label={item.prioridad} colorClass={prioridadColor[item.prioridad] || ""} /></td><td className="px-3 py-2"><Badge label={item.estado} colorClass={estadoColor[item.estado] || ""} /></td><td className="px-3 py-2">{item.bloqueadoPor !== "Sin bloqueo" ? <Badge label={item.bloqueadoPor} colorClass="bg-red-100 text-red-700" /> : "-"}</td><td className="px-3 py-2 text-slate-600">{item.proximaAccion}</td><td className="px-3 py-2">{item.fechaProximaAccion ? <SemaforoBadge fecha={item.fechaProximaAccion} /> : "-"}</td><td className="px-3 py-2">{getResponsableName(data, item.responsableId)}</td><td className="px-3 py-2"><span className="text-xs text-blue-600 underline">{item.modulo}</span></td></tr>))}</tbody></table></div></div>
@@ -1419,6 +2225,8 @@ El dashboard responde:
         {activeModulo === "evaluaciones" && <ModuloEvaluaciones data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={deleteItem} duplicateItem={duplicateItem} markClosed={markClosed} getResponsableName={getResponsableName} />}
         {activeModulo === "cargaSemanal" && <ModuloCargaSemanal data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={deleteItem} duplicateItem={duplicateItem} />}
         {activeModulo === "contactos" && <ModuloContactos data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={deleteItem} />}
+        {activeModulo === "valesGas" && <ModuloValesGas data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={deleteItem} getResponsableName={getResponsableName} />}
+        {activeModulo === "reclutamiento" && <ModuloReclutamiento data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={deleteItem} duplicateItem={duplicateItem} markClosed={markClosed} getResponsableName={getResponsableName} />}
         {activeModulo === "configuracion" && (
           <ModuloConfiguracion
             data={data}
@@ -1436,6 +2244,8 @@ El dashboard responde:
             runBackupAndToast={runBackupAndToast}
             setData={setData}
             toastShow={toastShow}
+            downloadXlsxTemplate={downloadXlsxTemplate}
+            parseXlsxFile={parseXlsxFile}
           />
         )}
 
@@ -1450,6 +2260,9 @@ El dashboard responde:
           {modalModulo === "evaluaciones" && <FormEvaluaciones data={data} editItem={editItem} closeModal={closeModal} saveItem={saveItem} />}
           {modalModulo === "cargaSemanal" && <FormCargaSemanal data={data} editItem={editItem} closeModal={closeModal} saveItem={saveItem} />}
           {modalModulo === "contactos" && <FormContactos data={data} editItem={editItem} closeModal={closeModal} saveItem={saveItem} />}
+          {modalModulo === "valesGas" && <FormValesGas data={data} editItem={editItem} closeModal={closeModal} saveItem={saveItem} />}
+          {modalModulo === "valesGasOrganizacion" && <FormValeGasOrg data={data} editItem={editItem} closeModal={closeModal} saveItem={saveItem} />}
+          {modalModulo === "reclutamiento" && <FormReclutamiento data={data} editItem={editItem} closeModal={closeModal} saveItem={saveItem} />}
         </Modal>
 
         <ConfirmModal open={!!confirm} message={confirm?.msg || ""} onConfirm={() => confirm?.cb()} onCancel={() => setConfirm(null)} />
@@ -1632,6 +2445,19 @@ function ModuloMiDia({ data, setActiveModulo, onCapturaRapida }: { data: AppData
         });
       });
 
+      (data.reclutamiento || []).forEach((r: ProcesoReclutamiento) => {
+        if (["Cerrado", "Desistido"].includes(r.proceso)) return;
+        const fechaRef = r.fechaProximaAccion || r.fechaIngreso;
+        const s = semaforo(fechaRef);
+        items.push({
+          tipo: "Reclutamiento", nombre: `${r.reclutamiento || "Proceso"} - ${r.plantaCentro}`,
+          prioridad: r.prioridad, estado: r.proceso, responsable: getResponsableName(data, r.reclutadorId),
+          proximaAccion: r.proximaAccion, fecha: fechaRef,
+          bloqueadoPor: r.bloqueadoPor, modulo: "reclutamiento" as Modulo,
+          semaforoLabel: s.label, semaforoColor: s.color, order: s.order,
+        });
+      });
+
       return items;
     }, [data]);
 
@@ -1743,7 +2569,7 @@ function ModuloCursos({ data, search, setSearch, openNew, openEdit, deleteItem, 
     return true;
   });
 
-  const columns = [{ key: "curso", label: "Curso" }, { key: "origen", label: "Origen", render: (r: Curso) => <Badge label={r.origen} colorClass="bg-slate-200 text-slate-700" /> }, { key: "prioridad", label: "Prioridad", render: (r: Curso) => <Badge label={r.prioridad} colorClass={prioridadColor[r.prioridad] || ""} /> }, { key: "estado", label: "Estado", render: (r: Curso) => <Badge label={r.estado} colorClass={estadoColor[r.estado] || ""} /> }, { key: "fechaRequerida", label: "Fecha req.", render: (r: Curso) => toDDMMYYYY(r.fechaRequerida) }, { key: "semaforo", label: "Semáforo", render: (r: Curso) => <SemaforoBadge fecha={r.fechaProximaAccion || r.fechaRequerida} /> }, { key: "bloqueadoPor", label: "Bloqueo", render: (r: Curso) => r.bloqueadoPor !== "Sin bloqueo" ? <Badge label={r.bloqueadoPor} colorClass="bg-red-100 text-red-700" /> : "-" }, { key: "responsable", label: "Resp.", render: (r: Curso) => getResponsableName(data, r.responsableId) }, { key: "montoEstimado", label: "Monto", render: (r: Curso) => fmtCLP(r.montoEstimado) }];
+  const columns = [{ key: "curso", label: "Curso" }, { key: "origen", label: "Origen", render: (r: Curso) => <Badge label={r.origen} colorClass="bg-slate-200 text-slate-700" /> }, { key: "prioridad", label: "Prioridad", render: (r: Curso) => <Badge label={r.prioridad} colorClass={prioridadColor[r.prioridad] || ""} /> }, { key: "estado", label: "Estado", render: (r: Curso) => <Badge label={r.estado} colorClass={estadoColor[r.estado] || ""} /> }, { key: "fechaRequerida", label: "Fecha req.", render: (r: Curso) => toDDMMYYYY(r.fechaRequerida) }, { key: "semaforo", label: "Semáforo", render: (r: Curso) => <SemaforoBadge fecha={r.fechaProximaAccion || r.fechaRequerida} /> }, { key: "bloqueadoPor", label: "Bloqueo", render: (r: Curso) => r.bloqueadoPor !== "Sin bloqueo" ? <Badge label={r.bloqueadoPor} colorClass="bg-red-100 text-red-700" /> : "-" }, { key: "responsable", label: "Resp.", render: (r: Curso) => getResponsableName(data, r.responsableId) }];
 
   return (
     <div className="space-y-5">
@@ -1758,18 +2584,20 @@ function ModuloCursos({ data, search, setSearch, openNew, openEdit, deleteItem, 
 function ModuloOCs({ data, search, setSearch, openNew, openEdit, deleteItem, markClosed, getResponsableName }: any) {
   const [filtroEstado, setFiltroEstado] = useState("");
   const [filtroPrioridad, setFiltroPrioridad] = useState("");
+  const [filtroCategoria, setFiltroCategoria] = useState("");
   const filtered = data.ocs.filter((o: OC) => {
     if (filtroEstado && o.estadoOC !== filtroEstado) return false;
     if (filtroPrioridad && o.prioridad !== filtroPrioridad) return false;
+    if (filtroCategoria && o.categoriaOC !== filtroCategoria) return false;
     if (search && !o.numeroOC.toLowerCase().includes(search.toLowerCase()) && !o.cursoAsociado.toLowerCase().includes(search.toLowerCase()) && !o.proveedor.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
-  const columns = [{ key: "numeroOC", label: "N° OC", render: (r: OC) => <span className="font-semibold">{r.numeroOC}</span> }, { key: "cursoAsociado", label: "Curso asociado" }, { key: "proveedor", label: "Proveedor" }, { key: "monto", label: "Monto", render: (r: OC) => fmtCLP(r.monto) }, { key: "estadoOC", label: "Estado", render: (r: OC) => <Badge label={r.estadoOC} colorClass={estadoColor[r.estadoOC] || ""} /> }, { key: "prioridad", label: "Prioridad", render: (r: OC) => <Badge label={r.prioridad} colorClass={prioridadColor[r.prioridad] || ""} /> }, { key: "fechaLimite", label: "Fecha límite", render: (r: OC) => toDDMMYYYY(r.fechaLimite) }, { key: "semaforo", label: "Semáforo", render: (r: OC) => <SemaforoBadge fecha={r.fechaLimite} /> }, { key: "bloqueadoPor", label: "Bloqueo", render: (r: OC) => r.bloqueadoPor !== "Sin bloqueo" ? <Badge label={r.bloqueadoPor} colorClass="bg-red-100 text-red-700" /> : "-" }, { key: "responsable", label: "Resp.", render: (r: OC) => getResponsableName(data, r.responsableId) }];
+  const columns = [{ key: "numeroOC", label: "N° OC", render: (r: OC) => <span className="font-semibold">{r.numeroOC}</span> }, { key: "categoriaOC", label: "Categoría", render: (r: OC) => r.categoriaOC ? <Badge label={r.categoriaOC} colorClass="bg-indigo-100 text-indigo-700" /> : <span className="text-slate-400 text-xs">-</span> }, { key: "cursoAsociado", label: "Curso / Servicio" }, { key: "proveedor", label: "Proveedor" }, { key: "monto", label: "Monto", render: (r: OC) => fmtCLP(r.monto) }, { key: "estadoOC", label: "Estado", render: (r: OC) => <Badge label={r.estadoOC} colorClass={estadoColor[r.estadoOC] || ""} /> }, { key: "prioridad", label: "Prioridad", render: (r: OC) => <Badge label={r.prioridad} colorClass={prioridadColor[r.prioridad] || ""} /> }, { key: "fechaLimite", label: "Fecha límite", render: (r: OC) => toDDMMYYYY(r.fechaLimite) }, { key: "semaforo", label: "Semáforo", render: (r: OC) => <SemaforoBadge fecha={r.fechaLimite} /> }, { key: "bloqueadoPor", label: "Bloqueo", render: (r: OC) => r.bloqueadoPor !== "Sin bloqueo" ? <Badge label={r.bloqueadoPor} colorClass="bg-red-100 text-red-700" /> : "-" }, { key: "responsable", label: "Resp.", render: (r: OC) => getResponsableName(data, r.responsableId) }];
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between"><h1 className="text-xl font-bold text-slate-800">🧾 OCs Pendientes</h1><button onClick={() => openNew("ocs")} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition">+ Nueva OC</button></div>
-      <FilterBar search={search} setSearch={setSearch} searchPlaceholder="Buscar OC, curso o proveedor..." filters={<><Select value={filtroEstado} onChange={setFiltroEstado} options={ESTADOS_OC} placeholder="Estado" /><Select value={filtroPrioridad} onChange={setFiltroPrioridad} options={PRIORIDADES} placeholder="Prioridad" /></>} />
+      <FilterBar search={search} setSearch={setSearch} searchPlaceholder="Buscar OC, curso o proveedor..." filters={<><Select value={filtroCategoria} onChange={setFiltroCategoria} options={CATEGORIAS_OC} placeholder="Categoría" /><Select value={filtroEstado} onChange={setFiltroEstado} options={ESTADOS_OC} placeholder="Estado" /><Select value={filtroPrioridad} onChange={setFiltroPrioridad} options={PRIORIDADES} placeholder="Prioridad" /></>} />
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"><Table columns={columns} rows={filtered} onEdit={(r: any) => openEdit("ocs", r)} onDelete={(id: string) => deleteItem("ocs", id)} onMarkClosed={(id: string) => markClosed("ocs", id, "Cerrada")} closedState="Cerrada" /></div>
       <p className="text-xs text-slate-400 mt-1">Mostrando {filtered.length} OCs</p>
     </div>
@@ -1800,103 +2628,53 @@ function ModuloPresupuesto({ data, search, setSearch, openNew, openEdit, deleteI
 
   // Calculate dynamic breakdowns
   const budgetBreakdown = useMemo(() => {
-    // 1. Cursos
-    const cursoBudgetRow = data.presupuesto.find((p: any) => p.concepto.toLowerCase().includes("curso")) || { id: "", presupuestoTotal: 15000000, gastado: 7500000, observaciones: "" };
-    const cursoComprometido = data.cursos.filter((c: any) => !["Cerrado", "Ejecutado", "Detenido"].includes(c.estado)).reduce((sum: number, c: any) => sum + (c.montoEstimado || 0), 0);
-    const cursoEjecutado = data.cursos.filter((c: any) => ["Ejecutado", "Cerrado"].includes(c.estado)).reduce((sum: number, c: any) => sum + (c.montoEstimado || 0), 0);
-
-    // 2. OCs
-    const ocBudgetRow = data.presupuesto.find((p: any) => p.concepto.toLowerCase() === "ocs" || p.concepto.toLowerCase().startsWith("oc")) || { id: "", presupuestoTotal: 5000000, gastado: 0, observaciones: "" };
-    const ocComprometido = data.ocs.filter((o: any) => !["Cerrada", "Emitida"].includes(o.estadoOC)).reduce((sum: number, o: any) => sum + (o.monto || 0), 0);
+    // 1. OCs — calculado desde registros
+    const ocBudgetRow = data.presupuesto.find((p: any) => p.concepto.toLowerCase() === "ocs" || p.concepto.toLowerCase().startsWith("oc")) || { id: "", presupuestoTotal: 0, montoComprometidoManual: 0, montoEjecutadoManual: 0, observaciones: "" };
+    const ocComprometido = data.ocs.filter((o: any) => ["Pendiente crear", "Solicitada", "En aprobación"].includes(o.estadoOC)).reduce((sum: number, o: any) => sum + (o.monto || 0), 0);
     const ocEjecutado = data.ocs.filter((o: any) => ["Emitida", "Enviada proveedor", "Cerrada"].includes(o.estadoOC)).reduce((sum: number, o: any) => sum + (o.monto || 0), 0);
 
-    // 3. Practicantes
-    const pracBudgetRow = data.presupuesto.find((p: any) => p.concepto.toLowerCase().includes("practicante")) || { id: "", presupuestoTotal: 8000000, gastado: 6400000, observaciones: "" };
+    // 2. Practicantes — calculado desde registros
+    const pracBudgetRow = data.presupuesto.find((p: any) => p.concepto.toLowerCase().includes("practicante")) || { id: "", presupuestoTotal: 0, observaciones: "" };
     const pracComprometido = data.practicantes.filter((p: any) => p.estado !== "Finalizado" && p.fechaInicio && p.fechaTermino).reduce((sum: number, p: any) => sum + ((p.costoMensual || 0) * durMesesEntre(p.fechaInicio, p.fechaTermino)), 0);
     const pracEjecutado = data.practicantes.filter((p: any) => p.estado === "Finalizado" && p.fechaInicio && p.fechaTermino).reduce((sum: number, p: any) => sum + ((p.costoMensual || 0) * durMesesEntre(p.fechaInicio, p.fechaTermino)), 0);
 
-    // 4. Evaluaciones Psicolaborales
-    const evalBudgetRow = data.presupuesto.find((p: any) => p.concepto.toLowerCase().includes("evaluaci")) || { id: "", presupuestoTotal: 3000000, gastado: 500000, observaciones: "" };
+    // 3. Evaluaciones Psicolaborales — calculado desde registros
+    const evalBudgetRow = data.presupuesto.find((p: any) => p.concepto.toLowerCase().includes("evaluaci")) || { id: "", presupuestoTotal: 0, observaciones: "" };
     const evalComprometido = data.evaluacionesPsicolaborales.filter((e: any) => !["Cerrada", "Detenida"].includes(e.estado)).reduce((sum: number, e: any) => sum + (e.costo || 0), 0);
     const evalEjecutado = data.evaluacionesPsicolaborales.filter((e: any) => ["Cerrada"].includes(e.estado)).reduce((sum: number, e: any) => sum + (e.costo || 0), 0);
 
-    // 5. Diplomas / Certificados / Licencias
-    const dipBudgetRow = data.presupuesto.find((p: any) => p.concepto.toLowerCase().includes("diploma") || p.concepto.toLowerCase().includes("certific")) || { id: "", presupuestoTotal: 2000000, gastado: 300000, observaciones: "" };
-    const dipComprometido = 0;
-    const dipEjecutado = dipBudgetRow.gastado;
-
-    // 6. Other manual entries
-    const standardKeys = ["curso", "oc", "practicante", "evaluaci", "diploma", "certific"];
-    const otherBudgetItems = data.presupuesto.filter((p: any) => {
-      const k = p.concepto.toLowerCase();
-      return !standardKeys.some(sk => k.includes(sk));
-    });
-
     const rows = [
       {
-        id: cursoBudgetRow.id,
-        area: "Cursos / Capacitaciones",
-        tipo: "Calculado desde registros",
-        presupuesto: cursoBudgetRow.presupuestoTotal,
-        comprometido: cursoComprometido,
-        ejecutado: cursoEjecutado,
-        saldo: cursoBudgetRow.presupuestoTotal - cursoEjecutado,
-        observaciones: cursoBudgetRow.observaciones || "Integrado con módulo Cursos"
-      },
-      {
         id: ocBudgetRow.id,
+        key: "oc",
         area: "Órdenes de Compra (OC)",
-        tipo: "Calculado desde registros",
         presupuesto: ocBudgetRow.presupuestoTotal,
         comprometido: ocComprometido,
         ejecutado: ocEjecutado,
-        saldo: ocBudgetRow.presupuestoTotal - ocEjecutado,
-        observaciones: ocBudgetRow.observaciones || "Integrado con módulo OCs"
+        saldo: ocBudgetRow.presupuestoTotal - ocEjecutado - ocComprometido,
+        observaciones: ocBudgetRow.observaciones || "Calculado desde módulo OCs"
       },
       {
         id: pracBudgetRow.id,
+        key: "practicante",
         area: "Practicantes",
-        tipo: "Calculado desde registros",
         presupuesto: pracBudgetRow.presupuestoTotal,
         comprometido: pracComprometido,
         ejecutado: pracEjecutado,
-        saldo: pracBudgetRow.presupuestoTotal - pracEjecutado,
-        observaciones: pracBudgetRow.observaciones || "Integrado con módulo Practicantes"
+        saldo: pracBudgetRow.presupuestoTotal - pracEjecutado - pracComprometido,
+        observaciones: pracBudgetRow.observaciones || "Calculado desde módulo Practicantes"
       },
       {
         id: evalBudgetRow.id,
+        key: "evaluacion",
         area: "Evaluaciones Psicolaborales",
-        tipo: "Calculado desde registros",
         presupuesto: evalBudgetRow.presupuestoTotal,
         comprometido: evalComprometido,
         ejecutado: evalEjecutado,
-        saldo: evalBudgetRow.presupuestoTotal - evalEjecutado,
-        observaciones: evalBudgetRow.observaciones || "Integrado con módulo Evaluaciones"
-      },
-      {
-        id: dipBudgetRow.id,
-        area: "Diplomas / Certificados",
-        tipo: "Manual",
-        presupuesto: dipBudgetRow.presupuestoTotal,
-        comprometido: dipComprometido,
-        ejecutado: dipEjecutado,
-        saldo: dipBudgetRow.presupuestoTotal - dipEjecutado,
-        observaciones: dipBudgetRow.observaciones || "Actualizado manualmente"
+        saldo: evalBudgetRow.presupuestoTotal - evalEjecutado - evalComprometido,
+        observaciones: evalBudgetRow.observaciones || "Calculado desde módulo Evaluaciones"
       }
     ];
-
-    otherBudgetItems.forEach((p: any) => {
-      rows.push({
-        id: p.id,
-        area: p.concepto,
-        tipo: "Manual",
-        presupuesto: p.presupuestoTotal,
-        comprometido: 0,
-        ejecutado: p.gastado,
-        saldo: p.presupuestoTotal - p.gastado,
-        observaciones: p.observaciones || "Registro manual"
-      });
-    });
 
     return rows;
   }, [data]);
@@ -1905,8 +2683,8 @@ function ModuloPresupuesto({ data, search, setSearch, openNew, openEdit, deleteI
   const totalPresupuesto = budgetBreakdown.reduce((s, r) => s + r.presupuesto, 0);
   const totalComprometido = budgetBreakdown.reduce((s, r) => s + r.comprometido, 0);
   const totalEjecutado = budgetBreakdown.reduce((s, r) => s + r.ejecutado, 0);
-  const saldoDisponible = totalPresupuesto - totalEjecutado;
-  const pctTotal = totalPresupuesto > 0 ? Math.round((totalEjecutado / totalPresupuesto) * 100) : 0;
+  const saldoDisponible = totalPresupuesto - totalEjecutado - totalComprometido;
+  const pctTotal = totalPresupuesto > 0 ? Math.round(((totalEjecutado + totalComprometido) / totalPresupuesto) * 100) : 0;
 
   // Filter breakdown rows for view search if search is active
   const filteredBreakdown = budgetBreakdown.filter(row => {
@@ -1922,9 +2700,7 @@ function ModuloPresupuesto({ data, search, setSearch, openNew, openEdit, deleteI
           <h1 className="text-xl font-bold text-slate-800">💰 Control Financiero y Presupuesto</h1>
           <p className="text-slate-500 text-xs">Visión unificada del presupuesto, montos comprometidos, ejecutados y saldos en tiempo real.</p>
         </div>
-        <button onClick={() => openNew("presupuesto")} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition font-semibold">
-          + Nuevo concepto manual
-        </button>
+        <p className="text-xs text-slate-400 italic">Los módulos son fijos. Solo se edita el presupuesto asignado.</p>
       </div>
 
       {/* 1. Resumen General Card */}
@@ -1943,23 +2719,38 @@ function ModuloPresupuesto({ data, search, setSearch, openNew, openEdit, deleteI
             <div className="text-sm text-red-700">Monto Ejecutado (Gastado)</div>
             <div className="text-2xl font-bold text-red-600">{fmtCLP(totalEjecutado)}</div>
           </div>
-          <div className="bg-green-50 rounded-lg p-4 text-center border border-green-200">
-            <div className="text-sm text-green-700">Saldo Disponible (Asignado - Ejecutado)</div>
-            <div className="text-2xl font-bold text-green-600">{fmtCLP(saldoDisponible)}</div>
+          <div className={`rounded-lg p-4 text-center border ${saldoDisponible < 0 ? "bg-red-50 border-red-300" : "bg-green-50 border-green-200"}`}>
+            <div className={`text-sm ${saldoDisponible < 0 ? "text-red-700" : "text-green-700"}`}>Saldo Disponible (Asignado − Ejecutado − Comprometido)</div>
+            <div className={`text-2xl font-bold ${saldoDisponible < 0 ? "text-red-600" : "text-green-600"}`}>{fmtCLP(saldoDisponible)}</div>
+            {saldoDisponible < 0 && <div className="text-xs text-red-600 font-semibold mt-1">⚠ Presupuesto excedido</div>}
           </div>
         </div>
 
-        {/* Total comprometido + ejecutado progress bar */}
+        {/* Barra de progreso: ejecutado + comprometido vs presupuesto */}
         <div className="mt-6">
           <div className="flex justify-between text-xs text-slate-600 mb-2">
-            <span>Progreso del Gasto Ejecutado vs Presupuesto Asignado:</span>
-            <span className="font-semibold">{pctTotal}% utilizado</span>
+            <span>Uso del presupuesto (Ejecutado + Comprometido vs Asignado):</span>
+            <span className="font-semibold">{pctTotal}% comprometido/utilizado</span>
           </div>
-          <div className="w-full bg-slate-200 rounded-full h-4 overflow-hidden">
-            <div
-              className={`h-4 rounded-full transition-all ${pctTotal > 90 ? "bg-red-600" : pctTotal > 75 ? "bg-orange-500" : "bg-green-500"}`}
-              style={{ width: `${Math.min(pctTotal, 100)}%` }}
-            />
+          <div className="w-full bg-slate-200 rounded-full h-4 overflow-hidden flex">
+            {totalPresupuesto > 0 && (
+              <>
+                <div
+                  className="h-4 bg-red-500 transition-all"
+                  style={{ width: `${Math.min((totalEjecutado / totalPresupuesto) * 100, 100)}%` }}
+                  title="Ejecutado"
+                />
+                <div
+                  className="h-4 bg-orange-400 transition-all"
+                  style={{ width: `${Math.min((totalComprometido / totalPresupuesto) * 100, Math.max(0, 100 - (totalEjecutado / totalPresupuesto) * 100))}%` }}
+                  title="Comprometido"
+                />
+              </>
+            )}
+          </div>
+          <div className="flex gap-4 mt-1 text-xs text-slate-500">
+            <span><span className="inline-block w-2 h-2 rounded-full bg-red-500 mr-1"></span>Ejecutado</span>
+            <span><span className="inline-block w-2 h-2 rounded-full bg-orange-400 mr-1"></span>Comprometido</span>
           </div>
         </div>
       </div>
@@ -1982,8 +2773,7 @@ function ModuloPresupuesto({ data, search, setSearch, openNew, openEdit, deleteI
           <table className="w-full text-sm text-left">
             <thead>
               <tr className="bg-slate-100 text-slate-600 uppercase text-xs">
-                <th className="px-4 py-3">Área / Módulo</th>
-                <th className="px-4 py-3">Origen de datos</th>
+                <th className="px-4 py-3">Módulo</th>
                 <th className="px-4 py-3 text-right">Presupuesto Asignado</th>
                 <th className="px-4 py-3 text-right">Monto Comprometido</th>
                 <th className="px-4 py-3 text-right">Monto Ejecutado</th>
@@ -1995,19 +2785,14 @@ function ModuloPresupuesto({ data, search, setSearch, openNew, openEdit, deleteI
             </thead>
             <tbody>
               {filteredBreakdown.map((row, idx) => {
-                const usePct = row.presupuesto > 0 ? Math.round((row.ejecutado / row.presupuesto) * 100) : 0;
+                const usePct = row.presupuesto > 0 ? Math.round(((row.ejecutado + row.comprometido) / row.presupuesto) * 100) : 0;
                 return (
                   <tr key={idx} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-3 font-semibold text-slate-800">{row.area}</td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded text-xs font-semibold ${row.tipo === "Manual" ? "bg-amber-100 text-amber-800" : "bg-teal-100 text-teal-800"}`}>
-                        {row.tipo}
-                      </span>
-                    </td>
                     <td className="px-4 py-3 text-right font-medium">{fmtCLP(row.presupuesto)}</td>
                     <td className="px-4 py-3 text-right text-orange-600 font-medium">{fmtCLP(row.comprometido)}</td>
                     <td className="px-4 py-3 text-right text-red-600 font-medium">{fmtCLP(row.ejecutado)}</td>
-                    <td className="px-4 py-3 text-right text-green-600 font-semibold">{fmtCLP(row.saldo)}</td>
+                    <td className={`px-4 py-3 text-right font-semibold ${row.saldo < 0 ? "text-red-600" : "text-green-600"}`}>{fmtCLP(row.saldo)}{row.saldo < 0 && " ⚠"}</td>
                     <td className="px-4 py-3 text-right">
                       <span className={`font-bold ${usePct > 90 ? "text-red-600" : usePct > 75 ? "text-orange-500" : "text-green-600"}`}>
                         {usePct}%
@@ -2017,25 +2802,15 @@ function ModuloPresupuesto({ data, search, setSearch, openNew, openEdit, deleteI
                       {row.observaciones}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      {row.id && (
-                        <div className="flex gap-2 justify-center">
-                          <button
-                            onClick={() => {
-                              const originalItem = data.presupuesto.find((p: any) => p.id === row.id);
-                              if (originalItem) openEdit("presupuesto", originalItem);
-                            }}
-                            className="text-blue-600 hover:underline text-xs font-semibold"
-                          >
-                            Editar
-                          </button>
-                          <button
-                            onClick={() => deleteItem("presupuesto", row.id)}
-                            className="text-red-600 hover:underline text-xs font-semibold"
-                          >
-                            Eliminar
-                          </button>
-                        </div>
-                      )}
+                      <button
+                        onClick={() => {
+                          const originalItem = data.presupuesto.find((p: any) => p.id === row.id);
+                          openEdit("presupuesto", originalItem || { concepto: row.area, presupuestoTotal: row.presupuesto, observaciones: row.observaciones });
+                        }}
+                        className="text-blue-600 hover:underline text-xs font-semibold"
+                      >
+                        Editar presupuesto
+                      </button>
                     </td>
                   </tr>
                 );
@@ -2050,34 +2825,6 @@ function ModuloPresupuesto({ data, search, setSearch, openNew, openEdit, deleteI
         <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">3. Detalle de Submontos y Registros Asociados</h3>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Cursos list */}
-          <div className="border rounded-lg p-4 space-y-3">
-            <div className="flex justify-between items-center border-b pb-2">
-              <h4 className="font-bold text-slate-800 text-sm">Detalle Cursos / Capacitaciones</h4>
-              <span className="text-xs font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded">Calculado</span>
-            </div>
-            <div className="max-h-60 overflow-y-auto space-y-2">
-              {data.cursos.length === 0 ? (
-                <p className="text-xs text-slate-400">No hay cursos registrados.</p>
-              ) : (
-                data.cursos.map((c: any) => (
-                  <div key={c.id} className="flex justify-between items-center text-xs p-2 rounded hover:bg-slate-50 border border-slate-100">
-                    <div>
-                      <div className="font-semibold text-slate-700 truncate max-w-[200px]">{c.curso}</div>
-                      <div className="text-slate-400">Estado: {c.estado}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-bold">{fmtCLP(c.montoEstimado)}</div>
-                      <span className={`px-1 rounded text-[10px] ${["Ejecutado", "Cerrado"].includes(c.estado) ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-700"}`}>
-                        {["Ejecutado", "Cerrado"].includes(c.estado) ? "Ejecutado" : "Comprometido"}
-                      </span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
           {/* OCs list */}
           <div className="border rounded-lg p-4 space-y-3">
             <div className="flex justify-between items-center border-b pb-2">
@@ -2276,7 +3023,7 @@ function ModuloEvaluaciones({ data, search, setSearch, openNew, openEdit, delete
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead><tr className="bg-slate-100 text-slate-600 uppercase text-xs">{columns.map(c => <th key={c.key} className="px-3 py-2 whitespace-nowrap">{c.label}</th>)}<th className="px-3 py-2">Acciones</th></tr></thead>
-            <tbody>{filtered.map((row, i) => (<tr key={row.id || i} className="border-t border-slate-100 hover:bg-purple-50/50 transition-colors">{columns.map(c => (<td key={c.key} className="px-3 py-2 whitespace-nowrap">{c.render ? c.render(row) : (row as any)[c.key]}</td>))}<td className="px-3 py-2 whitespace-nowrap"><div className="flex gap-1"><button onClick={() => openEdit("evaluaciones", row)} className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition">Editar</button><button onClick={() => duplicateItem("evaluaciones", row)} className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition">Duplicar</button><button onClick={() => deleteItem("evaluaciones", row.id)} className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition">Eliminar</button></div></td></tr>))}</tbody>
+            <tbody>{filtered.map((row: any, i: number) => (<tr key={row.id || i} className="border-t border-slate-100 hover:bg-purple-50/50 transition-colors">{columns.map(c => (<td key={c.key} className="px-3 py-2 whitespace-nowrap">{c.render ? c.render(row) : (row as any)[c.key]}</td>))}<td className="px-3 py-2 whitespace-nowrap"><div className="flex gap-1"><button onClick={() => openEdit("evaluaciones", row)} className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition">Editar</button><button onClick={() => duplicateItem("evaluacionesPsicolaborales", row)} className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition">Duplicar</button><button onClick={() => deleteItem("evaluacionesPsicolaborales", row.id)} className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition">Eliminar</button></div></td></tr>))}</tbody>
           </table>
         </div>
       </div>
@@ -2321,9 +3068,111 @@ function ModuloContactos({ data, search, setSearch, openNew, openEdit, deleteIte
   );
 }
 
+function XlsxImportPreview({ parseResult, onConfirmReplace, onConfirmMerge, onCancel }: {
+  parseResult: XlsxParseResult;
+  onConfirmReplace: () => void;
+  onConfirmMerge: () => void;
+  onCancel: () => void;
+}) {
+  const totalRegistros = parseResult.hojas.reduce((s, h) => s + h.total, 0);
+  const totalErrores = parseResult.hojas.reduce((s, h) => s + h.errores, 0);
+  const totalAdv = parseResult.hojas.reduce((s, h) => s + h.advertencias, 0);
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+        <div className="px-6 py-4 border-b flex items-center justify-between">
+          <h2 className="text-lg font-bold text-slate-800">Previsualizacion de importacion XLSX</h2>
+          <button onClick={onCancel} className="text-slate-400 hover:text-slate-600 text-xl">x</button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          <div className="grid grid-cols-3 gap-4">
+            <div className="bg-slate-50 rounded-xl p-4 text-center border">
+              <div className="text-2xl font-bold text-slate-800">{totalRegistros}</div>
+              <div className="text-xs text-slate-500">Total registros</div>
+            </div>
+            <div className={`rounded-xl p-4 text-center border ${totalErrores > 0 ? "bg-red-50 border-red-200" : "bg-green-50 border-green-200"}`}>
+              <div className={`text-2xl font-bold ${totalErrores > 0 ? "text-red-600" : "text-green-600"}`}>{totalErrores}</div>
+              <div className="text-xs text-slate-500">Errores criticos</div>
+            </div>
+            <div className={`rounded-xl p-4 text-center border ${totalAdv > 0 ? "bg-yellow-50 border-yellow-200" : "bg-slate-50"}`}>
+              <div className={`text-2xl font-bold ${totalAdv > 0 ? "text-yellow-600" : "text-slate-400"}`}>{totalAdv}</div>
+              <div className="text-xs text-slate-500">Advertencias</div>
+            </div>
+          </div>
+
+          {parseResult.tieneErroresCriticos && (
+            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
+              Hay errores criticos. Solo se importaran los registros validos al confirmar.
+            </div>
+          )}
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead>
+                <tr className="bg-slate-100 text-slate-600 text-xs uppercase">
+                  <th className="px-4 py-2">Hoja / Modulo</th>
+                  <th className="px-4 py-2 text-right">Total</th>
+                  <th className="px-4 py-2 text-right">Validos</th>
+                  <th className="px-4 py-2 text-right">Advertencias</th>
+                  <th className="px-4 py-2 text-right">Errores</th>
+                </tr>
+              </thead>
+              <tbody>
+                {parseResult.hojas.map((h, i) => (
+                  <tr key={i} className="border-t border-slate-100">
+                    <td className="px-4 py-2 font-medium text-slate-700">{h.nombre}</td>
+                    <td className="px-4 py-2 text-right">{h.total}</td>
+                    <td className="px-4 py-2 text-right text-green-600">{h.validos}</td>
+                    <td className="px-4 py-2 text-right text-yellow-600">{h.advertencias || "-"}</td>
+                    <td className="px-4 py-2 text-right text-red-600">{h.errores || "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {parseResult.hojas.some(h => h.erroresList.length > 0 || h.advertenciasList.length > 0) && (
+            <div className="space-y-2">
+              {parseResult.hojas.filter(h => h.erroresList.length > 0).map((h, i) => (
+                <div key={i} className="bg-red-50 border border-red-100 rounded-xl p-3">
+                  <div className="text-xs font-bold text-red-700 mb-1">{h.nombre} — Errores:</div>
+                  {h.erroresList.map((e, j) => <div key={j} className="text-xs text-red-600">- {e}</div>)}
+                </div>
+              ))}
+              {parseResult.hojas.filter(h => h.advertenciasList.length > 0).map((h, i) => (
+                <div key={i} className="bg-yellow-50 border border-yellow-100 rounded-xl p-3">
+                  <div className="text-xs font-bold text-yellow-700 mb-1">{h.nombre} — Advertencias:</div>
+                  {h.advertenciasList.map((e, j) => <div key={j} className="text-xs text-yellow-600">- {e}</div>)}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-xs text-blue-700">
+            Se creara un respaldo automatico antes de importar. Las hojas no presentes en el XLSX mantendran sus datos actuales.
+          </div>
+        </div>
+
+        <div className="px-6 py-4 border-t flex gap-3 justify-end flex-wrap">
+          <button onClick={onCancel} className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-medium hover:bg-slate-200 transition-colors">Cancelar</button>
+          <button onClick={onConfirmMerge} className="px-4 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors">
+            Fusionar con base actual
+          </button>
+          <button onClick={onConfirmReplace} className="px-4 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-medium hover:bg-orange-700 transition-colors">
+            Reemplazar base actual
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ModuloConfiguracion({
   data, exportJSON, importJSON, exportXLSX, exportLimpia, restaurarEjemplos, limpiarTodo, showInstructions,
-  backups, setBackups, lastJSONExport, lastXLSXExport, runBackupAndToast, setData, toastShow
+  backups, setBackups, lastJSONExport, lastXLSXExport, runBackupAndToast, setData, toastShow,
+  downloadXlsxTemplate, parseXlsxFile
 }: any) {
   const counts: Record<string, number> = {
     cursos: data.cursos.length,
@@ -2335,6 +3184,61 @@ function ModuloConfiguracion({
     evaluacionesPsicolaborales: data.evaluacionesPsicolaborales.length,
     cargaSemanal: data.cargaSemanal.length,
     contactos: data.contactos.length
+  };
+
+  const [xlsxParseResult, setXlsxParseResult] = useState<XlsxParseResult | null>(null);
+  const [xlsxImporting, setXlsxImporting] = useState(false);
+  const xlsxFileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleXlsxFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setXlsxImporting(true);
+    try {
+      const result = await parseXlsxFile(file);
+      setXlsxParseResult(result);
+    } catch (err) {
+      toastShow("Error al leer el archivo XLSX. Verifica que sea un archivo válido.");
+    } finally {
+      setXlsxImporting(false);
+      if (xlsxFileInputRef.current) xlsxFileInputRef.current.value = "";
+    }
+  };
+
+  const applyXlsxImport = (mode: "merge" | "replace") => {
+    if (!xlsxParseResult) return;
+    runBackupAndToast("importar-xlsx");
+    const parsed = xlsxParseResult.parsedData;
+    let newData = { ...data };
+    const modules: (keyof AppData)[] = ["contactos","cursos","ocs","practicantes","presupuesto","procesos","diplomas","evaluacionesPsicolaborales","cargaSemanal","valesGas","valesGasOrganizacion","reclutamiento"];
+    modules.forEach(mod => {
+      if (!(mod in parsed)) return;
+      const incoming = (parsed as any)[mod] as any[];
+      if (mode === "replace") {
+        (newData as any)[mod] = incoming;
+      } else {
+        const existing = (newData as any)[mod] as any[];
+        const merged = [...existing];
+        incoming.forEach((item: any) => {
+          const idx = merged.findIndex((e: any) => e.id === item.id);
+          if (idx >= 0) merged[idx] = { ...merged[idx], ...item };
+          else merged.push(item);
+        });
+        (newData as any)[mod] = merged;
+      }
+    });
+    if (mode === "merge" && xlsxParseResult.contactosNuevos.length > 0) {
+      const existingIds = new Set(newData.contactos.map((c: any) => c.id));
+      xlsxParseResult.contactosNuevos.forEach((c: any) => {
+        if (!existingIds.has(c.id)) newData.contactos.push(c);
+      });
+    }
+    newData.meta = { ...newData.meta, actualizado: new Date().toISOString() };
+    setData(newData);
+    setXlsxParseResult(null);
+    const hojas = xlsxParseResult.hojas.length;
+    const total = xlsxParseResult.hojas.reduce((s, h) => s + h.validos, 0);
+    toastShow(`XLSX importado correctamente: ${total} registros en ${hojas} modulos (modo: ${mode === "merge" ? "fusion" : "reemplazo"})`);
   };
 
   const handleRestaurarBackup = (backup: BackupItem) => {
@@ -2435,6 +3339,35 @@ function ModuloConfiguracion({
           <button onClick={showInstructions} className="bg-amber-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-amber-600 transition">Ver instrucciones de uso</button>
         </div>
 
+        {/* Base de datos XLSX */}
+        <div className="bg-white rounded-xl border border-indigo-200 p-5 shadow-sm col-span-1 md:col-span-2">
+          <h3 className="font-bold text-slate-800 mb-1">📊 Base de datos XLSX</h3>
+          <p className="text-sm text-slate-500 mb-4">Importa o exporta toda la base de datos desde/hacia un archivo Excel. Descarga primero la plantilla oficial para conocer el formato correcto.</p>
+          <input
+            ref={xlsxFileInputRef}
+            type="file"
+            accept=".xlsx"
+            className="hidden"
+            onChange={handleXlsxFileSelect}
+          />
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={downloadXlsxTemplate}
+              className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-indigo-700 transition"
+            >
+              📋 Descargar plantilla XLSX
+            </button>
+            <button
+              onClick={() => xlsxFileInputRef.current?.click()}
+              disabled={xlsxImporting}
+              className="bg-teal-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-teal-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {xlsxImporting ? "Procesando..." : "📤 Importar base desde XLSX"}
+            </button>
+          </div>
+          <p className="text-xs text-slate-400 mt-3">Modos disponibles al importar: <strong>Fusionar</strong> (agrega/actualiza sin borrar) o <strong>Reemplazar</strong> (sobreescribe los módulos presentes en el archivo).</p>
+        </div>
+
         {/* Datos de Ejemplo */}
         <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
           <h3 className="font-bold text-slate-800 mb-3">🔄 Datos de ejemplo</h3>
@@ -2526,6 +3459,15 @@ function ModuloConfiguracion({
           </div>
         )}
       </div>
+
+      {xlsxParseResult && (
+        <XlsxImportPreview
+          parseResult={xlsxParseResult}
+          onConfirmMerge={() => applyXlsxImport("merge")}
+          onConfirmReplace={() => applyXlsxImport("replace")}
+          onCancel={() => setXlsxParseResult(null)}
+        />
+      )}
     </div>
   );
 }
@@ -2541,7 +3483,7 @@ function useForm(initial: any, editItem: any) {
 }
 
 function FormCursos({ data, editItem, closeModal, saveItem }: any) {
-  const { form, set } = useForm({ curso: "", origen: "DNC", area: "", solicitante: "", fechaSolicitud: hoy(), fechaRequerida: "", estado: "Pendiente revisar", prioridad: "P3 Medio", nivelCritico: "Medio", requiereOC: "No", numeroOC: "", proveedor: "", montoEstimado: 0, responsableId: "", proximaAccion: "", fechaProximaAccion: "", bloqueadoPor: "Sin bloqueo", observaciones: "" }, editItem);
+  const { form, set } = useForm({ curso: "", origen: "DNC", area: "", solicitante: "", fechaSolicitud: hoy(), fechaRequerida: "", estado: "Pendiente revisar", prioridad: "P3 Medio", nivelCritico: "Medio", requiereOC: "No", numeroOC: "", proveedor: "", responsableId: "", proximaAccion: "", fechaProximaAccion: "", bloqueadoPor: "Sin bloqueo", observaciones: "" }, editItem);
   const [vErr, setVErr] = useState<VError>({});
   const [vWarn, setVWarn] = useState<string[]>([]);
   const save = () => {
@@ -2564,7 +3506,6 @@ function FormCursos({ data, editItem, closeModal, saveItem }: any) {
       <Field label="Requiere OC"><Select value={form.requiereOC} onChange={v => set("requiereOC", v)} options={["Sí", "No"]} /></Field>
       <Field label="N° OC asociada"><Input value={form.numeroOC} onChange={e => set("numeroOC", e.target.value)} /></Field>
       <Field label="Proveedor / OTEC"><Input value={form.proveedor} onChange={e => set("proveedor", e.target.value)} /></Field>
-      <Field label="Monto estimado (CLP)"><Input type="number" value={form.montoEstimado} onChange={e => set("montoEstimado", Number(e.target.value) || 0)} /></Field>
       <Field label="Responsable" error={vErr.responsableId}><SelectContact value={form.responsableId} onChange={v => set("responsableId", v)} data={data} /></Field>
       <Field label="Próxima acción" error={vErr.proximaAccion}><Input value={form.proximaAccion} onChange={e => set("proximaAccion", e.target.value)} /></Field>
       <Field label="Fecha próxima acción" error={vErr.fechaProximaAccion}><DateInput value={form.fechaProximaAccion} onChange={v => set("fechaProximaAccion", v)} /></Field>
@@ -2577,7 +3518,7 @@ function FormCursos({ data, editItem, closeModal, saveItem }: any) {
 }
 
 function FormOCs({ data, editItem, closeModal, saveItem }: any) {
-  const { form, set } = useForm({ numeroOC: "", cursoAsociado: "", proveedor: "", monto: 0, fechaSolicitud: hoy(), fechaLimite: "", estadoOC: "Pendiente crear", prioridad: "P3 Medio", accionPendiente: "", responsableId: "", bloqueadoPor: "Sin bloqueo", observaciones: "" }, editItem);
+  const { form, set } = useForm({ numeroOC: "", categoriaOC: "", cursoAsociado: "", proveedor: "", monto: 0, fechaSolicitud: hoy(), fechaLimite: "", estadoOC: "Pendiente crear", prioridad: "P3 Medio", accionPendiente: "", responsableId: "", bloqueadoPor: "Sin bloqueo", observaciones: "" }, editItem);
   const [vErr, setVErr] = useState<VError>({});
   const [vWarn, setVWarn] = useState<string[]>([]);
   const save = () => {
@@ -2589,6 +3530,7 @@ function FormOCs({ data, editItem, closeModal, saveItem }: any) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <Field label="N° OC" required error={vErr.numeroOC}><Input value={form.numeroOC} onChange={e => set("numeroOC", e.target.value)} /></Field>
+      <Field label="Categoría OC" required><Select value={form.categoriaOC} onChange={v => set("categoriaOC", v)} options={CATEGORIAS_OC} placeholder="Seleccionar categoría..." /></Field>
       <Field label="Curso / Servicio asociado"><Input value={form.cursoAsociado} onChange={e => set("cursoAsociado", e.target.value)} /></Field>
       <Field label="Proveedor"><Input value={form.proveedor} onChange={e => set("proveedor", e.target.value)} /></Field>
       <Field label="Monto (CLP)"><Input type="number" value={form.monto} onChange={e => set("monto", Number(e.target.value) || 0)} /></Field>
@@ -2637,97 +3579,30 @@ function FormPracticantes({ data, editItem, closeModal, saveItem }: any) {
 }
 
 function FormPresupuesto({ data, editItem, closeModal, saveItem }: any) {
-  const { form, set } = useForm({
-    concepto: "",
-    presupuestoTotal: 0,
-    montoComprometidoManual: 0,
-    montoEjecutadoManual: 0,
-    modoCalculo: "Calculado desde registros",
-    responsableId: "",
-    observaciones: ""
-  }, editItem);
-
+  const { form, set } = useForm({ concepto: "", presupuestoTotal: 0, observaciones: "" }, editItem);
   const [vErr, setVErr] = useState<VError>({});
-  const [vWarn, setVWarn] = useState<string[]>([]);
 
   const save = () => {
     const errors: VError = {};
-    const warnings: string[] = [];
-
-    if (!form.concepto.trim()) {
-      errors.concepto = "El concepto o área es obligatorio.";
-    }
-
     const total = Number(form.presupuestoTotal) || 0;
-    const comprometido = Number(form.montoComprometidoManual) || 0;
-    const ejecutado = Number(form.montoEjecutadoManual) || 0;
-
     if (total < 0) errors.presupuestoTotal = "El presupuesto asignado no puede ser negativo.";
-    if (comprometido < 0) errors.montoComprometidoManual = "El monto comprometido manual no puede ser negativo.";
-    if (ejecutado < 0) errors.montoEjecutadoManual = "El monto ejecutado manual no puede ser negativo.";
-
-    if (total === 0 && ejecutado > 0) {
-      warnings.push("El presupuesto asignado es $0 pero hay monto ejecutado. ¿Es correcto?");
-    }
-
     setVErr(errors);
-    setVWarn(warnings);
-
     if (Object.keys(errors).length > 0) return;
-
-    saveItem("presupuesto", {
-      ...form,
-      presupuestoTotal: total,
-      montoComprometidoManual: comprometido,
-      montoEjecutadoManual: ejecutado,
-      // For backwards compatibility with older reports, also set gastado to ejecutado
-      gastado: ejecutado
-    });
+    saveItem("presupuesto", { ...form, presupuestoTotal: total });
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <Field label="Área / Módulo" required error={vErr.concepto}>
-        <Input value={form.concepto} onChange={e => set("concepto", e.target.value)} />
-      </Field>
-      
-      <Field label="Modo de cálculo" error={vErr.modoCalculo}>
-        <Select
-          value={form.modoCalculo || "Calculado desde registros"}
-          onChange={v => set("modoCalculo", v)}
-          options={["Manual", "Calculado desde registros", "Mixto"]}
-        />
-      </Field>
-
-      <Field label="Presupuesto asignado (CLP)" error={vErr.presupuestoTotal}>
+    <div className="grid grid-cols-1 gap-4">
+      <div className="bg-slate-50 rounded-xl px-4 py-2.5 text-sm text-slate-500 border border-slate-200">
+        Módulo: <span className="font-semibold text-slate-700">{form.concepto}</span>
+      </div>
+      <Field label="Presupuesto asignado (CLP)" required error={vErr.presupuestoTotal}>
         <Input type="number" value={form.presupuestoTotal} onChange={e => set("presupuestoTotal", Number(e.target.value) || 0)} />
       </Field>
-
-      {(form.modoCalculo === "Manual" || form.modoCalculo === "Mixto") ? (
-        <>
-          <Field label="Monto comprometido manual (CLP)" error={vErr.montoComprometidoManual}>
-            <Input type="number" value={form.montoComprometidoManual} onChange={e => set("montoComprometidoManual", Number(e.target.value) || 0)} />
-          </Field>
-          <Field label="Monto ejecutado manual (CLP)" error={vErr.montoEjecutadoManual}>
-            <Input type="number" value={form.montoEjecutadoManual} onChange={e => set("montoEjecutadoManual", Number(e.target.value) || 0)} />
-          </Field>
-        </>
-      ) : (
-        <div className="md:col-span-2 text-xs text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-100">
-          ℹ️ Los montos de comprometido y ejecutado se calcularán automáticamente a partir de los registros de los módulos asociados (Cursos, OCs, Practicantes, Evaluaciones).
-        </div>
-      )}
-
-      <Field label="Responsable">
-        <SelectContact value={form.responsableId} onChange={v => set("responsableId", v)} data={data} />
-      </Field>
-
       <Field label="Observaciones">
         <Textarea value={form.observaciones} onChange={e => set("observaciones", e.target.value)} />
       </Field>
-
-      <FormMessages errors={vErr} warnings={vWarn} />
-      <div className="md:col-span-2 flex gap-3 justify-end pt-2">
+      <div className="flex gap-3 justify-end pt-2">
         <button onClick={closeModal} className="px-5 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-medium hover:bg-slate-200 transition-colors">Cancelar</button>
         <button onClick={save} className="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">Guardar</button>
       </div>
@@ -2933,7 +3808,7 @@ function FormContactos({ data, editItem, closeModal, saveItem }: any) {
 }
 
 // ── CAPTURA RÁPIDA FORM ─────────────────────────
-const TIPOS_CAPTURA = ["Curso", "OC", "Practicante", "Diploma / Certificado / Licencia", "Evaluación Psicolaboral", "Proceso Pendiente"];
+const TIPOS_CAPTURA = ["Curso", "OC", "Practicante", "Diploma / Certificado / Licencia", "Evaluación Psicolaboral", "Vale de Gas", "Proceso Pendiente"];
 
 function FormCapturaRapida({ data, onCancel, onSave }: { data: AppData; onCancel: () => void; onSave: (capture: any) => void; }) {
   const [form, setForm] = useState({
@@ -3010,28 +3885,33 @@ function ModuloReporteMensual({ data, toastShow }: { data: AppData; toastShow: (
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-  const parseMonthOfDate = (dateStr: string) => {
+  // ISO "YYYY-MM-DD" → 0-indexed month (-1 if invalid)
+  const parseMonthOfDate = (dateStr: string): number => {
     if (!dateStr) return -1;
     const parts = dateStr.split("-");
     if (parts.length < 2) return -1;
-    return parseInt(parts[1]) - 1; // 0-indexed month
+    return parseInt(parts[1], 10) - 1;
   };
 
-  const parseYearOfDate = (dateStr: string) => {
+  // ISO "YYYY-MM-DD" → year (-1 if invalid)
+  const parseYearOfDate = (dateStr: string): number => {
     if (!dateStr) return -1;
     const parts = dateStr.split("-");
-    if (parts.length < 1) return -1;
-    return parseInt(parts[0]);
+    if (parts.length < 2) return -1; // necesita al menos YYYY-MM
+    const year = parseInt(parts[0], 10);
+    return isNaN(year) ? -1 : year;
   };
 
   const monthIndex = MESES.indexOf(selectedMonth);
 
+  // Returns true if any of the provided date strings fall within the selected month/year
+  const isInMonth = (...dates: string[]): boolean =>
+    dates.some(d => parseMonthOfDate(d) === monthIndex && parseYearOfDate(d) === selectedYear);
+
   // Filter datasets based on selected month and year
-  const monthCursos = data.cursos.filter(c => {
-    const m = parseMonthOfDate(c.fechaSolicitud || c.fechaRequerida);
-    const y = parseYearOfDate(c.fechaSolicitud || c.fechaRequerida);
-    return m === monthIndex && y === selectedYear;
-  });
+  const monthCursos = data.cursos.filter(c =>
+    isInMonth(c.fechaSolicitud, c.fechaRequerida, c.ultimaActualizacion)
+  );
 
   const cursosEjecutados = monthCursos.filter(c => ["Ejecutado", "Cerrado"].includes(c.estado)).length;
   const cursosAbiertos = monthCursos.filter(c => c.estado !== "Cerrado").length;
@@ -3040,22 +3920,18 @@ function ModuloReporteMensual({ data, toastShow }: { data: AppData; toastShow: (
   const cursosP1 = monthCursos.filter(c => c.prioridad === "P1 Crítico").length;
   const cursosDetenidos = monthCursos.filter(c => c.estado === "Detenido").length;
 
-  const monthOCs = data.ocs.filter(o => {
-    const m = parseMonthOfDate(o.fechaSolicitud || o.fechaLimite);
-    const y = parseYearOfDate(o.fechaSolicitud || o.fechaLimite);
-    return m === monthIndex && y === selectedYear;
-  });
+  const monthOCs = data.ocs.filter(o =>
+    isInMonth(o.fechaSolicitud, o.fechaLimite, o.ultimaActualizacion)
+  );
 
   const ocsCreadas = monthOCs.filter(o => o.estadoOC !== "Pendiente crear").length;
   const ocsPendientes = monthOCs.filter(o => ["Pendiente crear", "Solicitada", "En aprobación"].includes(o.estadoOC)).length;
   const ocsCerradas = monthOCs.filter(o => o.estadoOC === "Cerrada").length;
   const ocsBloqueadas = monthOCs.filter(o => o.bloqueadoPor && o.bloqueadoPor !== "Sin bloqueo").length;
 
-  const monthDiplomas = data.diplomas.filter(d => {
-    const m = parseMonthOfDate(d.fechaSolicitudOTEC || d.fechaSubidaBUK || d.fechaRecepcionDoc);
-    const y = parseYearOfDate(d.fechaSolicitudOTEC || d.fechaSubidaBUK || d.fechaRecepcionDoc);
-    return m === monthIndex && y === selectedYear;
-  });
+  const monthDiplomas = data.diplomas.filter(d =>
+    isInMonth(d.fechaSolicitudOTEC, d.fechaRecepcionDoc, d.fechaEnvioParticipante, d.fechaSubidaBUK, d.ultimaActualizacion)
+  );
 
   const dipPedididos = monthDiplomas.filter(d => d.etapa === "Pedir a la OTEC").length;
   const dipParticipante = monthDiplomas.filter(d => d.etapa === "Enviar o pedir al participante").length;
@@ -3074,12 +3950,23 @@ function ModuloReporteMensual({ data, toastShow }: { data: AppData; toastShow: (
   const evRecomendados = monthEvaluaciones.filter(e => e.resultado === "Recomendado").length;
   const evNoRecomendados = monthEvaluaciones.filter(e => e.resultado === "No recomendado").length;
 
+  const monthProcesos = data.procesos.filter(p =>
+    isInMonth(p.fechaLimite, p.fechaProximaAccion, p.ultimaActualizacion)
+  );
+  const procAbiertos = monthProcesos.filter(p => p.estadoActual !== "Cerrado").length;
+  const procCerrados = monthProcesos.filter(p => p.estadoActual === "Cerrado").length;
+  const procBloqueados = monthProcesos.filter(p => p.bloqueadoPor && p.bloqueadoPor !== "Sin bloqueo").length;
+  const procCriticos = monthProcesos.filter(p => p.riesgo === "Alto" || p.prioridad === "P1 Crítico").length;
+
+  // Include practicantes active during the month: started on or before the last day of the month
+  // AND (no end date OR ended on or after the first day of the month)
   const monthPracticantes = data.practicantes.filter(p => {
-    const mStart = parseMonthOfDate(p.fechaInicio);
-    const yStart = parseYearOfDate(p.fechaInicio);
-    const mEnd = parseMonthOfDate(p.fechaTermino);
-    const yEnd = parseYearOfDate(p.fechaTermino);
-    return (mStart === monthIndex && yStart === selectedYear) || (mEnd === monthIndex && yEnd === selectedYear);
+    if (!p.fechaInicio) return false;
+    const monthStart = new Date(selectedYear, monthIndex, 1);
+    const monthEnd = new Date(selectedYear, monthIndex + 1, 0);
+    const inicio = new Date(p.fechaInicio);
+    const termino = p.fechaTermino ? new Date(p.fechaTermino) : null;
+    return inicio <= monthEnd && (!termino || termino >= monthStart);
   });
 
   const pracActivos = monthPracticantes.filter(p => p.estado === "Activo").length;
@@ -3091,6 +3978,30 @@ function ModuloReporteMensual({ data, toastShow }: { data: AppData; toastShow: (
   const budgetGastado = data.presupuesto.reduce((s, p) => s + p.gastado, 0);
   const budgetDisponible = budgetTotal - budgetGastado;
   const budgetPct = budgetTotal > 0 ? Math.round((budgetGastado / budgetTotal) * 100) : 0;
+
+  // Reclutamiento del mes
+  const monthReclutamiento = (data.reclutamiento || []).filter((r: ProcesoReclutamiento) => r.mesIngreso === selectedMonth);
+  const reclTotal = monthReclutamiento.length;
+  const reclAbiertos = monthReclutamiento.filter((r: ProcesoReclutamiento) => r.proceso === "Abierto").length;
+  const reclCerrados = monthReclutamiento.filter((r: ProcesoReclutamiento) => r.proceso === "Cerrado").length;
+  const reclPausados = monthReclutamiento.filter((r: ProcesoReclutamiento) => r.proceso === "Pausado").length;
+  const reclDesistidos = monthReclutamiento.filter((r: ProcesoReclutamiento) => r.proceso === "Desistido").length;
+  const reclBloqueados = monthReclutamiento.filter((r: ProcesoReclutamiento) => !["Cerrado","Desistido"].includes(r.proceso) && r.bloqueadoPor && r.bloqueadoPor !== "Sin bloqueo").length;
+  const reclAvanceProm = reclTotal === 0 ? 0 : Math.round(monthReclutamiento.reduce((s: number, r: ProcesoReclutamiento) => s + calcPctRecl(r), 0) / reclTotal);
+
+  const vgAll = data.valesGas || [];
+  const vgActivos = vgAll.filter((v: ValeGas) => v.estado !== "Cerrado" && v.estado !== "Detenido").length;
+  const vgEnDescuento = vgAll.filter((v: ValeGas) => v.estado === "En descuento").length;
+  const vgCerrados = vgAll.filter((v: ValeGas) => v.estado === "Cerrado").length;
+  const vgAsignadosTotal = vgAll.reduce((s: number, v: ValeGas) => s + (v.totalValesAsignados || 0), 0);
+  const vgUsadosTotal = vgAll.reduce((s: number, v: ValeGas) => s + (v.valesUsados || 0), 0);
+  const vgSaldoTotal = vgAll.reduce((s: number, v: ValeGas) => s + (v.saldoVales || 0), 0);
+  const vgTotalDescontado = vgAll.reduce((s: number, v: ValeGas) => s + (v.totalDescontado || 0), 0);
+  const vgOrgAll: ValeGasOrg[] = data.valesGasOrganizacion || [];
+  const vgOrgMes = vgOrgAll.filter((v: ValeGasOrg) => parseMonthOfDate(v.fechaRegistro) === monthIndex && (v as any).fechaRegistro && v.periodo?.includes(String(selectedYear)));
+  const vgOrgIngresosMes = vgOrgMes.filter((v: ValeGasOrg) => v.tipoMovimiento === "Ingreso de vales").reduce((s: number, v: ValeGasOrg) => s + (v.cantidadVales || 0), 0);
+  const vgOrgAjustesNegMes = vgOrgMes.filter((v: ValeGasOrg) => v.tipoMovimiento === "Ajuste negativo").reduce((s: number, v: ValeGasOrg) => s + (v.cantidadVales || 0), 0);
+  const vgOrgStockMes = vgOrgMes.reduce((s: number, v: ValeGasOrg) => v.tipoMovimiento === "Ajuste negativo" ? s - (v.cantidadVales || 0) : s + (v.cantidadVales || 0), 0);
 
   // Bloqueos frequencies
   const blockCounts: Record<string, number> = {
@@ -3119,6 +4030,7 @@ function ModuloReporteMensual({ data, toastShow }: { data: AppData; toastShow: (
   monthPracticantes.forEach(countBlocks);
   monthDiplomas.forEach(countBlocks);
   monthEvaluaciones.forEach(countBlocks);
+  monthProcesos.forEach(countBlocks);
 
   const topBlockeoName = Object.entries(blockCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "Ninguno";
   const topBlockeoValue = blockCounts[topBlockeoName] || 0;
@@ -3173,13 +4085,19 @@ function ModuloReporteMensual({ data, toastShow }: { data: AppData; toastShow: (
       ["Términos del Mes", pracTerminos],
       ["Por Buscar", pracPorBuscar],
       [],
-      ["6. RESUMEN DE PRESUPUESTO", ""],
+      ["6. RESUMEN DE PROCESOS PENDIENTES", ""],
+      ["Procesos Abiertos", procAbiertos],
+      ["Procesos Cerrados", procCerrados],
+      ["Procesos Bloqueados", procBloqueados],
+      ["Procesos Críticos / Riesgo Alto", procCriticos],
+      [],
+      ["7. RESUMEN DE PRESUPUESTO", ""],
       ["Presupuesto Asignado", budgetTotal],
       ["Presupuesto Ejecutado", budgetGastado],
       ["Saldo Disponible", budgetDisponible],
       ["Porcentaje Utilizado (%)", `${budgetPct}%`],
       [],
-      ["7. FRECUENCIA DE BLOQUEOS", ""],
+      ["8. FRECUENCIA DE BLOQUEOS", ""],
       ["Falta Aprobación", blockCounts["Falta aprobación"]],
       ["Falta OC", blockCounts["Falta OC"]],
       ["Falta OTEC", blockCounts["Falta OTEC"]],
@@ -3188,12 +4106,34 @@ function ModuloReporteMensual({ data, toastShow }: { data: AppData; toastShow: (
       ["Falta Presupuesto", blockCounts["Falta presupuesto"]],
       ["Otros Bloqueos", blockCounts["Otros"]],
       [],
-      ["8. CARGA REAL VS PLANIFICACIÓN", ""],
+      ["9. CARGA REAL VS PLANIFICACIÓN", ""],
       ["Cursos Planificados", cursosPlanificados],
       ["Cursos Urgentes Nuevos", cursosUrgentesNuevos],
       ["Cursos No Planificados Necesarios", cursosNoPlanificadosNecesarios],
       ["Carga Real Total (Cursos)", totalCursosReal],
       ["Diferencia (Real - Planificado)", diffPlanificadoReal],
+      [],
+      ["10. VALES DE GAS", ""],
+      ["Stock registrado en el mes", vgOrgStockMes],
+
+      ["Ingresos del mes (Ingreso de vales)", vgOrgIngresosMes],
+      ["Ajustes negativos del mes", vgOrgAjustesNegMes],
+      ["Registros Activos", vgActivos],
+      ["En Descuento", vgEnDescuento],
+      ["Cerrados", vgCerrados],
+      ["Total Vales Asignados a Colaboradores", vgAsignadosTotal],
+      ["Total Vales Usados", vgUsadosTotal],
+      ["Saldo Pendiente Colaboradores", vgSaldoTotal],
+      ["Total Descontado", vgTotalDescontado],
+      [],
+      ["11. RECLUTAMIENTO", ""],
+      ["Total procesos del mes", reclTotal],
+      ["Abiertos", reclAbiertos],
+      ["Cerrados", reclCerrados],
+      ["Pausados", reclPausados],
+      ["Desistidos", reclDesistidos],
+      ["Bloqueados", reclBloqueados],
+      ["Avance promedio (%)", `${reclAvanceProm}%`],
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(reportData);
@@ -3210,6 +4150,7 @@ function ModuloReporteMensual({ data, toastShow }: { data: AppData; toastShow: (
       diplomas: { dipPedididos, dipParticipante, dipBUK, dipCompletados },
       evaluaciones: { evSolicitadas, evRealizadas, evInformes, evCerradas, evBloqueadas, evRecomendados, evNoRecomendados },
       practicantes: { pracActivos, pracIngresos, pracTerminos, pracPorBuscar },
+      procesos: { procAbiertos, procCerrados, procBloqueados, procCriticos },
       presupuesto: { budgetTotal, budgetGastado, budgetDisponible, budgetPct },
       bloqueos: blockCounts,
       cargaVsPlanificacion: { cursosPlanificados, cursosUrgentesNuevos, cursosNoPlanificadosNecesarios, totalCursosReal, diffPlanificadoReal }
@@ -3277,8 +4218,9 @@ ${diffPlanificadoReal > 0
             onChange={e => setSelectedYear(parseInt(e.target.value))}
             className="border border-[#D9E2EC] rounded-xl px-4 py-2 text-sm bg-white text-slate-800 focus:outline-none focus:border-[#93C5FD] transition-colors"
           >
-            <option value="2026">2026</option>
-            <option value="2025">2025</option>
+            {Array.from({ length: 3 }, (_, i) => new Date().getFullYear() - 1 + i).map(y => (
+              <option key={y} value={y}>{y}</option>
+            ))}
           </select>
         </div>
       </div>
@@ -3370,6 +4312,20 @@ ${diffPlanificadoReal > 0
           </ul>
         </div>
 
+        {/* Procesos */}
+        <div className="border border-slate-100 rounded-xl p-4 space-y-3 bg-slate-50/20">
+          <h3 className="font-semibold text-slate-800 text-sm border-b pb-1.5 flex items-center justify-between">
+            <span>⚙️ Procesos Pendientes</span>
+            <span className="text-xs text-slate-400">Total: {monthProcesos.length}</span>
+          </h3>
+          <ul className="space-y-1.5 text-xs text-slate-600">
+            <li className="flex justify-between"><span>Procesos abiertos:</span> <span className="font-semibold text-slate-800">{procAbiertos}</span></li>
+            <li className="flex justify-between"><span>Procesos cerrados:</span> <span className="font-semibold text-slate-800">{procCerrados}</span></li>
+            <li className="flex justify-between"><span>Bloqueados:</span> <span className="font-semibold text-red-600">{procBloqueados}</span></li>
+            <li className="flex justify-between"><span>Críticos / Riesgo alto:</span> <span className="font-semibold text-red-600">{procCriticos}</span></li>
+          </ul>
+        </div>
+
         {/* Presupuesto */}
         <div className="border border-slate-100 rounded-xl p-4 space-y-3 bg-slate-50/20">
           <h3 className="font-semibold text-slate-800 text-sm border-b pb-1.5 flex items-center justify-between">
@@ -3380,6 +4336,41 @@ ${diffPlanificadoReal > 0
             <li className="flex justify-between"><span>Asignado:</span> <span className="font-semibold text-slate-800">{fmtCLP(budgetTotal)}</span></li>
             <li className="flex justify-between"><span>Ejecutado:</span> <span className="font-semibold text-red-600">{fmtCLP(budgetGastado)}</span></li>
             <li className="flex justify-between"><span>Disponible:</span> <span className="font-semibold text-green-600">{fmtCLP(budgetDisponible)}</span></li>
+          </ul>
+        </div>
+
+        {/* Vales de Gas */}
+        <div className="border border-slate-100 rounded-xl p-4 space-y-3 bg-slate-50/20">
+          <h3 className="font-semibold text-slate-800 text-sm border-b pb-1.5 flex items-center justify-between">
+            <span>⛽ Vales de Gas</span>
+            <span className="text-xs text-slate-400">Total: {vgAll.length}</span>
+          </h3>
+          <ul className="space-y-1.5 text-xs text-slate-600">
+            <li className="flex justify-between"><span>Stock registrado en el mes:</span> <span className="font-semibold text-slate-800">{vgOrgStockMes}</span></li>
+            <li className="flex justify-between"><span>Ingresos del mes:</span> <span className="font-semibold text-slate-800">{vgOrgIngresosMes}</span></li>
+            <li className="flex justify-between"><span>Ajustes negativos del mes:</span> <span className="font-semibold text-red-600">{vgOrgAjustesNegMes}</span></li>
+            <li className="flex justify-between"><span>Registros activos:</span> <span className="font-semibold text-slate-800">{vgActivos}</span></li>
+            <li className="flex justify-between"><span>En descuento:</span> <span className="font-semibold text-orange-600">{vgEnDescuento}</span></li>
+            <li className="flex justify-between"><span>Cerrados:</span> <span className="font-semibold text-slate-800">{vgCerrados}</span></li>
+            <li className="flex justify-between"><span>Vales asignados colabs.:</span> <span className="font-semibold text-slate-800">{vgAsignadosTotal}</span></li>
+            <li className="flex justify-between"><span>Total descontado:</span> <span className="font-semibold text-slate-800">{vgTotalDescontado}</span></li>
+            <li className="flex justify-between"><span>Saldo pendiente colabs.:</span> <span className="font-semibold text-emerald-600">{vgSaldoTotal}</span></li>
+          </ul>
+        </div>
+
+        {/* Reclutamiento */}
+        <div className="border border-slate-100 rounded-xl p-4 space-y-3 bg-slate-50/20">
+          <h3 className="font-semibold text-slate-800 text-sm border-b pb-1.5 flex items-center justify-between">
+            <span>👥 Reclutamiento</span>
+            <span className="text-xs text-slate-400">Total mes: {reclTotal}</span>
+          </h3>
+          <ul className="space-y-1.5 text-xs text-slate-600">
+            <li className="flex justify-between"><span>Abiertos:</span> <span className="font-semibold text-green-700">{reclAbiertos}</span></li>
+            <li className="flex justify-between"><span>Cerrados:</span> <span className="font-semibold text-slate-800">{reclCerrados}</span></li>
+            <li className="flex justify-between"><span>Pausados:</span> <span className="font-semibold text-yellow-700">{reclPausados}</span></li>
+            <li className="flex justify-between"><span>Desistidos:</span> <span className="font-semibold text-red-600">{reclDesistidos}</span></li>
+            <li className="flex justify-between"><span>Bloqueados:</span> <span className="font-semibold text-red-600">{reclBloqueados}</span></li>
+            <li className="flex justify-between"><span>Avance promedio:</span> <span className="font-semibold text-blue-700">{reclAvanceProm}%</span></li>
           </ul>
         </div>
 
@@ -3462,7 +4453,7 @@ ${diffPlanificadoReal > 0
       <div className="flex flex-wrap gap-3 justify-end border-t border-slate-100 pt-4">
         <button
           onClick={copyExecutiveSummary}
-          className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors animate-pulse"
+          className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors"
         >
           📋 Copiar Resumen Ejecutivo
         </button>
@@ -3478,6 +4469,535 @@ ${diffPlanificadoReal > 0
         >
           📥 Descargar Reporte XLSX
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ── MÓDULO VALES DE GAS ─────────────────────────
+
+function ModuloValesGas({ data, search, setSearch, openNew, openEdit, deleteItem, getResponsableName }: any) {
+  const [filterEstado, setFilterEstado] = useState("");
+  const [filterArea, setFilterArea] = useState("");
+  const [filterPeriodo, setFilterPeriodo] = useState("");
+  const [filterOrgTipo, setFilterOrgTipo] = useState("");
+  const [filterOrgPeriodo, setFilterOrgPeriodo] = useState("");
+
+  const valesGas: ValeGas[] = data.valesGas || [];
+  const valesGasOrg: ValeGasOrg[] = data.valesGasOrganizacion || [];
+
+  // ── Bloque 1: KPIs generales ──
+  const stockOrg = valesGasOrg.reduce((s, v) => {
+    if (v.tipoMovimiento === "Ajuste negativo") return s - (v.cantidadVales || 0);
+    return s + (v.cantidadVales || 0);
+  }, 0);
+  const valesAsignadosColabs = valesGas.reduce((s, v) => s + (v.totalValesAsignados || 0), 0);
+  const valesUtilizados = valesGas.reduce((s, v) => s + (v.valesUsados || 0), 0);
+  const saldoDisponibleOrg = stockOrg - valesAsignadosColabs;
+  const saldoPendienteColabs = valesGas.reduce((s, v) => s + (v.saldoVales || 0), 0);
+  const totalDescontadoColabs = valesGas.reduce((s, v) => s + (v.totalDescontado || 0), 0);
+  const registrosEnDescuento = valesGas.filter(v => v.estado === "En descuento").length;
+
+  // ── Bloque 2: Filtros org ──
+  const orgPeriodos = Array.from(new Set(valesGasOrg.map(v => v.periodo).filter(Boolean)));
+  const filteredOrg = valesGasOrg.filter(v => {
+    const matchTipo = !filterOrgTipo || v.tipoMovimiento === filterOrgTipo;
+    const matchPeriodo = !filterOrgPeriodo || v.periodo === filterOrgPeriodo;
+    return matchTipo && matchPeriodo;
+  });
+
+  // ── Bloque 3: Filtros colaboradores ──
+  const areas = Array.from(new Set(valesGas.map((v: ValeGas) => v.area).filter(Boolean)));
+  const periodos = Array.from(new Set(valesGas.map((v: ValeGas) => v.periodo).filter(Boolean)));
+  const filtered = valesGas.filter((v: ValeGas) => {
+    const q = search.toLowerCase();
+    const matchSearch = !q || v.colaborador.toLowerCase().includes(q) || v.area.toLowerCase().includes(q) || v.periodo.toLowerCase().includes(q);
+    const matchEstado = !filterEstado || v.estado === filterEstado;
+    const matchArea = !filterArea || v.area === filterArea;
+    const matchPeriodo = !filterPeriodo || v.periodo === filterPeriodo;
+    return matchSearch && matchEstado && matchArea && matchPeriodo;
+  });
+
+  const columnsColabs = [
+    { key: "colaborador", label: "Colaborador" },
+    { key: "area", label: "Área" },
+    { key: "periodo", label: "Período" },
+    { key: "fechaEntrega", label: "Fecha entrega", render: (v: ValeGas) => toDDMMYYYY(v.fechaEntrega) },
+    { key: "totalValesAsignados", label: "Vales asignados" },
+    { key: "valesUsados", label: "Vales utilizados" },
+    { key: "saldoVales", label: "Saldo colaborador" },
+    { key: "descuentoDiario", label: "Desc/día" },
+    { key: "diasDescuento", label: "Días desc." },
+    { key: "totalDescontado", label: "Total desc." },
+    { key: "estado", label: "Estado", render: (v: ValeGas) => <Badge label={v.estado} colorClass={estadoColor[v.estado] || ""} /> },
+    { key: "responsable", label: "Responsable", render: (v: ValeGas) => getResponsableName(data, v.responsableId) },
+    { key: "fechaProximaRevision", label: "Próx. revisión", render: (v: ValeGas) => v.fechaProximaRevision ? <SemaforoBadge fecha={v.fechaProximaRevision} /> : <span className="text-slate-400 text-xs">Sin fecha</span> },
+    { key: "observaciones", label: "Observaciones" },
+  ];
+
+  const columnsOrg = [
+    { key: "fechaRegistro", label: "Fecha registro", render: (v: ValeGasOrg) => toDDMMYYYY(v.fechaRegistro) },
+    { key: "periodo", label: "Período" },
+    { key: "tipoMovimiento", label: "Tipo movimiento" },
+    { key: "cantidadVales", label: "Cantidad" },
+    { key: "motivo", label: "Motivo" },
+    { key: "responsable", label: "Responsable", render: (v: ValeGasOrg) => getResponsableName(data, v.responsableId) },
+    { key: "observaciones", label: "Observaciones" },
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Encabezado */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-slate-800">⛽ Vales de Gas</h1>
+          <p className="text-xs text-slate-500 mt-0.5">Control integral de vales de gas — organización y colaboradores</p>
+        </div>
+      </div>
+
+      {/* ── BLOQUE 1: RESUMEN GENERAL ── */}
+      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3">
+        <h2 className="text-sm font-semibold text-slate-700 border-b border-slate-100 pb-2">Resumen general (calculado)</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
+            <div className="text-2xl font-bold text-blue-700">{stockOrg}</div>
+            <div className="text-xs text-slate-500 mt-0.5">Stock organización</div>
+          </div>
+          <div className={`border rounded-xl p-3 text-center ${saldoDisponibleOrg < 0 ? "bg-red-50 border-red-200" : "bg-slate-50 border-slate-200"}`}>
+            <div className={`text-2xl font-bold ${saldoDisponibleOrg < 0 ? "text-red-600" : "text-emerald-600"}`}>{saldoDisponibleOrg}</div>
+            <div className="text-xs text-slate-500 mt-0.5">Saldo disponible org.</div>
+            {saldoDisponibleOrg < 0 && <div className="text-xs text-red-600 mt-1 font-semibold">⚠ Más asignados que stock registrado</div>}
+          </div>
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
+            <div className="text-2xl font-bold text-indigo-700">{valesAsignadosColabs}</div>
+            <div className="text-xs text-slate-500 mt-0.5">Vales asignados</div>
+          </div>
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
+            <div className="text-2xl font-bold text-orange-600">{valesUtilizados}</div>
+            <div className="text-xs text-slate-500 mt-0.5">Vales utilizados</div>
+          </div>
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
+            <div className="text-2xl font-bold text-amber-600">{saldoPendienteColabs}</div>
+            <div className="text-xs text-slate-500 mt-0.5">Saldo pendiente colabs.</div>
+          </div>
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
+            <div className="text-2xl font-bold text-slate-700">{totalDescontadoColabs}</div>
+            <div className="text-xs text-slate-500 mt-0.5">Total descontado</div>
+          </div>
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
+            <div className="text-2xl font-bold text-orange-700">{registrosEnDescuento}</div>
+            <div className="text-xs text-slate-500 mt-0.5">En descuento</div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── BLOQUE 2: MOVIMIENTOS ORGANIZACIÓN ── */}
+      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <h2 className="text-sm font-semibold text-slate-700">Movimientos de vales — Organización</h2>
+          <button onClick={() => openNew("valesGasOrganizacion")} className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-emerald-700 transition-colors shadow-sm">+ Registrar vales organización</button>
+        </div>
+        <div className="flex flex-wrap gap-3 items-center">
+          <select value={filterOrgTipo} onChange={e => setFilterOrgTipo(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <option value="">Todos los tipos</option>
+            {TIPOS_MOVIMIENTO_VALES.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <select value={filterOrgPeriodo} onChange={e => setFilterOrgPeriodo(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <option value="">Todos los períodos</option>
+            {orgPeriodos.map(p => <option key={p as string} value={p as string}>{p as string}</option>)}
+          </select>
+          {(filterOrgTipo || filterOrgPeriodo) && (
+            <button onClick={() => { setFilterOrgTipo(""); setFilterOrgPeriodo(""); }} className="text-xs text-slate-500 hover:text-red-600 transition-colors">✕ Limpiar</button>
+          )}
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <Table
+            columns={columnsOrg}
+            rows={filteredOrg}
+            onEdit={(r: ValeGasOrg) => openEdit("valesGasOrganizacion", r)}
+            onDelete={(id: string) => deleteItem("valesGasOrganizacion", id)}
+          />
+        </div>
+      </div>
+
+      {/* ── BLOQUE 3: ENTREGAS A COLABORADORES ── */}
+      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <h2 className="text-sm font-semibold text-slate-700">Registros por colaborador</h2>
+          <button onClick={() => openNew("valesGas")} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Nuevo registro colaborador</button>
+        </div>
+        <div className="flex flex-wrap gap-3 items-center">
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar por colaborador, área o período..."
+            className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white w-64"
+          />
+          <select value={filterEstado} onChange={e => setFilterEstado(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <option value="">Todos los estados</option>
+            {ESTADOS_VALE_GAS.map(e => <option key={e} value={e}>{e}</option>)}
+          </select>
+          <select value={filterArea} onChange={e => setFilterArea(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <option value="">Todas las áreas</option>
+            {areas.map(a => <option key={a as string} value={a as string}>{a as string}</option>)}
+          </select>
+          <select value={filterPeriodo} onChange={e => setFilterPeriodo(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <option value="">Todos los períodos</option>
+            {periodos.map(p => <option key={p as string} value={p as string}>{p as string}</option>)}
+          </select>
+          {(filterEstado || filterArea || filterPeriodo || search) && (
+            <button onClick={() => { setFilterEstado(""); setFilterArea(""); setFilterPeriodo(""); setSearch(""); }} className="text-xs text-slate-500 hover:text-red-600 transition-colors">✕ Limpiar filtros</button>
+          )}
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <Table
+            columns={columnsColabs}
+            rows={filtered}
+            onEdit={(r: ValeGas) => openEdit("valesGas", r)}
+            onDelete={(id: string) => deleteItem("valesGas", id)}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── FORMULARIO VALES DE GAS ─────────────────────────
+
+function FormValesGas({ data, editItem, closeModal, saveItem }: any) {
+  const today = hoy();
+  const defaults: ValeGas = {
+    id: "", colaborador: "", contactoId: "", area: "", periodo: "",
+    fechaEntrega: today, totalValesAsignados: 0, valesUsados: 0,
+    descuentoDiario: 0, diasDescuento: 0, totalDescontado: 0, saldoVales: 0,
+    estado: "Pendiente entregar", responsableId: "", fechaProximaRevision: "",
+    observaciones: "", ultimaActualizacion: today,
+  };
+  const { form, set } = useForm(defaults, editItem);
+
+  // Cálculos automáticos
+  const saldoCalculado = (form.totalValesAsignados || 0) - (form.valesUsados || 0);
+  const totalDescontadoCalculado = (form.descuentoDiario || 0) * (form.diasDescuento || 0);
+
+  const [vErr, setVErr] = useState<VError>({});
+  const [vWarn, setVWarn] = useState<string[]>([]);
+
+  const save = () => {
+    const errors: VError = {};
+    const warnings: string[] = [];
+    if (!form.colaborador?.trim()) errors.colaborador = "El nombre del colaborador es obligatorio.";
+    if (!form.area?.trim()) errors.area = "El área es obligatoria.";
+    if (!form.periodo?.trim()) errors.periodo = "El período es obligatorio.";
+    if ((form.totalValesAsignados || 0) < 0) errors.totalValesAsignados = "El total de vales asignados no puede ser negativo.";
+    if ((form.valesUsados || 0) < 0) errors.valesUsados = "Los vales usados no pueden ser negativos.";
+    if ((form.valesUsados || 0) > (form.totalValesAsignados || 0)) warnings.push("Los vales entregados/utilizados superan los vales asignados al colaborador. Verifique el dato.");
+    if (!form.estado) errors.estado = "El estado es obligatorio.";
+    if (form.estado === "En descuento" && !form.fechaProximaRevision) errors.fechaProximaRevision = "La fecha de próxima revisión es obligatoria cuando el vale está en descuento.";
+    if (form.estado === "Cerrado" && saldoCalculado > 0) warnings.push("El estado es 'Cerrado' pero hay saldo pendiente del colaborador. Verifique si corresponde cerrar el registro.");
+    setVErr(errors); setVWarn(warnings);
+    if (Object.keys(errors).length > 0) return;
+    saveItem("valesGas", {
+      ...form,
+      saldoVales: saldoCalculado,
+      totalDescontado: totalDescontadoCalculado,
+      ultimaActualizacion: today,
+    });
+    closeModal();
+  };
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="md:col-span-2">
+        <h3 className="text-sm font-semibold text-slate-700 border-b border-slate-100 pb-1.5 mb-2">Información principal</h3>
+      </div>
+      <Field label="Colaborador *"><Input value={form.colaborador} onChange={e => set("colaborador", e.target.value)} placeholder="Nombre del colaborador" /></Field>
+      <Field label="Área *"><Input value={form.area} onChange={e => set("area", e.target.value)} placeholder="Ej: Operaciones" /></Field>
+      <Field label="Período *"><Input value={form.periodo} onChange={e => set("periodo", e.target.value)} placeholder="Ej: Mayo 2026" /></Field>
+      <Field label="Fecha de entrega"><DateInput value={form.fechaEntrega} onChange={v => set("fechaEntrega", v)} /></Field>
+      <Field label="Responsable"><SelectContact value={form.responsableId} onChange={v => set("responsableId", v)} data={data} /></Field>
+      <Field label="Contacto (opcional)">
+        <select value={form.contactoId} onChange={e => set("contactoId", e.target.value)} className="border border-[#D9E2EC] rounded-xl px-4 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:border-[#93C5FD] focus:ring-2 focus:ring-blue-100 transition-colors w-full">
+          <option value="">Sin contacto asociado</option>
+          {(data.contactos || []).filter((c: any) => c.activo !== "No").map((c: any) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+        </select>
+      </Field>
+
+      <div className="md:col-span-2">
+        <h3 className="text-sm font-semibold text-slate-700 border-b border-slate-100 pb-1.5 mb-2 mt-2">Control de vales</h3>
+      </div>
+      <p className="text-xs text-slate-400 col-span-2">Este formulario registra los vales asociados a un colaborador, no el total general de la organización.</p>
+      <Field label="Vales asignados al colaborador"><Input type="number" value={String(form.totalValesAsignados)} onChange={e => set("totalValesAsignados", parseInt(e.target.value) || 0)} /></Field>
+      <Field label="Vales entregados / utilizados"><Input type="number" value={String(form.valesUsados)} onChange={e => set("valesUsados", parseInt(e.target.value) || 0)} /></Field>
+      <Field label="Saldo pendiente del colaborador">
+        <div className={`border rounded-lg px-3 py-2 text-sm font-semibold ${saldoCalculado < 0 ? "border-red-300 bg-red-50 text-red-700" : "border-slate-200 bg-slate-50 text-slate-800"}`}>
+          {saldoCalculado} vales
+        </div>
+      </Field>
+      <Field label="Descuento diario (vales/día)"><Input type="number" value={String(form.descuentoDiario)} onChange={e => set("descuentoDiario", parseFloat(e.target.value) || 0)} /></Field>
+      <Field label="Días de descuento"><Input type="number" value={String(form.diasDescuento)} onChange={e => set("diasDescuento", parseInt(e.target.value) || 0)} /></Field>
+      <Field label="Total descontado al colaborador">
+        <div className="border border-slate-200 rounded-lg px-3 py-2 text-sm font-semibold bg-slate-50 text-slate-800">
+          {totalDescontadoCalculado} vales
+        </div>
+      </Field>
+
+      <div className="md:col-span-2">
+        <h3 className="text-sm font-semibold text-slate-700 border-b border-slate-100 pb-1.5 mb-2 mt-2">Seguimiento</h3>
+      </div>
+      <Field label="Estado *"><Select value={form.estado} onChange={v => set("estado", v)} options={ESTADOS_VALE_GAS} /></Field>
+      <Field label="Fecha próxima revisión"><DateInput value={form.fechaProximaRevision} onChange={v => set("fechaProximaRevision", v)} /></Field>
+      <div className="md:col-span-2">
+        <Field label="Observaciones"><Textarea value={form.observaciones} onChange={e => set("observaciones", e.target.value)} placeholder="Contexto adicional..." /></Field>
+      </div>
+
+      <FormMessages errors={vErr} warnings={vWarn} />
+      <div className="md:col-span-2 flex gap-3 justify-end pt-2">
+        <button onClick={closeModal} className="px-5 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-medium hover:bg-slate-200 transition-colors">Cancelar</button>
+        <button onClick={save} className="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">Guardar</button>
+      </div>
+    </div>
+  );
+}
+
+// ── FORMULARIO VALES GAS ORGANIZACIÓN ─────────────────────────
+
+function FormValeGasOrg({ data, editItem, closeModal, saveItem }: any) {
+  const today = hoy();
+  const defaults: ValeGasOrg = {
+    id: "", fechaRegistro: today, periodo: "", tipoMovimiento: "Ingreso de vales",
+    cantidadVales: 0, motivo: "", responsableId: "", observaciones: "", ultimaActualizacion: today,
+  };
+  const { form, set } = useForm(defaults, editItem);
+  const [vErr, setVErr] = useState<VError>({});
+
+  const save = () => {
+    const errors: VError = {};
+    if (!form.fechaRegistro) errors.fechaRegistro = "La fecha de registro es obligatoria.";
+    if (!form.periodo?.trim()) errors.periodo = "El período es obligatorio.";
+    if (!form.tipoMovimiento) errors.tipoMovimiento = "El tipo de movimiento es obligatorio.";
+    if ((form.cantidadVales || 0) <= 0) errors.cantidadVales = "La cantidad de vales debe ser mayor a 0.";
+    setVErr(errors);
+    if (Object.keys(errors).length > 0) return;
+    saveItem("valesGasOrganizacion", { ...form, ultimaActualizacion: today });
+    closeModal();
+  };
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="md:col-span-2">
+        <h3 className="text-sm font-semibold text-slate-700 border-b border-slate-100 pb-1.5 mb-2">Movimiento de vales — Organización</h3>
+      </div>
+      <Field label="Fecha de registro *" error={vErr.fechaRegistro}><DateInput value={form.fechaRegistro} onChange={v => set("fechaRegistro", v)} /></Field>
+      <Field label="Período *" error={vErr.periodo}><Input value={form.periodo} onChange={e => set("periodo", e.target.value)} placeholder="Ej: Mayo 2026" /></Field>
+      <Field label="Tipo de movimiento *" error={vErr.tipoMovimiento}><Select value={form.tipoMovimiento} onChange={v => set("tipoMovimiento", v)} options={TIPOS_MOVIMIENTO_VALES} /></Field>
+      <Field label="Cantidad de vales *" error={vErr.cantidadVales}><Input type="number" value={String(form.cantidadVales)} onChange={e => set("cantidadVales", parseInt(e.target.value) || 0)} /></Field>
+      <Field label="Motivo"><Input value={form.motivo} onChange={e => set("motivo", e.target.value)} placeholder="Ej: Compra mensual" /></Field>
+      <Field label="Responsable"><SelectContact value={form.responsableId} onChange={v => set("responsableId", v)} data={data} /></Field>
+      <div className="md:col-span-2">
+        <Field label="Observaciones"><Textarea value={form.observaciones} onChange={e => set("observaciones", e.target.value)} placeholder="Contexto adicional..." /></Field>
+      </div>
+      <FormMessages errors={vErr} warnings={[]} />
+      <div className="md:col-span-2 flex gap-3 justify-end pt-2">
+        <button onClick={closeModal} className="px-5 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-medium hover:bg-slate-200 transition-colors">Cancelar</button>
+        <button onClick={save} className="px-5 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors shadow-sm">Guardar</button>
+      </div>
+    </div>
+  );
+}
+
+// ── MÓDULO RECLUTAMIENTO ─────────────────────────
+
+function ModuloReclutamiento({ data, search, setSearch, openNew, openEdit, deleteItem, duplicateItem, markClosed }: any) {
+  const [filtroEstado, setFiltroEstado] = useState("");
+  const [filtroPlanta, setFiltroPlanta] = useState("");
+  const [filtroTipo, setFiltroTipo] = useState("");
+  const [filtroMes, setFiltroMes] = useState("");
+  const [filtroReclutador, setFiltroReclutador] = useState("");
+  const [filtroPrioridad, setFiltroPrioridad] = useState("");
+
+  // suppress lint: setFiltroReclutador available for future filter UI
+  void setFiltroReclutador;
+
+  const reclutamientos: ProcesoReclutamiento[] = data.reclutamiento || [];
+
+  const total = reclutamientos.length;
+  const abiertos = reclutamientos.filter(r => r.proceso === "Abierto").length;
+  const cerrados = reclutamientos.filter(r => r.proceso === "Cerrado").length;
+  const pausados = reclutamientos.filter(r => r.proceso === "Pausado").length;
+  const desistidos = reclutamientos.filter(r => r.proceso === "Desistido").length;
+  const bloqueados = reclutamientos.filter(r => !["Cerrado","Desistido"].includes(r.proceso) && r.bloqueadoPor && r.bloqueadoPor !== "Sin bloqueo").length;
+
+  const filtered = reclutamientos.filter(r => {
+    if (filtroEstado && r.proceso !== filtroEstado) return false;
+    if (filtroPlanta && r.plantaCentro !== filtroPlanta) return false;
+    if (filtroTipo && r.tipoVacante !== filtroTipo) return false;
+    if (filtroMes && r.mesIngreso !== filtroMes) return false;
+    if (filtroReclutador && r.reclutador !== filtroReclutador) return false;
+    if (filtroPrioridad && r.prioridad !== filtroPrioridad) return false;
+    if (search) {
+      const s = search.toLowerCase();
+      if (!r.reclutamiento?.toLowerCase().includes(s) &&
+          !r.plantaCentro?.toLowerCase().includes(s) &&
+          !r.tipoVacante?.toLowerCase().includes(s) &&
+          !r.mesIngreso?.toLowerCase().includes(s) &&
+          !r.reclutador?.toLowerCase().includes(s) &&
+          !r.proceso?.toLowerCase().includes(s) &&
+          !r.observaciones?.toLowerCase().includes(s) &&
+          !r.proximaAccion?.toLowerCase().includes(s)) return false;
+    }
+    return true;
+  });
+
+  const columns = [
+    { key: "reclutamiento", label: "Tipo recl." },
+    { key: "plantaCentro", label: "Planta / Centro" },
+    { key: "tipoVacante", label: "Tipo vacante" },
+    { key: "mesIngreso", label: "Mes ingreso" },
+    { key: "reclutador", label: "Reclutador" },
+    { key: "proceso", label: "Proceso", render: (r: ProcesoReclutamiento) => <Badge label={r.proceso} colorClass={r.proceso === "Abierto" ? "bg-green-100 text-green-700" : r.proceso === "Cerrado" ? "bg-slate-200 text-slate-600" : r.proceso === "Pausado" ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"} /> },
+    { key: "avance", label: "Avance", render: (r: ProcesoReclutamiento) => { const { pct } = calcReclutamientoAvance(r); return <div className="flex items-center gap-2"><div className="w-16 bg-slate-200 rounded-full h-1.5"><div className="h-1.5 rounded-full bg-blue-500" style={{width:`${pct}%`}}/></div><span className="text-xs text-slate-600">{pct}%</span></div>; } },
+    { key: "etapaActual", label: "Etapa actual", render: (r: ProcesoReclutamiento) => { const { etapaActual } = calcReclutamientoAvance(r); return <span className="text-xs text-slate-600 max-w-[120px] truncate block">{etapaActual}</span>; } },
+    { key: "prioridad", label: "Prioridad", render: (r: ProcesoReclutamiento) => <Badge label={r.prioridad} colorClass={prioridadColor[r.prioridad] || ""} /> },
+    { key: "bloqueadoPor", label: "Bloqueo", render: (r: ProcesoReclutamiento) => r.bloqueadoPor !== "Sin bloqueo" && r.bloqueadoPor ? <Badge label={r.bloqueadoPor} colorClass="bg-red-100 text-red-700" /> : "-" },
+    { key: "proximaAccion", label: "Próxima acción", render: (r: ProcesoReclutamiento) => <span className="text-xs text-slate-600 max-w-[140px] truncate block">{r.proximaAccion || "-"}</span> },
+    { key: "semaforo", label: "Semáforo", render: (r: ProcesoReclutamiento) => <SemaforoBadge fecha={r.fechaProximaAccion || r.fechaIngreso} /> },
+  ];
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div><h1 className="text-xl font-bold text-slate-800">👥 Reclutamiento</h1><p className="text-sm text-slate-500">Control de procesos de reclutamiento y selección</p></div>
+        <button onClick={() => openNew("reclutamiento")} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition font-semibold">+ Nuevo proceso</button>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+        {[
+          { label: "Total", val: total, color: "bg-slate-50 text-slate-700" },
+          { label: "Abiertos", val: abiertos, color: "bg-green-50 text-green-700" },
+          { label: "Cerrados", val: cerrados, color: "bg-slate-100 text-slate-600" },
+          { label: "Pausados", val: pausados, color: "bg-yellow-50 text-yellow-700" },
+          { label: "Desistidos", val: desistidos, color: "bg-red-50 text-red-700" },
+          { label: "Bloqueados", val: bloqueados, color: "bg-orange-50 text-orange-700" },
+        ].map(k => (
+          <div key={k.label} className={`rounded-xl p-3 text-center border ${k.color}`}>
+            <div className="text-xs font-medium opacity-70">{k.label}</div>
+            <div className="text-2xl font-bold">{k.val}</div>
+          </div>
+        ))}
+      </div>
+
+      <FilterBar search={search} setSearch={setSearch} searchPlaceholder="Buscar por planta, tipo, reclutador..." filters={<>
+        <Select value={filtroEstado} onChange={setFiltroEstado} options={ESTADOS_PROCESO_RECLUTAMIENTO} placeholder="Proceso" />
+        <Select value={filtroPlanta} onChange={setFiltroPlanta} options={PLANTAS_CENTROS} placeholder="Planta / Centro" />
+        <Select value={filtroTipo} onChange={setFiltroTipo} options={TIPOS_VACANTE} placeholder="Tipo vacante" />
+        <Select value={filtroMes} onChange={setFiltroMes} options={MESES} placeholder="Mes ingreso" />
+        <Select value={filtroPrioridad} onChange={setFiltroPrioridad} options={PRIORIDADES} placeholder="Prioridad" />
+      </>} />
+
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <Table columns={columns} rows={filtered}
+          onEdit={(r: any) => openEdit("reclutamiento", r)}
+          onDelete={(id: string) => deleteItem("reclutamiento", id)}
+          onDuplicate={duplicateItem ? (id: string) => duplicateItem("reclutamiento", id) : undefined}
+          onMarkClosed={(id: string) => markClosed("reclutamiento", id, "Cerrado")}
+          closedState="Cerrado" />
+      </div>
+      <p className="text-xs text-slate-400">Mostrando {filtered.length} de {total} procesos</p>
+    </div>
+  );
+}
+
+function FormReclutamiento({ data, editItem, closeModal, saveItem }: any) {
+  const { form, set } = useForm({
+    reclutamiento: "", plantaCentro: "", tipoVacante: "", mesIngreso: "",
+    revisadoPPTO: "", procesoBuk: "", publicado: "", seleccionCV: "",
+    cvSeleccionadoBuk: "", entrevistaJefatura: "", entrevistaGP: "",
+    testPsicolaboral: "", testHogan: "", seleccionado: "", cartaOferta: "",
+    envioCartaOferta: "", firmaCartaOferta: "", fechaIngreso: "",
+    reclutador: "", proceso: "Abierto", reclutadorId: "",
+    prioridad: "P3 Medio", bloqueadoPor: "Sin bloqueo",
+    proximaAccion: "", fechaProximaAccion: "", observaciones: ""
+  }, editItem);
+
+  const [vErr, setVErr] = useState<VError>({});
+  const [vWarn, setVWarn] = useState<string[]>([]);
+
+  const { pct, etapaActual } = calcReclutamientoAvance(form as ProcesoReclutamiento);
+
+  const save = () => {
+    const errors: VError = {};
+    const warnings: string[] = [];
+    if (!form.plantaCentro) errors.plantaCentro = "Planta o Centro es obligatorio.";
+    if (!form.tipoVacante) errors.tipoVacante = "Tipo de vacante es obligatorio.";
+    if (!form.mesIngreso) errors.mesIngreso = "Mes ingreso es obligatorio.";
+    if (!form.proceso) errors.proceso = "El estado del proceso es obligatorio.";
+    if (form.proceso === "Pausado" && (!form.bloqueadoPor || form.bloqueadoPor === "Sin bloqueo")) {
+      warnings.push("El proceso está Pausado pero no tiene bloqueante indicado.");
+    }
+    setVErr(errors); setVWarn(warnings);
+    if (Object.keys(errors).length > 0) return;
+    saveItem("reclutamiento", form);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 flex items-center gap-4">
+        <div className="flex-1">
+          <div className="flex justify-between text-xs text-blue-700 mb-1"><span>Avance del proceso</span><span className="font-bold">{pct}%</span></div>
+          <div className="w-full bg-blue-200 rounded-full h-2"><div className="h-2 rounded-full bg-blue-600 transition-all" style={{width:`${pct}%`}}/></div>
+        </div>
+        <div className="text-xs text-blue-600 font-semibold min-w-max">Etapa: {etapaActual}</div>
+      </div>
+
+      <div>
+        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">1. Información principal</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Field label="Tipo de reclutamiento"><Select value={form.reclutamiento} onChange={(v: string) => set("reclutamiento", v)} options={TIPOS_RECLUTAMIENTO} placeholder="Seleccionar..." /></Field>
+          <Field label="Planta o Centro" required error={vErr.plantaCentro}><Select value={form.plantaCentro} onChange={(v: string) => set("plantaCentro", v)} options={PLANTAS_CENTROS} placeholder="Seleccionar..." /></Field>
+          <Field label="Tipo de vacante" required error={vErr.tipoVacante}><Select value={form.tipoVacante} onChange={(v: string) => set("tipoVacante", v)} options={TIPOS_VACANTE} placeholder="Seleccionar..." /></Field>
+          <Field label="Mes ingreso" required error={vErr.mesIngreso}><Select value={form.mesIngreso} onChange={(v: string) => set("mesIngreso", v)} options={MESES} placeholder="Seleccionar..." /></Field>
+          <Field label="Fecha ingreso"><DateInput value={form.fechaIngreso} onChange={(v: string) => set("fechaIngreso", v)} /></Field>
+          <Field label="Proceso" required error={vErr.proceso}><Select value={form.proceso} onChange={(v: string) => set("proceso", v)} options={ESTADOS_PROCESO_RECLUTAMIENTO} /></Field>
+          <Field label="Reclutador (texto)"><Input value={form.reclutador} onChange={(e: React.ChangeEvent<HTMLInputElement>) => set("reclutador", e.target.value)} placeholder="Nombre del reclutador" /></Field>
+          <Field label="Responsable web"><SelectContact value={form.reclutadorId} onChange={(v: string) => set("reclutadorId", v)} data={data} /></Field>
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">2. Flujo del proceso</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Field label="Revisado PPTO"><Select value={form.revisadoPPTO} onChange={(v: string) => set("revisadoPPTO", v)} options={OPTS_REVISADO_PPTO} placeholder="—" /></Field>
+          <Field label="Proceso en BUK"><Select value={form.procesoBuk} onChange={(v: string) => set("procesoBuk", v)} options={OPTS_PROCESO_BUK} placeholder="—" /></Field>
+          <Field label="Publicado"><Select value={form.publicado} onChange={(v: string) => set("publicado", v)} options={OPTS_SI_NO} placeholder="—" /></Field>
+          <Field label="Selección de CV"><Select value={form.seleccionCV} onChange={(v: string) => set("seleccionCV", v)} options={OPTS_SELECCION_CV} placeholder="—" /></Field>
+          <Field label="CV Seleccionado en BUK"><Select value={form.cvSeleccionadoBuk} onChange={(v: string) => set("cvSeleccionadoBuk", v)} options={OPTS_SI_NO} placeholder="—" /></Field>
+          <Field label="Entrevista Jefatura"><Select value={form.entrevistaJefatura} onChange={(v: string) => set("entrevistaJefatura", v)} options={OPTS_ENTREVISTA} placeholder="—" /></Field>
+          <Field label="Entrevista GP"><Select value={form.entrevistaGP} onChange={(v: string) => set("entrevistaGP", v)} options={OPTS_ENTREVISTA} placeholder="—" /></Field>
+          <Field label="Test Psicolaboral"><Select value={form.testPsicolaboral} onChange={(v: string) => set("testPsicolaboral", v)} options={OPTS_TEST} placeholder="—" /></Field>
+          <Field label="Test Hogan"><Select value={form.testHogan} onChange={(v: string) => set("testHogan", v)} options={OPTS_TEST} placeholder="—" /></Field>
+          <Field label="Seleccionado"><Select value={form.seleccionado} onChange={(v: string) => set("seleccionado", v)} options={OPTS_SI_NO} placeholder="—" /></Field>
+          <Field label="Carta Oferta"><Select value={form.cartaOferta} onChange={(v: string) => set("cartaOferta", v)} options={OPTS_CARTA_OFERTA} placeholder="—" /></Field>
+          <Field label="Envío carta oferta"><Select value={form.envioCartaOferta} onChange={(v: string) => set("envioCartaOferta", v)} options={OPTS_ENVIO_CARTA} placeholder="—" /></Field>
+          <Field label="Firma Carta Oferta"><Select value={form.firmaCartaOferta} onChange={(v: string) => set("firmaCartaOferta", v)} options={OPTS_SI_NO} placeholder="—" /></Field>
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">3. Seguimiento interno</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Field label="Prioridad"><Select value={form.prioridad} onChange={(v: string) => set("prioridad", v)} options={PRIORIDADES} /></Field>
+          <Field label="Bloqueado por" error={vErr.bloqueadoPor}><Select value={form.bloqueadoPor} onChange={(v: string) => set("bloqueadoPor", v)} options={BLOQUEOS} /></Field>
+          <Field label="Próxima acción"><Input value={form.proximaAccion} onChange={(e: React.ChangeEvent<HTMLInputElement>) => set("proximaAccion", e.target.value)} /></Field>
+          <Field label="Fecha próxima acción" error={vErr.fechaProximaAccion}><DateInput value={form.fechaProximaAccion} onChange={(v: string) => set("fechaProximaAccion", v)} /></Field>
+          <Field label="Observaciones" error={vErr.observaciones}><Textarea value={form.observaciones} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => set("observaciones", e.target.value)} /></Field>
+        </div>
+      </div>
+
+      <FormMessages errors={vErr} warnings={vWarn} />
+      <div className="flex gap-3 justify-end pt-2">
+        <button onClick={closeModal} className="px-5 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-medium hover:bg-slate-200 transition-colors">Cancelar</button>
+        <button onClick={save} className="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">Guardar</button>
       </div>
     </div>
   );
