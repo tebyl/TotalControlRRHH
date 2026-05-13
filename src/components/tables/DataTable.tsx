@@ -1,14 +1,14 @@
-import React, { useState } from "react";
+import React, { useId, useState } from "react";
 import { isTableRowClosed } from "../../domain/status";
 
 type Column = { key: string; label: string; render?: (row: any) => React.ReactNode };
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
-function EmptyTableState({ message = "Sin registros", hint }: { message?: string; hint?: string }) {
+function EmptyTableState({ message = "Sin registros", hint, colSpan }: { message?: string; hint?: string; colSpan: number }) {
   return (
     <tr>
-      <td colSpan={999}>
+      <td colSpan={colSpan}>
         <div className="flex flex-col items-center justify-center py-14 px-6 text-center">
           <div className="text-4xl mb-3 opacity-40">📋</div>
           <p className="text-sm font-medium text-slate-500 mb-1">{message}</p>
@@ -30,41 +30,47 @@ export function DataTable({
   emptyMessage,
   emptyHint,
   pageSize: defaultPageSize = 25,
+  "aria-label": ariaLabel,
 }: {
   columns: Column[];
   rows: any[];
   onEdit: (row: any) => void;
-  onDelete: (id: string) => void;
+  onDelete?: (id: string) => void;
   onDuplicate?: (row: any) => void;
   onMarkClosed?: (id: string) => void;
   closedState?: string;
   emptyMessage?: string;
   emptyHint?: string;
   pageSize?: number;
+  "aria-label"?: string;
 }) {
   const [page, setPage] = useState(1);
   const [size, setSize] = useState(defaultPageSize);
+  const pageSizeId = useId();
 
   const totalPages = Math.max(1, Math.ceil(rows.length / size));
   // Clamp page if rows shrink (filter applied) without using an effect
   const safePageNum = Math.min(page, totalPages);
   const pageRows = rows.slice((safePageNum - 1) * size, safePageNum * size);
+  // +1 accounts for the "Acciones" column
+  const totalCols = columns.length + 1;
 
   return (
     <div className="space-y-2">
       <div className="overflow-x-auto rounded-2xl border border-slate-200">
-        <table className="w-full text-sm text-left">
+        <table className="w-full text-sm text-left" aria-label={ariaLabel}>
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
               {columns.map(c => (
                 <th
                   key={c.key}
+                  scope="col"
                   className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap"
                 >
                   {c.label}
                 </th>
               ))}
-              <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-[200px]">
+              <th scope="col" className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-[200px]">
                 Acciones
               </th>
             </tr>
@@ -72,6 +78,7 @@ export function DataTable({
           <tbody>
             {rows.length === 0 ? (
               <EmptyTableState
+                colSpan={totalCols}
                 message={emptyMessage || "Aún no hay registros en este módulo"}
                 hint={emptyHint || "Usa el botón «Agregar nuevo» para crear el primero."}
               />
@@ -97,7 +104,7 @@ export function DataTable({
                         <button
                           onClick={() => onEdit(row)}
                           className="px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300"
-                          aria-label="Editar"
+                          aria-label={`Editar ${row.nombre || row.curso || row.proceso || ""}`}
                         >
                           Editar
                         </button>
@@ -105,7 +112,7 @@ export function DataTable({
                           <button
                             onClick={() => onMarkClosed(row.id)}
                             className="px-3 py-1.5 text-xs font-medium bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-300"
-                            aria-label="Cerrar registro"
+                            aria-label={`Cerrar ${row.nombre || row.curso || row.proceso || ""}`}
                           >
                             Cerrar
                           </button>
@@ -114,18 +121,20 @@ export function DataTable({
                           <button
                             onClick={() => onDuplicate(row)}
                             className="px-3 py-1.5 text-xs font-medium bg-violet-50 text-violet-700 rounded-lg border border-violet-100 hover:bg-violet-100 transition-colors focus:outline-none focus:ring-2 focus:ring-violet-300"
-                            aria-label="Duplicar"
+                            aria-label={`Duplicar ${row.nombre || row.curso || row.proceso || ""}`}
                           >
                             Duplicar
                           </button>
                         )}
-                        <button
-                          onClick={() => onDelete(row.id)}
-                          className="px-3 py-1.5 text-xs font-medium bg-red-50 text-red-600 rounded-lg border border-red-100 hover:bg-red-100 transition-colors focus:outline-none focus:ring-2 focus:ring-red-300"
-                          aria-label="Eliminar"
-                        >
-                          Eliminar
-                        </button>
+                        {onDelete && (
+                          <button
+                            onClick={() => onDelete(row.id)}
+                            className="px-3 py-1.5 text-xs font-medium bg-red-50 text-red-600 rounded-lg border border-red-100 hover:bg-red-100 transition-colors focus:outline-none focus:ring-2 focus:ring-red-300"
+                            aria-label={`Eliminar ${row.nombre || row.curso || row.proceso || ""}`}
+                          >
+                            Eliminar
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -136,12 +145,14 @@ export function DataTable({
         </table>
       </div>
 
-      {/* Pagination bar — only show if more than one page or more rows than minimum page size */}
-      {rows.length > PAGE_SIZE_OPTIONS[0] && (
+      {/* Pagination bar — only show when there is more than one page */}
+      {totalPages > 1 && (
         <div className="flex items-center justify-between gap-3 px-1 flex-wrap">
           <div className="flex items-center gap-2 text-xs text-slate-500">
-            <span>Filas por página:</span>
+            <label htmlFor={pageSizeId} className="sr-only">Filas por página</label>
+            <span aria-hidden="true">Filas por página:</span>
             <select
+              id={pageSizeId}
               value={size}
               onChange={e => { setSize(Number(e.target.value)); setPage(1); }}
               className="border border-slate-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
@@ -149,7 +160,7 @@ export function DataTable({
               {PAGE_SIZE_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
             </select>
           </div>
-          <div className="flex items-center gap-1 text-xs text-slate-500">
+          <div className="flex items-center gap-1 text-xs text-slate-500" aria-live="polite" aria-atomic="true">
             <span>{((safePageNum - 1) * size) + 1}–{Math.min(safePageNum * size, rows.length)} de {rows.length}</span>
             <button
               onClick={() => setPage(p => Math.max(1, p - 1))}
@@ -157,7 +168,7 @@ export function DataTable({
               className="px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed ml-2"
               aria-label="Página anterior"
             >‹</button>
-            <span className="px-1">{safePageNum} / {totalPages}</span>
+            <span className="px-1" aria-current="page">Página {safePageNum} de {totalPages}</span>
             <button
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={safePageNum === totalPages}

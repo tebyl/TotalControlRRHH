@@ -33,9 +33,11 @@ export function KpiCard({
   const v = kpiVariants[variant];
   return (
     <div
-      className={`${v.bg} border ${v.border} rounded-2xl p-4 flex flex-col gap-1.5 shadow-sm ${onClick ? "cursor-pointer hover:shadow-md transition-shadow" : ""}`}
+      className={`${v.bg} border ${v.border} rounded-2xl p-4 flex flex-col gap-1.5 shadow-sm ${onClick ? "cursor-pointer hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-blue-300" : ""}`}
       onClick={onClick}
+      onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined}
       role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
     >
       {icon && <span className={`text-xl leading-none ${v.icon}`}>{icon}</span>}
       <div className={`text-2xl font-bold leading-none ${v.value}`}>{value}</div>

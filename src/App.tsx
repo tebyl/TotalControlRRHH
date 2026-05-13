@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { cn } from "./utils/cn";
 import {
   ahora,
   duplicateRecord,
@@ -48,6 +49,7 @@ import {
   KpiGroup,
 } from "./components/ui";
 import { login as authLogin, getSession, logout as authLogout, refreshSession } from "./auth/authService";
+import { can } from "./auth/permissions";
 import { logAudit } from "./audit/auditService";
 
 import * as XLSX from "xlsx";
@@ -119,11 +121,12 @@ const ETAPAS_RECLUTAMIENTO = [
 // FORM COMPONENTS (Global)
 // ──────────────────────────────────────────────
 
-const Field = ({ label, children, error, required }: { label: string; children: React.ReactNode; error?: string; required?: boolean }) => (
+// htmlFor links <label> to its input for accessibility (clicking label focuses the input)
+const Field = ({ label, children, error, required, htmlFor }: { label: string; children: React.ReactNode; error?: string; required?: boolean; htmlFor?: string }) => (
   <div className="flex flex-col gap-1.5">
-    <label className="text-sm font-medium text-slate-700">{label}{required && <span className="text-red-400 ml-0.5">*</span>}</label>
+    <label htmlFor={htmlFor} className="text-sm font-medium text-slate-700">{label}{required && <span className="text-red-400 ml-0.5">*</span>}</label>
     <div className={error ? "[&>input]:border-red-300 [&>select]:border-red-300 [&>textarea]:border-red-300" : ""}>{children}</div>
-    {error && <p className="text-xs text-red-600 mt-0.5">{error}</p>}
+    {error && <p id={htmlFor ? `${htmlFor}-error` : undefined} className="text-xs text-red-600 mt-0.5">{error}</p>}
   </div>
 );
 
@@ -192,9 +195,10 @@ function FormMessages({ errors, warnings }: { errors: VError; warnings: string[]
     </div>
   );
 }
-const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} className="border border-[#D9E2EC] rounded-xl px-4 py-2.5 text-sm bg-white text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#93C5FD] focus:ring-2 focus:ring-blue-100 transition-colors" />;
-const Select = ({ value, onChange, options, placeholder }: { value: string; onChange: (v: string) => void; options: string[]; placeholder?: string }) => <select value={value} onChange={e => onChange(e.target.value)} className="border border-[#D9E2EC] rounded-xl px-4 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:border-[#93C5FD] focus:ring-2 focus:ring-blue-100 transition-colors"><option value="">{placeholder}</option>{options.map(o => <option key={o} value={o}>{o}</option>)}</select>;
-const Textarea = (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...props} className="border border-[#D9E2EC] rounded-xl px-4 py-2.5 text-sm bg-white text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#93C5FD] focus:ring-2 focus:ring-blue-100 transition-colors" rows={3} />;
+const INPUT_BASE = "w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm bg-white text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100 transition-colors";
+const Input = ({ className, ...props }: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} className={cn(INPUT_BASE, className)} />;
+const Select = ({ value, onChange, options, placeholder, className }: { value: string; onChange: (v: string) => void; options: string[]; placeholder?: string; className?: string }) => <select value={value} onChange={e => onChange(e.target.value)} className={cn(INPUT_BASE, className)}><option value="">{placeholder}</option>{options.map(o => <option key={o} value={o}>{o}</option>)}</select>;
+const Textarea = ({ className, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...props} className={cn(INPUT_BASE, "resize-y", className)} rows={props.rows ?? 3} />;
 
 // ──────────────────────────────────────────────
 // GLOBAL COMPONENTS (need data passed as prop)
@@ -202,7 +206,7 @@ const Textarea = (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <
 
 function SelectContact({ value, onChange, data }: { value: string; onChange: (v: string) => void; data: AppData }) {
   const activeContacts = data.contactos.filter(c => c.activo === "Sí");
-  return <select value={value} onChange={e => onChange(e.target.value)} className="border border-[#D9E2EC] rounded-xl px-4 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:border-[#93C5FD] focus:ring-2 focus:ring-blue-100 transition-colors"><option value="">Sin responsable</option>{activeContacts.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select>;
+  return <select value={value} onChange={e => onChange(e.target.value)} className={INPUT_BASE}><option value="">Sin responsable</option>{activeContacts.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select>;
 }
 
 // ──────────────────────────────────────────────
@@ -450,10 +454,17 @@ function Modal({ open, onClose, title, children, wide }: { open: boolean; onClos
 }
 
 function ConfirmModal({ open, message, onConfirm, onCancel }: { open: boolean; message: string; onConfirm: () => void; onCancel: () => void }) {
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onCancel(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [open, onCancel]);
+
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50" onClick={onCancel}>
-      <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50" onClick={onCancel} aria-hidden="true">
+      <div role="dialog" aria-modal="true" aria-label="Confirmar acción" className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
         <p className="text-slate-800 mb-4">{message}</p>
         <div className="flex gap-3 justify-end">
           <button onClick={onCancel} className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition">Cancelar</button>
@@ -500,12 +511,12 @@ function Login({ onLogin }: { onLogin: () => void }) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1">Usuario</label>
-            <input type="text" value={user} onChange={e => setUser(e.target.value)} className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="KataS" />
+            <input type="text" value={user} onChange={e => setUser(e.target.value)} className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Nombre de usuario" autoComplete="username" />
           </div>
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1">Clave</label>
             <div className="relative">
-              <input type={showPass ? "text" : "password"} value={pass} onChange={e => setPass(e.target.value)} className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="••••••" />
+              <input type={showPass ? "text" : "password"} value={pass} onChange={e => setPass(e.target.value)} className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="••••••" autoComplete="current-password" />
               <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-sm">{showPass ? "Ocultar" : "Mostrar"}</button>
             </div>
           </div>
@@ -575,10 +586,14 @@ export default function App() {
 
   const toggleFocusMode = () => { const v = !focusMode; setFocusMode(v); localStorage.setItem("kata_focus_mode", String(v)); };
 
-  // Session expiry check — every 60 s verify session is still valid
+  // Role derived from session — cheap sessionStorage read, no memoization needed
+  const currentRole = authenticated ? getSession()?.role : undefined;
+
+  // Session expiry check — every 60 s, only while authenticated
   useEffect(() => {
+    if (!authenticated) return;
     const interval = setInterval(() => {
-      if (authenticated && getSession() === null) {
+      if (getSession() === null) {
         logAudit("logout", { detail: "Sesión expirada automáticamente" });
         authLogout();
         setAuthenticated(false);
@@ -1160,12 +1175,12 @@ export default function App() {
   };
 
   const restaurarEjemplos = () => {
-    setConfirm({ msg: "¿Restaurar datos de ejemplo? Se perderán los datos actuales.", cb: () => { runBackupAndToast("restaurar"); limpiarDatos(); setData(crearDatosEjemplo()); toastShow("Datos de ejemplo restaurados"); setConfirm(null); } });
+    setConfirm({ msg: "¿Restaurar datos de ejemplo? Se perderán los datos actuales.", cb: () => { logAudit("backup:restore", { detail: "Restaurar datos de ejemplo" }); runBackupAndToast("restaurar"); limpiarDatos(); setData(crearDatosEjemplo()); toastShow("Datos de ejemplo restaurados"); setConfirm(null); } });
   };
 
   const limpiarTodo = () => {
     setConfirm({ msg: "⚠️ ¿Eliminar TODOS los datos? Esta acción no se puede deshacer.", cb: () => {
-      setConfirm({ msg: "🚨 ÚLTIMA CONFIRMACIÓN: Se borrará todo definitivamente. ¿Continuar?", cb: () => { runBackupAndToast("limpiar"); limpiarDatos(); setData({ ...crearDatosEjemplo(), cursos: [], ocs: [], practicantes: [], presupuesto: [], procesos: [], diplomas: [], cargaSemanal: [], contactos: [], evaluacionesPsicolaborales: [], valesGas: [], valesGasOrganizacion: [], reclutamiento: [] }); toastShow("Todos los datos eliminados"); setConfirm(null); } });
+      setConfirm({ msg: "🚨 ÚLTIMA CONFIRMACIÓN: Se borrará todo definitivamente. ¿Continuar?", cb: () => { logAudit("record:delete", { detail: "Limpiar todos los datos del sistema" }); runBackupAndToast("limpiar"); limpiarDatos(); setData({ ...crearDatosEjemplo(), cursos: [], ocs: [], practicantes: [], presupuesto: [], procesos: [], diplomas: [], cargaSemanal: [], contactos: [], evaluacionesPsicolaborales: [], valesGas: [], valesGasOrganizacion: [], reclutamiento: [] }); toastShow("Todos los datos eliminados"); setConfirm(null); } });
     }});
   };
 
@@ -1190,6 +1205,7 @@ export default function App() {
         setConfirm({
           msg: `Este contacto está asignado como responsable en: ${usedIn.join(", ")}. ¿Reasignar a "Sin responsable" y eliminar?`,
           cb: () => {
+            logAudit("record:delete", { module: "contactos", recordId: id, detail: "Eliminado con reasignación de responsable" });
             setData(d => {
               const nd = { ...d };
               allModules.forEach(m => {
@@ -1212,6 +1228,7 @@ export default function App() {
   };
 
   const duplicateItem = (modulo: string, item: any) => {
+    logAudit("record:duplicate", { module: modulo, recordId: item.id });
     runBackupAndToast("crear");
     setData(d => {
       const nd = { ...d };
@@ -1368,6 +1385,7 @@ export default function App() {
   };
 
   const markClosed = (modulo: string, id: string, closedState: string) => {
+    logAudit("record:close", { module: modulo, recordId: id });
     setData(d => {
       const nd = { ...d };
       const arr = [...(nd as any)[modulo]];
@@ -1380,6 +1398,12 @@ export default function App() {
     });
     toastShow("Estado actualizado");
   };
+
+  // Permission-gated action wrappers — pass undefined when role lacks the permission
+  // so DataTable hides the button rather than calling undefined()
+  const permDeleteItem = can(currentRole, "record:delete") ? deleteItem : undefined;
+  const permDuplicateItem = can(currentRole, "record:duplicate") ? duplicateItem : undefined;
+  const permMarkClosed = can(currentRole, "record:close") ? markClosed : undefined;
 
   // ── DASHBOARD DATA ─────────────────────────
 
@@ -1643,7 +1667,7 @@ El dashboard responde:
           {navGroups.map((grp, gi) => (
             <div key={gi} className={grp.group ? "mt-3" : ""}>
               {grp.group && sidebarOpen && (
-                <div className="px-4 pt-1 pb-1.5 text-[9px] font-bold tracking-[0.15em] text-white/25 uppercase">{grp.group}</div>
+                <div className="px-4 pt-1 pb-1.5 text-[11px] font-bold tracking-[0.12em] text-white/30 uppercase">{grp.group}</div>
               )}
               {!grp.group && !sidebarOpen && gi > 0 && <div className="mx-3 my-2 h-px bg-white/10" />}
               {grp.items.map(m => {
@@ -1828,23 +1852,35 @@ El dashboard responde:
             {/* Bandeja de acción */}
             <SectionCard title="📋 Bandeja de acción priorizada" subtitle="Los 20 ítems más urgentes de todos los módulos activos" noPadding>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
+                <table className="w-full text-sm text-left" aria-label="Bandeja de acción priorizada">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200">
                       {["#","Tipo","Nombre / Proceso","Prioridad","Estado","Bloqueado por","Próxima acción","Fecha","Responsable","Módulo"].map(h => (
-                        <th key={h} className="px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                        <th key={h} scope="col" className="px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {dashboardData.bandeja.length === 0 ? (
-                      <tr><td colSpan={10} className="text-center py-10 text-slate-400 text-sm">No hay ítems urgentes en este momento 🎉</td></tr>
+                      <tr>
+                        <td colSpan={10}>
+                          <div className="flex flex-col items-center justify-center py-14 px-6 text-center">
+                            <div className="text-4xl mb-3 opacity-60">🎉</div>
+                            <p className="text-sm font-medium text-slate-500 mb-1">Sin ítems urgentes por ahora</p>
+                            <p className="text-xs text-slate-400">Cuando haya pendientes críticos o próximos a vencer aparecerán aquí.</p>
+                          </div>
+                        </td>
+                      </tr>
                     ) : (
                       dashboardData.bandeja.slice(0, 20).map((item, i) => (
                         <tr
-                          key={i}
-                          className={`border-t border-slate-100 hover:bg-blue-50/50 transition-colors cursor-pointer ${i % 2 === 0 ? "bg-white" : "bg-slate-50/30"}`}
+                          key={`${item.modulo}_${item.id || i}`}
+                          tabIndex={0}
+                          role="button"
+                          aria-label={`Ir a ${item.nombre} en módulo ${item.modulo}`}
+                          className={`border-t border-slate-100 hover:bg-blue-50/50 focus:bg-blue-50/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-300 transition-colors cursor-pointer ${i % 2 === 0 ? "bg-white" : "bg-slate-50/30"}`}
                           onClick={() => setActiveModulo(item.modulo as Modulo)}
+                          onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setActiveModulo(item.modulo as Modulo); } }}
                         >
                           <td className="px-3 py-2.5 text-xs text-slate-400 font-medium">{i + 1}</td>
                           <td className="px-3 py-2.5"><Badge label={item.tipo} colorClass="bg-slate-100 text-slate-600 border border-slate-200" /></td>
@@ -1884,17 +1920,17 @@ El dashboard responde:
           </div>
         )}
 
-        {activeModulo === "cursos" && <ModuloCursos data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={deleteItem} markClosed={markClosed} getResponsableName={getResponsableName} />}
-        {activeModulo === "ocs" && <ModuloOCs data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={deleteItem} markClosed={markClosed} getResponsableName={getResponsableName} />}
-        {activeModulo === "practicantes" && <ModuloPracticantes data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={deleteItem} markClosed={markClosed} getResponsableName={getResponsableName} />}
-        {activeModulo === "presupuesto" && <ModuloPresupuesto data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={deleteItem} getResponsableName={getResponsableName} />}
-        {activeModulo === "procesos" && <ModuloProcesos data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={deleteItem} getResponsableName={getResponsableName} />}
-        {activeModulo === "diplomas" && <ModuloDiplomas data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={deleteItem} markClosed={markClosed} getResponsableName={getResponsableName} />}
-        {activeModulo === "evaluaciones" && <ModuloEvaluaciones data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={deleteItem} duplicateItem={duplicateItem} markClosed={markClosed} getResponsableName={getResponsableName} />}
-        {activeModulo === "cargaSemanal" && <ModuloCargaSemanal data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={deleteItem} duplicateItem={duplicateItem} />}
-        {activeModulo === "contactos" && <ModuloContactos data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={deleteItem} />}
-        {activeModulo === "valesGas" && <ModuloValesGas data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={deleteItem} getResponsableName={getResponsableName} />}
-        {activeModulo === "reclutamiento" && <ModuloReclutamiento data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={deleteItem} duplicateItem={duplicateItem} markClosed={markClosed} getResponsableName={getResponsableName} />}
+        {activeModulo === "cursos" && <ModuloCursos data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} markClosed={permMarkClosed} getResponsableName={getResponsableName} />}
+        {activeModulo === "ocs" && <ModuloOCs data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} markClosed={permMarkClosed} getResponsableName={getResponsableName} />}
+        {activeModulo === "practicantes" && <ModuloPracticantes data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} markClosed={permMarkClosed} getResponsableName={getResponsableName} />}
+        {activeModulo === "presupuesto" && <ModuloPresupuesto data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} getResponsableName={getResponsableName} />}
+        {activeModulo === "procesos" && <ModuloProcesos data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} getResponsableName={getResponsableName} />}
+        {activeModulo === "diplomas" && <ModuloDiplomas data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} markClosed={permMarkClosed} getResponsableName={getResponsableName} />}
+        {activeModulo === "evaluaciones" && <ModuloEvaluaciones data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} duplicateItem={permDuplicateItem} markClosed={permMarkClosed} getResponsableName={getResponsableName} />}
+        {activeModulo === "cargaSemanal" && <ModuloCargaSemanal data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} duplicateItem={permDuplicateItem} />}
+        {activeModulo === "contactos" && <ModuloContactos data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} />}
+        {activeModulo === "valesGas" && <ModuloValesGas data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} getResponsableName={getResponsableName} />}
+        {activeModulo === "reclutamiento" && <ModuloReclutamiento data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} duplicateItem={permDuplicateItem} markClosed={permMarkClosed} getResponsableName={getResponsableName} />}
         {activeModulo === "configuracion" && (
           <ModuloConfiguracion
             data={data}
@@ -1975,7 +2011,10 @@ El dashboard responde:
 
         {/* Toast con link "Ir al módulo" cuando hay captura reciente */}
         {toast && (
-          <div className={`fixed bottom-6 right-6 z-[70] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl text-sm font-medium animate-fade-in
+          <div
+            role="alert"
+            aria-live="polite"
+            className={`fixed bottom-6 right-6 z-[70] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl text-sm font-medium animate-fade-in
             ${toast.startsWith("⚠") || toast.toLowerCase().includes("error") || toast.toLowerCase().includes("lleno")
               ? "bg-amber-900 text-amber-100 border border-amber-700"
               : toast.toLowerCase().includes("elimin") || toast.toLowerCase().includes("borr")
@@ -2008,7 +2047,17 @@ function SemaforoItem({ color, label, count }: { color: string; label: string; c
 
 function FilterBar({ filters, searchPlaceholder, search, setSearch }: { filters: React.ReactNode; searchPlaceholder: string; search: string; setSearch: (v: string) => void }) {
   const [localSearch, setLocalSearch] = useState(search);
+  const [prevSearch, setPrevSearch] = useState(search);
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync localSearch when parent resets search externally (e.g. on module change)
+  if (prevSearch !== search) {
+    setPrevSearch(search);
+    setLocalSearch(search);
+  }
+
+  // Cancel any pending debounce on unmount to avoid calling setSearch on an orphaned timer
+  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
 
   const handleChange = (value: string) => {
     setLocalSearch(value);
@@ -2019,12 +2068,12 @@ function FilterBar({ filters, searchPlaceholder, search, setSearch }: { filters:
   const handleClear = () => { setLocalSearch(""); setSearch(""); };
 
   return (
-    <div className="bg-white rounded-2xl border border-[#D9E2EC] p-4 mb-5">
+    <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-5">
       <div className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-3">Filtros</div>
       <div className="flex flex-wrap gap-3 items-center">
         {filters}
         <div className="flex-1 min-w-[200px]">
-          <input type="text" placeholder={searchPlaceholder} value={localSearch} onChange={e => handleChange(e.target.value)} className="w-full border border-[#D9E2EC] rounded-xl px-4 py-2.5 text-sm bg-white text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#93C5FD] focus:ring-2 focus:ring-blue-100 transition-colors" />
+          <input type="text" placeholder={searchPlaceholder} value={localSearch} onChange={e => handleChange(e.target.value)} className={INPUT_BASE} />
         </div>
         {(localSearch || search) && (<button onClick={handleClear} className="text-xs text-blue-600 hover:underline whitespace-nowrap">Limpiar filtros</button>)}
       </div>
@@ -2267,8 +2316,8 @@ function ModuloCursos({ data, search, setSearch, openNew, openEdit, deleteItem, 
         columns={columns}
         rows={filtered}
         onEdit={(r: any) => openEdit("cursos", r)}
-        onDelete={(id: string) => deleteItem("cursos", id)}
-        onMarkClosed={(id: string) => markClosed("cursos", id, "Cerrado")}
+        onDelete={deleteItem ? (id: string) => deleteItem("cursos", id) : undefined}
+        onMarkClosed={markClosed ? (id: string) => markClosed("cursos", id, "Cerrado") : undefined}
         closedState="Cerrado"
         emptyMessage="Aún no hay cursos registrados"
         emptyHint="Crea el primero con «+ Agregar nuevo» o importa desde la plantilla XLSX."
@@ -2304,8 +2353,8 @@ function ModuloOCs({ data, search, setSearch, openNew, openEdit, deleteItem, mar
         columns={columns}
         rows={filtered}
         onEdit={(r: any) => openEdit("ocs", r)}
-        onDelete={(id: string) => deleteItem("ocs", id)}
-        onMarkClosed={(id: string) => markClosed("ocs", id, "Cerrada")}
+        onDelete={deleteItem ? (id: string) => deleteItem("ocs", id) : undefined}
+        onMarkClosed={markClosed ? (id: string) => markClosed("ocs", id, "Cerrada") : undefined}
         closedState="Cerrada"
         emptyMessage="Aún no hay OCs registradas"
         emptyHint="Crea la primera con «+ Nueva OC» o importa desde la plantilla XLSX."
@@ -2338,8 +2387,8 @@ function ModuloPracticantes({ data, search, setSearch, openNew, openEdit, delete
         columns={columns}
         rows={filtered}
         onEdit={(r: any) => openEdit("practicantes", r)}
-        onDelete={(id: string) => deleteItem("practicantes", id)}
-        onMarkClosed={(id: string) => markClosed("practicantes", id, "Finalizado")}
+        onDelete={deleteItem ? (id: string) => deleteItem("practicantes", id) : undefined}
+        onMarkClosed={markClosed ? (id: string) => markClosed("practicantes", id, "Finalizado") : undefined}
         closedState="Finalizado"
         emptyMessage="Aún no hay practicantes registrados"
         emptyHint="Crea el primero con «+ Nuevo practicante» o importa desde la plantilla XLSX."
@@ -2667,7 +2716,7 @@ function ModuloProcesos({ data, search, setSearch, openNew, openEdit, deleteItem
         columns={columns}
         rows={filtered}
         onEdit={(r: any) => openEdit("procesos", r)}
-        onDelete={(id: string) => deleteItem("procesos", id)}
+        onDelete={deleteItem ? (id: string) => deleteItem("procesos", id) : undefined}
         emptyMessage="Aún no hay procesos pendientes"
         emptyHint="Crea el primero con «+ Nuevo proceso» para llevar un seguimiento formal."
       />
@@ -2712,8 +2761,8 @@ function ModuloDiplomas({ data, search, setSearch, openNew, openEdit, deleteItem
         columns={columns}
         rows={filtered}
         onEdit={(r: any) => openEdit("diplomas", r)}
-        onDelete={(id: string) => deleteItem("diplomas", id)}
-        onMarkClosed={(id: string) => markClosed("diplomas", id, "Subido")}
+        onDelete={deleteItem ? (id: string) => deleteItem("diplomas", id) : undefined}
+        onMarkClosed={markClosed ? (id: string) => markClosed("diplomas", id, "Subido") : undefined}
         closedState="Subido"
         emptyMessage="Aún no hay documentos registrados"
         emptyHint="Crea el primero con «+ Nuevo documento» para hacer seguimiento de diplomas, certificados y licencias."
@@ -2783,8 +2832,8 @@ function ModuloEvaluaciones({ data, search, setSearch, openNew, openEdit, delete
         columns={columns}
         rows={filtered}
         onEdit={(r: any) => openEdit("evaluaciones", r)}
-        onDelete={(id: string) => deleteItem("evaluacionesPsicolaborales", id)}
-        onDuplicate={(r: any) => duplicateItem("evaluacionesPsicolaborales", r)}
+        onDelete={deleteItem ? (id: string) => deleteItem("evaluacionesPsicolaborales", id) : undefined}
+        onDuplicate={duplicateItem ? (r: any) => duplicateItem("evaluacionesPsicolaborales", r) : undefined}
         emptyMessage="Aún no hay evaluaciones registradas"
         emptyHint="Crea la primera con «+ Nueva evaluación» o importa desde la plantilla XLSX."
       />
@@ -2810,8 +2859,8 @@ function ModuloCargaSemanal({ data, search, setSearch, openNew, openEdit, delete
         columns={columns}
         rows={filtered}
         onEdit={(r: any) => openEdit("cargaSemanal", r)}
-        onDelete={(id: string) => deleteItem("cargaSemanal", id)}
-        onDuplicate={(r: any) => duplicateItem("cargaSemanal", r)}
+        onDelete={deleteItem ? (id: string) => deleteItem("cargaSemanal", id) : undefined}
+        onDuplicate={duplicateItem ? (r: any) => duplicateItem("cargaSemanal", r) : undefined}
         emptyMessage="Aún no hay semanas registradas"
         emptyHint="Registra la primera semana para llevar estadísticas de carga operativa."
       />
@@ -2848,7 +2897,7 @@ function ModuloContactos({ data, search, setSearch, openNew, openEdit, deleteIte
         columns={columns}
         rows={filtered}
         onEdit={(r: any) => openEdit("contactos", r)}
-        onDelete={(id: string) => deleteItem("contactos", id)}
+        onDelete={deleteItem ? (id: string) => deleteItem("contactos", id) : undefined}
         emptyMessage="Aún no hay contactos registrados"
         emptyHint="Crea el primero con «+ Nuevo contacto». Los responsables de todos los módulos se asignan desde aquí."
       />
@@ -4429,11 +4478,11 @@ function ModuloValesGas({ data, search, setSearch, openNew, openEdit, deleteItem
           <button onClick={() => openNew("valesGasOrganizacion")} className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-emerald-700 transition-colors shadow-sm">+ Registrar vales organización</button>
         </div>
         <div className="flex flex-wrap gap-3 items-center">
-          <select value={filterOrgTipo} onChange={e => setFilterOrgTipo(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <select aria-label="Filtrar por tipo" value={filterOrgTipo} onChange={e => setFilterOrgTipo(e.target.value)} className={INPUT_BASE}>
             <option value="">Todos los tipos</option>
             {TIPOS_MOVIMIENTO_VALES.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
-          <select value={filterOrgPeriodo} onChange={e => setFilterOrgPeriodo(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <select aria-label="Filtrar por período" value={filterOrgPeriodo} onChange={e => setFilterOrgPeriodo(e.target.value)} className={INPUT_BASE}>
             <option value="">Todos los períodos</option>
             {orgPeriodos.map(p => <option key={p as string} value={p as string}>{p as string}</option>)}
           </select>
@@ -4446,7 +4495,7 @@ function ModuloValesGas({ data, search, setSearch, openNew, openEdit, deleteItem
             columns={columnsOrg}
             rows={filteredOrg}
             onEdit={(r: ValeGasOrg) => openEdit("valesGasOrganizacion", r)}
-            onDelete={(id: string) => deleteItem("valesGasOrganizacion", id)}
+            onDelete={deleteItem ? (id: string) => deleteItem("valesGasOrganizacion", id) : undefined}
           />
         </div>
       </div>
@@ -4463,17 +4512,18 @@ function ModuloValesGas({ data, search, setSearch, openNew, openEdit, deleteItem
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Buscar por colaborador, área o período..."
-            className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white w-64"
+            aria-label="Buscar vales de colaborador"
+            className={cn(INPUT_BASE, "w-64")}
           />
-          <select value={filterEstado} onChange={e => setFilterEstado(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <select value={filterEstado} onChange={e => setFilterEstado(e.target.value)} aria-label="Filtrar por estado" className={INPUT_BASE}>
             <option value="">Todos los estados</option>
             {ESTADOS_VALE_GAS.map(e => <option key={e} value={e}>{e}</option>)}
           </select>
-          <select value={filterArea} onChange={e => setFilterArea(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <select value={filterArea} onChange={e => setFilterArea(e.target.value)} aria-label="Filtrar por área" className={INPUT_BASE}>
             <option value="">Todas las áreas</option>
             {areas.map(a => <option key={a as string} value={a as string}>{a as string}</option>)}
           </select>
-          <select value={filterPeriodo} onChange={e => setFilterPeriodo(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <select value={filterPeriodo} onChange={e => setFilterPeriodo(e.target.value)} aria-label="Filtrar por período" className={INPUT_BASE}>
             <option value="">Todos los períodos</option>
             {periodos.map(p => <option key={p as string} value={p as string}>{p as string}</option>)}
           </select>
@@ -4486,7 +4536,7 @@ function ModuloValesGas({ data, search, setSearch, openNew, openEdit, deleteItem
             columns={columnsColabs}
             rows={filtered}
             onEdit={(r: ValeGas) => openEdit("valesGas", r)}
-            onDelete={(id: string) => deleteItem("valesGas", id)}
+            onDelete={deleteItem ? (id: string) => deleteItem("valesGas", id) : undefined}
           />
         </div>
       </div>
@@ -4729,9 +4779,9 @@ function ModuloReclutamiento({ data, search, setSearch, openNew, openEdit, delet
         columns={columns}
         rows={filtered}
         onEdit={(r: any) => openEdit("reclutamiento", r)}
-        onDelete={(id: string) => deleteItem("reclutamiento", id)}
+        onDelete={deleteItem ? (id: string) => deleteItem("reclutamiento", id) : undefined}
         onDuplicate={duplicateItem ? (r: any) => duplicateItem("reclutamiento", r) : undefined}
-        onMarkClosed={(id: string) => markClosed("reclutamiento", id, "Cerrado")}
+        onMarkClosed={markClosed ? (id: string) => markClosed("reclutamiento", id, "Cerrado") : undefined}
         closedState="Cerrado"
         emptyMessage="Aún no hay procesos de reclutamiento"
         emptyHint="Crea el primero con «+ Nuevo proceso» o importa desde la plantilla XLSX."
