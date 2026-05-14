@@ -19,26 +19,6 @@ import { FormCapturaRapida } from "./forms/FormCapturaRapida";
 import { FormValesGas } from "./forms/FormValesGas";
 import { FormValeGasOrg } from "./forms/FormValeGasOrg";
 import { FormReclutamiento } from "./forms/FormReclutamiento";
-import { Badge, SemaforoBadge, prioridadColor, estadoColor } from "./shared/badges";
-import { FilterBar, SemaforoItem } from "./shared/filterBar";
-import { validateGeneral, notifyValidationError, FormMessages, SelectContact, isValidEmail, isValidPhone, isValidRut } from "./shared/formHelpers";
-import type { VError, ConfirmState, ToastType, ToastItem } from "./shared/formTypes";
-import { fmtCLP, resolveResponsable, getResponsableName } from "./shared/dataHelpers";
-import { calcReclutamientoAvance, calcPctRecl } from "./shared/reclutamientoHelpers";
-import { useForm } from "./hooks/useForm";
-import { FormCursos } from "./forms/FormCursos";
-import { FormOCs } from "./forms/FormOCs";
-import { FormPracticantes } from "./forms/FormPracticantes";
-import { FormPresupuesto } from "./forms/FormPresupuesto";
-import { FormProcesos } from "./forms/FormProcesos";
-import { FormDiplomas } from "./forms/FormDiplomas";
-import { FormEvaluaciones } from "./forms/FormEvaluaciones";
-import { FormCargaSemanal } from "./forms/FormCargaSemanal";
-import { FormContactos } from "./forms/FormContactos";
-import { FormCapturaRapida } from "./forms/FormCapturaRapida";
-import { FormValesGas } from "./forms/FormValesGas";
-import { FormValeGasOrg } from "./forms/FormValeGasOrg";
-import { FormReclutamiento } from "./forms/FormReclutamiento";
 import { cn } from "./utils/cn";
 import {
   ahora,
