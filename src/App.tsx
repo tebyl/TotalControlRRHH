@@ -1,11 +1,9 @@
 import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { Badge, SemaforoBadge, prioridadColor, estadoColor } from "./shared/badges";
 import { FilterBar, SemaforoItem } from "./shared/filterBar";
-import { validateGeneral, notifyValidationError, FormMessages, SelectContact, isValidEmail, isValidPhone, isValidRut } from "./shared/formHelpers";
-import type { VError, ConfirmState, ToastType, ToastItem } from "./shared/formTypes";
+import type { ConfirmState, ToastType, ToastItem } from "./shared/formTypes";
 import { fmtCLP, resolveResponsable, getResponsableName } from "./shared/dataHelpers";
 import { calcReclutamientoAvance, calcPctRecl } from "./shared/reclutamientoHelpers";
-import { useForm } from "./hooks/useForm";
 import { FormCursos } from "./forms/FormCursos";
 import { FormOCs } from "./forms/FormOCs";
 import { FormPracticantes } from "./forms/FormPracticantes";
@@ -26,7 +24,6 @@ import {
   duplicateRecord,
   durMesesEntre,
   genId,
-  getWeeksForYear,
   hoy,
   isClosedRecord,
   markRecordClosed,
@@ -55,7 +52,6 @@ import type {
   ValeGasOrg,
 } from "./domain/types";
 import {
-  BLOQUEOS,
   CATEGORIAS_OC,
   ESTADOS_BUK,
   ESTADOS_CURSO,
@@ -65,29 +61,14 @@ import {
   ESTADOS_PRACTICANTE,
   ESTADOS_PROCESO_RECLUTAMIENTO,
   ESTADOS_VALE_GAS,
-  ETAPAS_COMPLETADAS_VALUES,
-  ETAPAS_NO_APLICA_VALUES,
-  ETAPAS_RECLUTAMIENTO,
   MESES,
-  OPTS_CARTA_OFERTA,
-  OPTS_ENTREVISTA,
-  OPTS_ENVIO_CARTA,
-  OPTS_PROCESO_BUK,
-  OPTS_REVISADO_PPTO,
-  OPTS_SELECCION_CV,
-  OPTS_SI_NO,
-  OPTS_TEST,
   ORIGENES_CURSO,
   PLANTAS_CENTROS,
   PRIORIDADES,
   RELACIONES,
   RESULTADOS_EVALUACION,
-  TIPOS_CAPTURA,
-  TIPOS_DOCUMENTO,
-  TIPOS_EVALUACION,
   TIPOS_MOVIMIENTO_VALES,
   TIPOS_PROCESO,
-  TIPOS_RECLUTAMIENTO,
   TIPOS_VACANTE,
 } from "./domain/options";
 import { ensureBudgetRows } from "./domain/budget";
@@ -107,12 +88,10 @@ import { createJsonBlob } from "./importExport/jsonExport";
 import { buildExportSheets } from "./importExport/xlsxExport";
 import { xlsxSheetToObjects, type XlsxParseResult } from "./importExport/xlsxImport";
 import { DataTable as Table } from "./components/tables/DataTable";
-import { DateInput } from "./components/forms/DateInput";
-import { Field, Input, Select, Textarea, INPUT_BASE } from "./components/forms/fields";
+import { Select, INPUT_BASE } from "./components/forms/fields";
 import {
   ConfirmDialog,
   ErrorBoundary,
-  ExpandableSection,
   KpiCard as KpiCardUI,
   KpiGroup,
   LoadingSpinner,
@@ -126,7 +105,6 @@ import {
 import { login as authLogin, getSession, logout as authLogout, refreshSession } from "./auth/authService";
 import { can } from "./auth/permissions";
 import { logAudit } from "./audit/auditService";
-import { ValidatedInput } from "./components/forms/ValidatedForm";
 
 const ChartsPanel = React.lazy(() => import("./components/dashboard/ChartsPanel"));
 

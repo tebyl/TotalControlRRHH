@@ -5,7 +5,7 @@ import { DateInput } from "../components/forms/DateInput";
 import { ValidatedInput } from "../components/forms/ValidatedForm";
 import { validateGeneral, notifyValidationError, FormMessages, SelectContact } from "../shared/formHelpers";
 import type { VError } from "../shared/formTypes";
-import { BLOQUEOS, ESTADOS_PRACTICANTE, PRIORIDADES } from "../domain/options";
+import { BLOQUEOS, ESTADOS_PRACTICANTE } from "../domain/options";
 
 export function FormPracticantes({ data, editItem, closeModal, saveItem }: any) {
   const { form, set } = useForm({ nombre: "", area: "", especialidad: "", fechaInicio: "", fechaTermino: "", costoMensual: 0, estado: "Por buscar", responsableId: "", proximoPaso: "", fechaProximaAccion: "", bloqueadoPor: "Sin bloqueo", observaciones: "" }, editItem);

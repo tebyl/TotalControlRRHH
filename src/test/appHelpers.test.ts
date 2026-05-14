@@ -125,12 +125,12 @@ describe("isClosedRecord", () => {
 // ── markRecordClosed ─────────────────────────────────
 describe("markRecordClosed", () => {
   it("sets estado to closed state", () => {
-    const result = markRecordClosed("cursos", { id: "1", estado: "En progreso" }, "Cerrado", "2026-05-14");
+    const result = markRecordClosed("cursos", { id: "1", estado: "En progreso" }, "Cerrado", "2026-05-14") as any;
     expect(result.estado).toBe("Cerrado");
     expect(result.ultimaActualizacion).toBe("2026-05-14");
   });
   it("marks diplomas with BUK fields", () => {
-    const result = markRecordClosed("diplomas", { id: "1" }, "Subido", "2026-05-14");
+    const result = markRecordClosed("diplomas", { id: "1" }, "Subido", "2026-05-14") as any;
     expect(result.estadoBUK).toBe("Subido");
     expect(result.etapa).toBe("Completado");
     expect(result.fechaSubidaBUK).toBe("2026-05-14");
