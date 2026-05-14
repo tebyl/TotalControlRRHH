@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { cn } from "./utils/cn";
 import {
   ahora,
+  createDataToSave,
   duplicateRecord,
   durMesesEntre,
   genId,
@@ -33,105 +34,115 @@ import type {
   ValeGas,
   ValeGasOrg,
 } from "./domain/types";
+import {
+  BLOQUEOS,
+  CATEGORIAS_OC,
+  ESTADOS_BUK,
+  ESTADOS_CURSO,
+  ESTADOS_DIPLOMA,
+  ESTADOS_EVALUACION,
+  ESTADOS_OC,
+  ESTADOS_PRACTICANTE,
+  ESTADOS_PROCESO_RECLUTAMIENTO,
+  ESTADOS_VALE_GAS,
+  ETAPAS_COMPLETADAS_VALUES,
+  ETAPAS_NO_APLICA_VALUES,
+  ETAPAS_RECLUTAMIENTO,
+  MESES,
+  OPTS_CARTA_OFERTA,
+  OPTS_ENTREVISTA,
+  OPTS_ENVIO_CARTA,
+  OPTS_PROCESO_BUK,
+  OPTS_REVISADO_PPTO,
+  OPTS_SELECCION_CV,
+  OPTS_SI_NO,
+  OPTS_TEST,
+  ORIGENES_CURSO,
+  PLANTAS_CENTROS,
+  PRIORIDADES,
+  RELACIONES,
+  RESULTADOS_EVALUACION,
+  TIPOS_CAPTURA,
+  TIPOS_DOCUMENTO,
+  TIPOS_EVALUACION,
+  TIPOS_MOVIMIENTO_VALES,
+  TIPOS_PROCESO,
+  TIPOS_RECLUTAMIENTO,
+  TIPOS_VACANTE,
+} from "./domain/options";
 import { ensureBudgetRows } from "./domain/budget";
 import { createBackup, getLocalBackups, saveLocalBackups } from "./storage/backupStorage";
-import { readStorageJSON, removeStorageKey, saveAppData, STORAGE_KEY } from "./storage/localStorage";
+import { readStorageJSON, removeStorageKey, saveAppData, writeStorageJSON, STORAGE_KEY } from "./storage/localStorage";
 import { migrateData } from "./storage/migrations";
+import {
+  cachePassphrase,
+  clearCachedPassphrase,
+  decryptAppData,
+  encryptAppData,
+  getCachedPassphrase,
+  isEncryptedPayload,
+  type EncryptedPayload,
+} from "./storage/encryption";
 import { createJsonBlob } from "./importExport/jsonExport";
 import { buildExportSheets } from "./importExport/xlsxExport";
 import { xlsxSheetToObjects, type XlsxParseResult } from "./importExport/xlsxImport";
 import { DataTable as Table } from "./components/tables/DataTable";
 import { DateInput } from "./components/forms/DateInput";
+import { Field, Input, Select, Textarea, INPUT_BASE } from "./components/forms/fields";
 import {
+  ConfirmDialog,
+  ExpandableSection,
   KpiCard as KpiCardUI,
+  KpiGroup,
+  LoadingSpinner,
+  Modal,
   PageHeader,
   SectionCard,
-  KpiGroup,
+  SkeletonCard,
+  SkeletonTable,
+  ToastContainer,
 } from "./components/ui";
 import { login as authLogin, getSession, logout as authLogout, refreshSession } from "./auth/authService";
 import { can } from "./auth/permissions";
 import { logAudit } from "./audit/auditService";
+import { ValidatedInput } from "./components/forms/ValidatedForm";
 
-import * as XLSX from "xlsx";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  ArcElement,
-  Title,
-  Tooltip,
-  Legend,
-} from "chart.js";
-import { Bar, Doughnut } from "react-chartjs-2";
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
+const ChartsPanel = React.lazy(() => import("./components/dashboard/ChartsPanel"));
 
 // ──────────────────────────────────────────────
 // CONSTANTS
 // ──────────────────────────────────────────────
 
-const PRIORIDADES = ["P1 Crítico", "P2 Alto", "P3 Medio", "P4 Bajo"];
-const ESTADOS_CURSO = ["Pendiente revisar", "En cotización", "En aprobación", "Programado", "Ejecutado", "Cerrado", "Detenido"];
-const ESTADOS_OC = ["Pendiente crear", "Solicitada", "En aprobación", "Emitida", "Enviada proveedor", "Cerrada", "Detenida"];
-const CATEGORIAS_OC = ["Curso / Capacitación", "Evento", "Actividad de bienestar", "Kit de bienvenida", "Artículos / Insumos", "Evaluación psicolaboral", "Servicio profesional", "Uniformes / EPP", "Tecnología / Software", "Otro"];
-const ESTADOS_PRACTICANTE = ["Por buscar", "En reclutamiento", "Seleccionado", "Activo", "Finalizado", "Detenido"];
-const ESTADOS_DIPLOMA = ["Pedir a la OTEC", "Enviar o pedir al participante", "Subir a BUK", "Completado", "Detenido"];
-const ESTADOS_BUK = ["Pendiente subir", "Subido", "Rechazado", "No aplica"];
-const ESTADOS_EVALUACION = ["Pendiente solicitar", "Solicitada", "Agendada", "Realizada", "Informe recibido", "En revisión", "Cerrada", "Detenida"];
-const RESULTADOS_EVALUACION = ["Recomendado", "Recomendado con observaciones", "No recomendado", "Pendiente", "No aplica"];
-const TIPOS_EVALUACION = ["Psicolaboral", "Referencias laborales", "Evaluación técnica", "Evaluación mixta","Hogan", "Otro"];
-const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-const ORIGENES_CURSO = ["DNC", "Carta Gantt", "Urgente no planificado", "Academia Molineria","No planificado necesario", "Emergente por operación", "Requerimiento legal", "Solicitud jefatura", "Reprogramado", "Otro"];
-const BLOQUEOS = ["Sin bloqueo", "Falta aprobación", "Falta OC", "Falta cotización", "Falta OTEC", "Falta participante", "Falta jefatura", "Falta presupuesto", "Falta subir a BUK", "Falta candidato", "Falta proveedor", "Falta informe", "Otro"];
-const RELACIONES = ["Interno", "OTEC", "Participante", "Jefatura", "Compras", "Finanzas", "RRHH", "BUK", "Psicólogo / Proveedor evaluación", "Otro"];
-const TIPOS_PROCESO = ["Curso", "OC", "Presupuesto", "Practicante", "Reclutamiento", "Diploma / certificado / licencia", "BUK", "Otro"];
-const TIPOS_DOCUMENTO = ["Diploma", "Certificado", "Licencia", "Otro"];
-const ESTADOS_VALE_GAS = ["Pendiente entregar", "Entregado", "En descuento", "Cerrado", "Detenido"];
-const TIPOS_MOVIMIENTO_VALES = ["Ingreso de vales", "Ajuste positivo", "Ajuste negativo", "Corrección inventario", "Otro"];
-const TIPOS_RECLUTAMIENTO = ["Interno", "Externo", "Promoción interna", "Reemplazo interno", "Otro", "Por definir"];
-const PLANTAS_CENTROS = ["Planta Bio Bio", "Planta Freire", "Planta Perquenco", "Perquenco Carretera", "Planta Lautaro", "Lautaro Copeval", "Planta Rio Bueno", "Planta Victoria", "Casa Matriz", "Otro"];
-const TIPOS_VACANTE = ["Cosecha", "Reemplazo", "Fijo", "Temporal", "Práctica", "Proyecto", "Otro", "Por definir"];
-const ESTADOS_PROCESO_RECLUTAMIENTO = ["Abierto", "Cerrado", "Pausado", "Desistido"];
-const OPTS_SI_NO = ["Sí", "No", "Pendiente", "N/A"];
-const OPTS_ENTREVISTA = ["Pendiente", "Agendada", "Realizada", "N/A"];
-const OPTS_TEST = ["Pendiente", "Solicitado", "Realizado", "N/A"];
-const OPTS_SELECCION_CV = ["Pendiente", "En proceso", "Finalizado", "N/A"];
-const OPTS_CARTA_OFERTA = ["Pendiente", "Solicitada", "Emitida", "N/A"];
-const OPTS_ENVIO_CARTA = ["Pendiente", "Realizado", "N/A"];
-const OPTS_PROCESO_BUK = ["Sí", "No", "Confidencial", "Pendiente", "N/A"];
-const OPTS_REVISADO_PPTO = ["Pendiente", "Aceptado", "Rechazado", "N/A"];
-const ETAPAS_RECLUTAMIENTO = [
-  { key: "revisadoPPTO", label: "Revisado PPTO" },
-  { key: "procesoBuk", label: "Proceso en BUK" },
-  { key: "publicado", label: "Publicado" },
-  { key: "seleccionCV", label: "Selección de CV" },
-  { key: "cvSeleccionadoBuk", label: "CV Seleccionado en BUK" },
-  { key: "entrevistaJefatura", label: "Entrevista Jefatura" },
-  { key: "entrevistaGP", label: "Entrevista GP" },
-  { key: "testPsicolaboral", label: "Test Psicolaboral" },
-  { key: "testHogan", label: "Test Hogan" },
-  { key: "seleccionado", label: "Seleccionado" },
-  { key: "cartaOferta", label: "Carta Oferta" },
-  { key: "envioCartaOferta", label: "Envío carta oferta" },
-  { key: "firmaCartaOferta", label: "Firma Carta Oferta" },
-];
+let xlsxModule: typeof import("xlsx") | null = null;
+const getXlsx = async () => {
+  if (!xlsxModule) {
+    xlsxModule = await import("xlsx");
+  }
+  return xlsxModule;
+};
 
 // ──────────────────────────────────────────────
 // FORM COMPONENTS (Global)
 // ──────────────────────────────────────────────
 
-// htmlFor links <label> to its input for accessibility (clicking label focuses the input)
-const Field = ({ label, children, error, required, htmlFor }: { label: string; children: React.ReactNode; error?: string; required?: boolean; htmlFor?: string }) => (
-  <div className="flex flex-col gap-1.5">
-    <label htmlFor={htmlFor} className="text-sm font-medium text-slate-700">{label}{required && <span className="text-red-400 ml-0.5">*</span>}</label>
-    <div className={error ? "[&>input]:border-red-300 [&>select]:border-red-300 [&>textarea]:border-red-300" : ""}>{children}</div>
-    {error && <p id={htmlFor ? `${htmlFor}-error` : undefined} className="text-xs text-red-600 mt-0.5">{error}</p>}
-  </div>
-);
-
 // ── VALIDATION HELPERS ──────────────────────────
 type VError = Record<string, string>;
+type ToastType = "success" | "error" | "warning" | "info";
+type ToastItem = {
+  id: string;
+  type: ToastType;
+  title: string;
+  message?: string;
+  action?: { label: string; onClick: () => void };
+};
+type ConfirmState = {
+  title: string;
+  message?: string;
+  onConfirm: () => void;
+  variant?: "default" | "danger" | "warning";
+  confirmLabel?: string;
+  cancelLabel?: string;
+};
 
 function validateGeneral(form: any, mainFieldKey: string, mainFieldLabel: string): { errors: VError; warnings: string[] } {
   const errors: VError = {};
@@ -176,6 +187,13 @@ function validateGeneral(form: any, mainFieldKey: string, mainFieldLabel: string
   return { errors, warnings };
 }
 
+const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+const isValidPhone = (value: string) => /^[0-9+()\s-]{6,}$/.test(value);
+const isValidRut = (value: string) => /^[0-9]{1,2}\.?[0-9]{3}\.?[0-9]{3}-?[0-9kK]$/.test(value);
+
+// Placeholder so Form components can call it; inline FormMessages already shows errors.
+function notifyValidationError() {}
+
 function FormMessages({ errors, warnings }: { errors: VError; warnings: string[] }) {
   const errList = Object.values(errors);
   if (errList.length === 0 && warnings.length === 0) return null;
@@ -195,10 +213,6 @@ function FormMessages({ errors, warnings }: { errors: VError; warnings: string[]
     </div>
   );
 }
-const INPUT_BASE = "w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm bg-white text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100 transition-colors";
-const Input = ({ className, ...props }: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} className={cn(INPUT_BASE, className)} />;
-const Select = ({ value, onChange, options, placeholder, className }: { value: string; onChange: (v: string) => void; options: string[]; placeholder?: string; className?: string }) => <select value={value} onChange={e => onChange(e.target.value)} className={cn(INPUT_BASE, className)}><option value="">{placeholder}</option>{options.map(o => <option key={o} value={o}>{o}</option>)}</select>;
-const Textarea = ({ className, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...props} className={cn(INPUT_BASE, "resize-y", className)} rows={props.rows ?? 3} />;
 
 // ──────────────────────────────────────────────
 // GLOBAL COMPONENTS (need data passed as prop)
@@ -219,8 +233,6 @@ function SelectContact({ value, onChange, data }: { value: string; onChange: (v:
 
 const fmtCLP = (n: number) => n != null ? "$" + n.toLocaleString("es-CL") : "-";
 
-const ETAPAS_COMPLETADAS_VALUES = ["Sí", "Realizado", "Realizada", "Finalizado", "Emitida", "Aceptado", "Solicitada"];
-const ETAPAS_NO_APLICA_VALUES = ["N/A"];
 
 function calcReclutamientoAvance(r: ProcesoReclutamiento): { pct: number; etapaActual: string } {
   if (r.proceso === "Cerrado") return { pct: 100, etapaActual: "Cerrado" };
@@ -391,23 +403,16 @@ function crearDatosEjemplo(): AppData {
   };
 }
 
-function cargarDatos(): AppData {
-  const raw = readStorageJSON<unknown>(STORAGE_KEY);
-  if (raw) {
-    const parsed = migrateData(raw, crearDatosEjemplo());
-    parsed.presupuesto = ensureBudgetRows(parsed.presupuesto);
-    return parsed;
-  }
-  const de = crearDatosEjemplo();
-  de.presupuesto = ensureBudgetRows(de.presupuesto);
-  return de;
+function hydrateData(raw: unknown): AppData {
+  const parsed = migrateData(raw, crearDatosEjemplo());
+  parsed.presupuesto = ensureBudgetRows(parsed.presupuesto);
+  return parsed;
 }
 
-function guardarDatos(data: AppData) {
-  saveAppData(STORAGE_KEY, data);
+function limpiarDatos() {
+  removeStorageKey(STORAGE_KEY);
+  clearCachedPassphrase();
 }
-
-function limpiarDatos() { removeStorageKey(STORAGE_KEY); }
 
 // ──────────────────────────────────────────────
 // COMPONENTS
@@ -435,43 +440,6 @@ function SemaforoBadge({ fecha }: { fecha: string }) {
       <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
       {s.label}
     </span>
-  );
-}
-
-function Modal({ open, onClose, title, children, wide }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode; wide?: boolean }) {
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-8 bg-black/30 backdrop-blur-sm" onClick={onClose}>
-      <div className={`bg-white rounded-2xl shadow-lg shadow-slate-200/50 max-h-[88vh] overflow-y-auto w-full ${wide ? "max-w-4xl" : "max-w-2xl"}`} onClick={e => e.stopPropagation()}>
-        <div className="sticky top-0 bg-white border-b border-[#F1F5F9] px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
-          <h2 className="text-lg font-semibold text-slate-800">{title}</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-2xl leading-none w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-50 transition-colors">&times;</button>
-        </div>
-        <div className="px-6 py-5">{children}</div>
-      </div>
-    </div>
-  );
-}
-
-function ConfirmModal({ open, message, onConfirm, onCancel }: { open: boolean; message: string; onConfirm: () => void; onCancel: () => void }) {
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onCancel(); };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [open, onCancel]);
-
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50" onClick={onCancel} aria-hidden="true">
-      <div role="dialog" aria-modal="true" aria-label="Confirmar acción" className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
-        <p className="text-slate-800 mb-4">{message}</p>
-        <div className="flex gap-3 justify-end">
-          <button onClick={onCancel} className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition">Cancelar</button>
-          <button onClick={onConfirm} className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition">Confirmar</button>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -529,6 +497,45 @@ function Login({ onLogin }: { onLogin: () => void }) {
   );
 }
 
+function EncryptionUnlock({
+  passphrase,
+  setPassphrase,
+  error,
+  onUnlock,
+}: {
+  passphrase: string;
+  setPassphrase: (value: string) => void;
+  error: string;
+  onUnlock: () => void;
+}) {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-bold text-slate-800">Datos protegidos</h1>
+          <p className="text-slate-500 text-sm mt-1">Ingresa la clave local para desbloquear la información.</p>
+        </div>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">Clave de cifrado</label>
+            <input
+              type="password"
+              value={passphrase}
+              onChange={(e) => setPassphrase(e.target.value)}
+              className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="••••••••"
+              autoComplete="current-password"
+            />
+          </div>
+          {error && <p className="text-red-600 text-sm">{error}</p>}
+          <button onClick={onUnlock} className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-semibold">Desbloquear</button>
+        </div>
+        <p className="text-xs text-slate-400 text-center mt-4">La clave no se guarda en el navegador; se conserva solo durante esta sesión.</p>
+      </div>
+    </div>
+  );
+}
+
 // ──────────────────────────────────────────────
 // MAIN APP
 // ──────────────────────────────────────────────
@@ -566,19 +573,36 @@ const navGroups: NavGroup[] = [
 
 export default function App() {
   const [authenticated, setAuthenticated] = useState(() => getSession() !== null);
-  const [data, setData] = useState<AppData>(cargarDatos);
+  const [data, setData] = useState<AppData>(() => {
+    const de = crearDatosEjemplo();
+    de.presupuesto = ensureBudgetRows(de.presupuesto);
+    return de;
+  });
+  const [dataReady, setDataReady] = useState(false);
+  const [encryptionEnabled, setEncryptionEnabled] = useState(false);
+  const [encryptedPayload, setEncryptedPayload] = useState<EncryptedPayload | null>(null);
+  const [unlockOpen, setUnlockOpen] = useState(false);
+  const [unlockPassphrase, setUnlockPassphrase] = useState("");
+  const [unlockError, setUnlockError] = useState("");
+  const [encryptionSetupOpen, setEncryptionSetupOpen] = useState(false);
+  const [encryptionPassphrase, setEncryptionPassphrase] = useState("");
+  const [encryptionPassphraseConfirm, setEncryptionPassphraseConfirm] = useState("");
+  const [encryptionSetupError, setEncryptionSetupError] = useState("");
   const [activeModulo, setActiveModulo] = useState<Modulo>("inicio");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [focusMode, setFocusMode] = useState(() => localStorage.getItem("kata_focus_mode") === "true");
   const [search, setSearch] = useState("");
-  const [confirm, setConfirm] = useState<{ msg: string; cb: () => void } | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const [tableLoading, setTableLoading] = useState(false);
+  const [exporting, setExporting] = useState<null | "json" | "jsonAnon" | "jsonSummary" | "xlsx" | "xlsxAnon" | "template" | "cleanTemplate">(
+    null
+  );
   const [modalModulo, setModalModulo] = useState<string>("");
   const [editItem, setEditItem] = useState<any>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
   const [captureOpen, setCaptureOpen] = useState(false);
-  const [lastCapturedModulo, setLastCapturedModulo] = useState<Modulo | null>(null);
 
   const [backups, setBackups] = useState<BackupItem[]>(() => getLocalBackups());
   const [lastJSONExport, setLastJSONExport] = useState<string>(() => localStorage.getItem("kata_last_json_export") || "");
@@ -589,6 +613,51 @@ export default function App() {
   // Role derived from session — cheap sessionStorage read, no memoization needed
   const currentRole = authenticated ? getSession()?.role : undefined;
 
+  // Initial data load (supports encrypted payload)
+  useEffect(() => {
+    let active = true;
+    const init = async () => {
+      const raw = readStorageJSON<unknown>(STORAGE_KEY);
+      if (!raw) {
+        const de = crearDatosEjemplo();
+        de.presupuesto = ensureBudgetRows(de.presupuesto);
+        if (!active) return;
+        setData(de);
+        setDataReady(true);
+        return;
+      }
+      if (isEncryptedPayload(raw)) {
+        if (!active) return;
+        setEncryptionEnabled(true);
+        setEncryptedPayload(raw);
+        const cached = getCachedPassphrase();
+        if (!cached) {
+          setUnlockOpen(true);
+          return;
+        }
+        try {
+          const decrypted = await decryptAppData(raw, cached);
+          if (!active) return;
+          setData(hydrateData(decrypted));
+          setDataReady(true);
+          setUnlockOpen(false);
+        } catch {
+          if (!active) return;
+          setUnlockError("Clave incorrecta o datos corruptos.");
+          setUnlockOpen(true);
+        }
+        return;
+      }
+      if (!active) return;
+      setEncryptionEnabled(false);
+      setEncryptedPayload(null);
+      setData(hydrateData(raw));
+      setDataReady(true);
+    };
+    void init();
+    return () => { active = false; };
+  }, []);
+
   // Session expiry check — every 60 s, only while authenticated
   useEffect(() => {
     if (!authenticated) return;
@@ -597,6 +666,7 @@ export default function App() {
         logAudit("logout", { detail: "Sesión expirada automáticamente" });
         authLogout();
         setAuthenticated(false);
+        toastShow("Sesión expirada", { type: "warning", message: "Por seguridad, inicia sesión nuevamente." });
       }
     }, 60_000);
     return () => clearInterval(interval);
@@ -615,36 +685,245 @@ export default function App() {
     return () => { window.removeEventListener("click", handler); window.removeEventListener("keydown", handler); };
   }, [authenticated]);
 
-  useEffect(() => { guardarDatos(data); }, [data]);
+  useEffect(() => {
+    if (!dataReady) return;
+    if (!encryptionEnabled) {
+      saveAppData(STORAGE_KEY, data);
+      return;
+    }
+    const passphrase = getCachedPassphrase();
+    if (!passphrase) return;
+    const dataToSave = createDataToSave(data);
+    void (async () => {
+      try {
+        const encrypted = await encryptAppData(dataToSave, passphrase);
+        writeStorageJSON(STORAGE_KEY, encrypted);
+      } catch (error) {
+        console.warn("[storage] No se pudo cifrar datos", error);
+      }
+    })();
+  }, [data, dataReady, encryptionEnabled]);
 
-  const toastShow = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 2500); };
+  useEffect(() => {
+    if (!dataReady) return;
+    setTableLoading(true);
+    const timer = setTimeout(() => setTableLoading(false), 200);
+    return () => clearTimeout(timer);
+  }, [activeModulo, search, dataReady]);
+
+  const toastShow = (
+    title: string,
+    options?: {
+      type?: ToastType;
+      message?: string;
+      action?: { label: string; onClick: () => void };
+      duration?: number;
+    }
+  ) => {
+    const { type = "info", message, action, duration = 2500 } = options || {};
+    const id = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    setToasts(prev => {
+      if (prev.some(t => t.title === title && t.message === message)) return prev;
+      return [...prev, { id, type, title, message, action }];
+    });
+    if (duration > 0) {
+      setTimeout(() => {
+        setToasts(prev => prev.filter(t => t.id !== id));
+      }, duration);
+    }
+  };
+  const removeToast = (id: string) => setToasts(prev => prev.filter(t => t.id !== id));
 
   const runBackupAndToast = (motivo: string) => {
     const success = createBackup(data, motivo);
     if (!success) {
-      toastShow("localStorage lleno, libera espacio o elimina respaldos antiguos");
+      toastShow("No se pudo crear respaldo", {
+        type: "error",
+        message: "El almacenamiento local está lleno. Libera espacio o elimina respaldos antiguos.",
+      });
     } else {
       setBackups(getLocalBackups());
     }
   };
 
+  const openEncryptionSetup = () => {
+    setEncryptionSetupError("");
+    setEncryptionPassphrase("");
+    setEncryptionPassphraseConfirm("");
+    setEncryptionSetupOpen(true);
+  };
+
+  const handleEnableEncryption = async () => {
+    const passphrase = encryptionPassphrase.trim();
+    if (passphrase.length < 8) { setEncryptionSetupError("La clave debe tener al menos 8 caracteres."); return; }
+    if (passphrase !== encryptionPassphraseConfirm.trim()) { setEncryptionSetupError("Las claves no coinciden."); return; }
+    try {
+      cachePassphrase(passphrase);
+      const encrypted = await encryptAppData(createDataToSave(data), passphrase);
+      writeStorageJSON(STORAGE_KEY, encrypted);
+      setEncryptionEnabled(true);
+      setEncryptedPayload(encrypted);
+      setEncryptionSetupOpen(false);
+      toastShow("Cifrado local activado", { type: "success" });
+    } catch {
+      setEncryptionSetupError("No se pudo activar el cifrado.");
+    }
+  };
+
+  const handleDisableEncryption = () => {
+    setConfirm({
+      title: "Desactivar cifrado local",
+      message: "Los datos quedarán en texto plano en este navegador.",
+      variant: "warning",
+      confirmLabel: "Desactivar",
+      onConfirm: () => {
+        clearCachedPassphrase();
+        setEncryptionEnabled(false);
+        setEncryptedPayload(null);
+        setUnlockOpen(false);
+        setUnlockError("");
+        setUnlockPassphrase("");
+        saveAppData(STORAGE_KEY, data);
+        toastShow("Cifrado local desactivado", { type: "info" });
+        setConfirm(null);
+      },
+    });
+  };
+
+  const handleUnlock = async () => {
+    if (!encryptedPayload) return;
+    const passphrase = unlockPassphrase.trim();
+    if (!passphrase) { setUnlockError("Ingresa la clave de cifrado."); return; }
+    try {
+      const decrypted = await decryptAppData(encryptedPayload, passphrase);
+      setData(hydrateData(decrypted));
+      setDataReady(true);
+      cachePassphrase(passphrase);
+      setUnlockPassphrase("");
+      setUnlockError("");
+      setUnlockOpen(false);
+    } catch {
+      setUnlockError("Clave incorrecta. Intenta nuevamente.");
+    }
+  };
+
   // ── EXPORT / IMPORT ────────────────────────
 
+  const confirmSensitiveExport = (label: string, cb: () => void) => {
+    setConfirm({
+      title: "Confirmar exportación sensible",
+      message: `La exportación ${label} incluye datos sensibles (RUT, correo, teléfono y nombres). Confirma que tienes autorización y que guardarás el archivo de forma segura.`,
+      variant: "warning",
+      confirmLabel: "Sí, exportar",
+      onConfirm: () => { cb(); setConfirm(null); },
+    });
+  };
+
+  const anonymizeData = (input: AppData): AppData => {
+    const redact = (value: string) => (value ? "REDACTADO" : "");
+    return {
+      ...input,
+      cursos: input.cursos.map(c => ({ ...c, solicitante: redact(c.solicitante) })),
+      practicantes: input.practicantes.map(p => ({ ...p, nombre: redact(p.nombre) })),
+      diplomas: input.diplomas.map(d => ({ ...d, participante: redact(d.participante) })),
+      contactos: input.contactos.map(c => ({
+        ...c,
+        nombre: redact(c.nombre),
+        correo: redact(c.correo),
+        telefono: redact(c.telefono),
+      })),
+      evaluacionesPsicolaborales: input.evaluacionesPsicolaborales.map(e => ({
+        ...e,
+        candidato: redact(e.candidato),
+        rut: redact(e.rut),
+      })),
+      valesGas: input.valesGas.map(v => ({ ...v, colaborador: redact(v.colaborador) })),
+      reclutamiento: input.reclutamiento.map(r => ({ ...r, reclutador: redact(r.reclutador) })),
+    };
+  };
+
+  const buildSummary = (input: AppData) => ({
+    generadoEn: ahora(),
+    versionEsquema: input.meta.version,
+    conteos: {
+      cursos: input.cursos.length,
+      ocs: input.ocs.length,
+      practicantes: input.practicantes.length,
+      presupuesto: input.presupuesto.length,
+      procesos: input.procesos.length,
+      diplomas: input.diplomas.length,
+      cargaSemanal: input.cargaSemanal.length,
+      contactos: input.contactos.length,
+      evaluacionesPsicolaborales: input.evaluacionesPsicolaborales.length,
+      valesGas: input.valesGas.length,
+      valesGasOrganizacion: input.valesGasOrganizacion.length,
+      reclutamiento: input.reclutamiento.length,
+    },
+  });
+
+  const exportJSONFull = () => {
+    setExporting("json");
+    try {
+      logAudit("data:export", { detail: "Exportación JSON completa" });
+      const backupFileName = `total-control-rh-backup-${hoy()}.json`;
+      const blob = createJsonBlob(data);
+      const a = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      a.href = url;
+      a.download = backupFileName;
+      a.click();
+      URL.revokeObjectURL(url);
+      const timeNow = ahora();
+      localStorage.setItem("kata_last_json_export", timeNow);
+      setLastJSONExport(timeNow);
+      setData(d => ({ ...d, meta: { ...d.meta, ultimaExportacion: timeNow } }));
+      toastShow("JSON exportado correctamente", { type: "success" });
+    } finally {
+      setExporting(null);
+    }
+  };
+
   const exportJSON = () => {
-    logAudit("data:export", { detail: "Exportación JSON completa" });
-    const backupFileName = `total-control-rh-backup-${hoy()}.json`;
-    const blob = createJsonBlob(data);
-    const a = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    a.href = url;
-    a.download = backupFileName;
-    a.click();
-    URL.revokeObjectURL(url);
-    const timeNow = ahora();
-    localStorage.setItem("kata_last_json_export", timeNow);
-    setLastJSONExport(timeNow);
-    setData(d => ({ ...d, meta: { ...d.meta, ultimaExportacion: timeNow } }));
-    toastShow("JSON exportado correctamente");
+    if (!canExportFull) { toastShow("Permiso insuficiente", { type: "error", message: "No tienes permiso para exportar datos completos." }); return; }
+    confirmSensitiveExport("JSON completo", exportJSONFull);
+  };
+
+  const exportJSONAnonymized = () => {
+    if (!canExportAnonymized) { toastShow("Permiso insuficiente", { type: "error", message: "No tienes permiso para exportar datos anonimizados." }); return; }
+    setExporting("jsonAnon");
+    try {
+      logAudit("data:export", { detail: "Exportación JSON anonimizada" });
+      const backupFileName = `total-control-rh-backup-anon-${hoy()}.json`;
+      const blob = createJsonBlob(anonymizeData(data));
+      const a = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      a.href = url;
+      a.download = backupFileName;
+      a.click();
+      URL.revokeObjectURL(url);
+      toastShow("JSON anonimizado exportado correctamente", { type: "success" });
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  const exportJSONSummary = () => {
+    if (!canExportSummary) { toastShow("Permiso insuficiente", { type: "error", message: "No tienes permiso para exportar resúmenes." }); return; }
+    setExporting("jsonSummary");
+    try {
+      logAudit("data:export", { detail: "Exportación JSON resumen" });
+      const summaryFileName = `total-control-rh-resumen-${hoy()}.json`;
+      const blob = new Blob([JSON.stringify(buildSummary(data), null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      a.href = url;
+      a.download = summaryFileName;
+      a.click();
+      URL.revokeObjectURL(url);
+      toastShow("Resumen exportado correctamente", { type: "success" });
+    } finally {
+      setExporting(null);
+    }
   };
 
   const importJSON = () => {
@@ -657,72 +936,121 @@ export default function App() {
         try {
           const parsed = JSON.parse(ev.target?.result as string);
           if (!parsed || typeof parsed !== "object") {
-            toastShow("Respaldo corrupto o inválido");
+            toastShow("Respaldo corrupto o inválido", { type: "error" });
             return;
           }
           const imported = migrateData(parsed, crearDatosEjemplo());
-          runBackupAndToast("importar");
-          setData(imported); toastShow("Datos importados exitosamente");
-        } catch { toastShow("Error al leer el archivo JSON"); }
+          setConfirm({
+            title: "Confirmar importación JSON",
+            message: "Se reemplazarán los datos actuales. Se creará un respaldo automático antes de importar.",
+            variant: "warning",
+            confirmLabel: "Importar",
+            onConfirm: () => {
+              runBackupAndToast("importar");
+              setData(imported);
+              toastShow("Datos importados exitosamente", { type: "success" });
+              setConfirm(null);
+            },
+          });
+        } catch {
+          toastShow("Error al leer el archivo JSON", { type: "error", message: "Verifica que el archivo sea válido." });
+        }
       };
       reader.readAsText(file);
     };
     input.click();
   };
 
+  const exportXLSXFull = async () => {
+    setExporting("xlsx");
+    try {
+      logAudit("data:export", { detail: "Exportación XLSX completa" });
+      const XLSX = await getXlsx();
+      const wb = XLSX.utils.book_new();
+      const sheets = buildExportSheets(data, getResponsableName);
+      sheets.forEach(([name, rows]) => { const ws = XLSX.utils.json_to_sheet(rows); XLSX.utils.book_append_sheet(wb, ws, name); });
+      XLSX.writeFile(wb, `control_operativo_kata_v5_${hoy()}.xlsx`);
+      const timeNow = ahora();
+      localStorage.setItem("kata_last_xlsx_export", timeNow);
+      setLastXLSXExport(timeNow);
+      setData(d => ({ ...d, meta: { ...d.meta, ultimaExportacion: timeNow } }));
+      toastShow("XLSX exportado correctamente", { type: "success" });
+    } finally {
+      setExporting(null);
+    }
+  };
+
   const exportXLSX = () => {
-    logAudit("data:export", { detail: "Exportación XLSX completa" });
-    const wb = XLSX.utils.book_new();
-    const sheets = buildExportSheets(data, getResponsableName);
-    sheets.forEach(([name, rows]) => { const ws = XLSX.utils.json_to_sheet(rows); XLSX.utils.book_append_sheet(wb, ws, name); });
-    XLSX.writeFile(wb, `control_operativo_kata_v5_${hoy()}.xlsx`);
-    const timeNow = ahora();
-    localStorage.setItem("kata_last_xlsx_export", timeNow);
-    setLastXLSXExport(timeNow);
-    setData(d => ({ ...d, meta: { ...d.meta, ultimaExportacion: timeNow } }));
-    toastShow("XLSX exportado correctamente");
+    if (!canExportFull) { toastShow("Permiso insuficiente", { type: "error", message: "No tienes permiso para exportar datos completos." }); return; }
+    confirmSensitiveExport("XLSX completo", exportXLSXFull);
   };
 
-  const exportLimpia = () => {
-    const wb = XLSX.utils.book_new();
-    const headers: Record<string, string[]> = {
-      Cursos: ["id","curso","origen","area","solicitante","fechaSolicitud","fechaRequerida","estado","prioridad","nivelCritico","requiereOC","numeroOC","proveedor","responsable","proximaAccion","fechaProximaAccion","bloqueadoPor","ultimaActualizacion","observaciones"],
-      OCs: ["id","numeroOC","categoriaOC","cursoAsociado","proveedor","monto","fechaSolicitud","fechaLimite","estadoOC","prioridad","accionPendiente","responsable","bloqueadoPor","ultimaActualizacion","observaciones"],
-      Practicantes: ["id","nombre","area","especialidad","fechaInicio","fechaTermino","costoMensual","estado","responsable","proximoPaso","fechaProximaAccion","bloqueadoPor","ultimaActualizacion","observaciones"],
-      Presupuesto: ["id","concepto","presupuestoTotal","gastado","responsable","ultimaActualizacion","observaciones"],
-      Procesos: ["id","proceso","tipo","estadoActual","queFalta","responsable","fechaLimite","riesgo","prioridad","proximaAccion","fechaProximaAccion","bloqueadoPor","ultimaActualizacion","observaciones"],
-      Diplomas: ["id","cursoAsociado","participante","tipoDocumento","otec","etapa","fechaSolicitudOTEC","fechaRecepcionDoc","fechaEnvioParticipante","fechaSubidaBUK","estadoBUK","prioridad","responsable","proximaAccion","fechaProximaAccion","bloqueadoPor","ultimaActualizacion","observaciones"],
-      "Evaluaciones Psicolaborales": ["id","mes","ano","cargo","area","candidato","rut","tipoEvaluacion","proveedor","fechaSolicitud","fechaEvaluacion","fechaEntregaInforme","estado","resultado","prioridad","responsable","costo","requiereOC","numeroOC","proximaAccion","fechaProximaAccion","bloqueadoPor","ultimaActualizacion","observaciones"],
-      "Carga Semanal": ["id","semana","cursosPlanificados","cursosUrgentesNuevos","cursosNoPlanificados","ocsNuevas","diplomasPendientes","procesosBloqueados","comentario"],
-      Contactos: ["id","nombre","rol","areaEmpresa","correo","telefono","relacion","activo","observaciones"],
-      "Vales de Gas": ["id","colaborador","contactoId","area","periodo","fechaEntrega","totalValesAsignados","valesUsados","saldoVales","descuentoDiario","diasDescuento","totalDescontado","estado","responsable","fechaProximaRevision","observaciones","ultimaActualizacion"],
-      "Vales Gas Organización": ["id","fechaRegistro","periodo","tipoMovimiento","cantidadVales","motivo","responsable","observaciones","ultimaActualizacion"],
-      "Reclutamiento": ["id","reclutamiento","plantaCentro","tipoVacante","mesIngreso","revisadoPPTO","procesoBuk","publicado","seleccionCV","cvSeleccionadoBuk","entrevistaJefatura","entrevistaGP","testPsicolaboral","testHogan","seleccionado","cartaOferta","envioCartaOferta","firmaCartaOferta","fechaIngreso","reclutador","proceso","prioridad","bloqueadoPor","proximaAccion","fechaProximaAccion","observaciones","ultimaActualizacion"],
-    };
-    Object.entries(headers).forEach(([name, cols]) => { const ws = XLSX.utils.aoa_to_sheet([cols]); XLSX.utils.book_append_sheet(wb, ws, name); });
-    XLSX.writeFile(wb, `plantilla_limpia_kata_v5.xlsx`);
-    toastShow("Plantilla limpia descargada");
+  const exportXLSXAnonymized = async () => {
+    if (!canExportAnonymized) { toastShow("Permiso insuficiente", { type: "error", message: "No tienes permiso para exportar datos anonimizados." }); return; }
+    setExporting("xlsxAnon");
+    try {
+      logAudit("data:export", { detail: "Exportación XLSX anonimizada" });
+      const XLSX = await getXlsx();
+      const wb = XLSX.utils.book_new();
+      const anon = anonymizeData(data);
+      const sheets = buildExportSheets(anon, getResponsableName);
+      sheets.forEach(([name, rows]) => { const ws = XLSX.utils.json_to_sheet(rows); XLSX.utils.book_append_sheet(wb, ws, name); });
+      XLSX.writeFile(wb, `control_operativo_kata_v5_anon_${hoy()}.xlsx`);
+      toastShow("XLSX anonimizado exportado correctamente", { type: "success" });
+    } finally {
+      setExporting(null);
+    }
   };
 
-  const downloadXlsxTemplate = () => {
-    const wb = XLSX.utils.book_new();
-    const readmeData = [
-      ["TotalControlRH — Plantilla oficial de carga XLSX"],
-      [""],
-      ["INSTRUCCIONES:"],
-      ["1. No cambiar nombres de hojas."],
-      ["2. No cambiar encabezados de columnas."],
-      ["3. Completar una fila por registro."],
-      ["4. Las fechas deben ir en formato dd/mm/yyyy."],
-      ["5. Los montos deben ir como números (sin puntos de miles ni símbolos $)."],
-      ["6. Las columnas ID pueden dejarse vacías; la app generará IDs automáticamente."],
-      ["7. Si se deja responsable vacío, se usará 'Sin responsable'."],
-      ["8. Antes de importar, se recomienda exportar un respaldo JSON."],
-      ["9. Cada hoja corresponde a un módulo de la app."],
-      ["10. Modo fusión: registros con ID existente se actualizan; sin ID se crean como nuevos."],
-      ["11. Modo reemplazo: módulos presentes en el XLSX reemplazan la información actual."],
-      ["12. Las hojas no incluidas en el XLSX no serán modificadas."],
-    ];
+  const exportLimpia = async () => {
+    setExporting("cleanTemplate");
+    try {
+      const XLSX = await getXlsx();
+      const wb = XLSX.utils.book_new();
+      const headers: Record<string, string[]> = {
+        Cursos: ["id","curso","origen","area","solicitante","fechaSolicitud","fechaRequerida","estado","prioridad","nivelCritico","requiereOC","numeroOC","proveedor","responsable","proximaAccion","fechaProximaAccion","bloqueadoPor","ultimaActualizacion","observaciones"],
+        OCs: ["id","numeroOC","categoriaOC","cursoAsociado","proveedor","monto","fechaSolicitud","fechaLimite","estadoOC","prioridad","accionPendiente","responsable","bloqueadoPor","ultimaActualizacion","observaciones"],
+        Practicantes: ["id","nombre","area","especialidad","fechaInicio","fechaTermino","costoMensual","estado","responsable","proximoPaso","fechaProximaAccion","bloqueadoPor","ultimaActualizacion","observaciones"],
+        Presupuesto: ["id","concepto","presupuestoTotal","gastado","responsable","ultimaActualizacion","observaciones"],
+        Procesos: ["id","proceso","tipo","estadoActual","queFalta","responsable","fechaLimite","riesgo","prioridad","proximaAccion","fechaProximaAccion","bloqueadoPor","ultimaActualizacion","observaciones"],
+        Diplomas: ["id","cursoAsociado","participante","tipoDocumento","otec","etapa","fechaSolicitudOTEC","fechaRecepcionDoc","fechaEnvioParticipante","fechaSubidaBUK","estadoBUK","prioridad","responsable","proximaAccion","fechaProximaAccion","bloqueadoPor","ultimaActualizacion","observaciones"],
+        "Evaluaciones Psicolaborales": ["id","mes","ano","cargo","area","candidato","rut","tipoEvaluacion","proveedor","fechaSolicitud","fechaEvaluacion","fechaEntregaInforme","estado","resultado","prioridad","responsable","costo","requiereOC","numeroOC","proximaAccion","fechaProximaAccion","bloqueadoPor","ultimaActualizacion","observaciones"],
+        "Carga Semanal": ["id","semana","cursosPlanificados","cursosUrgentesNuevos","cursosNoPlanificados","ocsNuevas","diplomasPendientes","procesosBloqueados","comentario"],
+        Contactos: ["id","nombre","rol","areaEmpresa","correo","telefono","relacion","activo","observaciones"],
+        "Vales de Gas": ["id","colaborador","contactoId","area","periodo","fechaEntrega","totalValesAsignados","valesUsados","saldoVales","descuentoDiario","diasDescuento","totalDescontado","estado","responsable","fechaProximaRevision","observaciones","ultimaActualizacion"],
+        "Vales Gas Organización": ["id","fechaRegistro","periodo","tipoMovimiento","cantidadVales","motivo","responsable","observaciones","ultimaActualizacion"],
+        "Reclutamiento": ["id","reclutamiento","plantaCentro","tipoVacante","mesIngreso","revisadoPPTO","procesoBuk","publicado","seleccionCV","cvSeleccionadoBuk","entrevistaJefatura","entrevistaGP","testPsicolaboral","testHogan","seleccionado","cartaOferta","envioCartaOferta","firmaCartaOferta","fechaIngreso","reclutador","proceso","prioridad","bloqueadoPor","proximaAccion","fechaProximaAccion","observaciones","ultimaActualizacion"],
+      };
+      Object.entries(headers).forEach(([name, cols]) => { const ws = XLSX.utils.aoa_to_sheet([cols]); XLSX.utils.book_append_sheet(wb, ws, name); });
+      XLSX.writeFile(wb, `plantilla_limpia_kata_v5.xlsx`);
+      toastShow("Plantilla limpia descargada", { type: "success" });
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  const downloadXlsxTemplate = async () => {
+    setExporting("template");
+    try {
+      const XLSX = await getXlsx();
+      const wb = XLSX.utils.book_new();
+      const readmeData = [
+        ["PulsoLaboral — Plantilla oficial de carga XLSX"],
+        [""],
+        ["INSTRUCCIONES:"],
+        ["1. No cambiar nombres de hojas."],
+        ["2. No cambiar encabezados de columnas."],
+        ["3. Completar una fila por registro."],
+        ["4. Las fechas deben ir en formato dd/mm/yyyy."],
+        ["5. Los montos deben ir como números (sin puntos de miles ni símbolos $)."],
+        ["6. Las columnas ID pueden dejarse vacías; la app generará IDs automáticamente."],
+        ["7. Si se deja responsable vacío, se usará 'Sin responsable'."],
+        ["8. Antes de importar, se recomienda exportar un respaldo JSON."],
+        ["9. Cada hoja corresponde a un módulo de la app."],
+        ["10. Modo fusión: registros con ID existente se actualizan; sin ID se crean como nuevos."],
+        ["11. Modo reemplazo: módulos presentes en el XLSX reemplazan la información actual."],
+        ["12. Las hojas no incluidas en el XLSX no serán modificadas."],
+      ];
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(readmeData), "README");
 
     const sheets: Record<string, string[]> = {
@@ -754,21 +1082,31 @@ export default function App() {
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), sheetName);
     });
 
-    XLSX.writeFile(wb, "Plantilla_TotalControlRH.xlsx");
-    toastShow("Plantilla XLSX descargada");
+      XLSX.writeFile(wb, "Plantilla_TotalControlRH.xlsx");
+      toastShow("Plantilla XLSX descargada", { type: "success" });
+    } finally {
+      setExporting(null);
+    }
   };
 
   const parseXlsxFile = async (file: File): Promise<XlsxParseResult> => {
     const MAX_FILE_MB = 10;
     if (file.size > MAX_FILE_MB * 1024 * 1024) {
-      toastShow(`⚠ El archivo supera los ${MAX_FILE_MB} MB permitidos.`);
+      toastShow("Archivo demasiado grande", {
+        type: "warning",
+        message: `El archivo supera los ${MAX_FILE_MB} MB permitidos.`,
+      });
       return { hojas: [], contactosNuevos: [], parsedData: {}, tieneErroresCriticos: true };
     }
     if (!file.name.match(/\.(xlsx|xls)$/i)) {
-      toastShow("⚠ Solo se aceptan archivos .xlsx o .xls");
+      toastShow("Formato inválido", {
+        type: "warning",
+        message: "Solo se aceptan archivos .xlsx o .xls.",
+      });
       return { hojas: [], contactosNuevos: [], parsedData: {}, tieneErroresCriticos: true };
     }
     const buffer = await file.arrayBuffer();
+    const XLSX = await getXlsx();
     const wb = XLSX.read(buffer, { type: "array", cellDates: false });
 
     const result: XlsxParseResult = {
@@ -788,7 +1126,7 @@ export default function App() {
     const processSheet = (sheetNames: string[], modulo: string, processor: (rows: any[]) => { registros: any[]; erroresList: string[]; advertenciasList: string[] }) => {
       const ws = getSheet(sheetNames);
       if (!ws) return;
-      const rows = xlsxSheetToObjects(ws).filter((r: any) => Object.values(r).some((v: any) => v !== "" && v !== null && v !== undefined));
+      const rows = xlsxSheetToObjects(ws, XLSX.utils).filter((r: any) => Object.values(r).some((v: any) => v !== "" && v !== null && v !== undefined));
       const { registros, erroresList, advertenciasList } = processor(rows);
       const validos = registros.filter((r: any) => !r._hasError).length;
       const conError = registros.filter((r: any) => r._hasError).length;
@@ -1175,16 +1513,62 @@ export default function App() {
   };
 
   const restaurarEjemplos = () => {
-    setConfirm({ msg: "¿Restaurar datos de ejemplo? Se perderán los datos actuales.", cb: () => { logAudit("backup:restore", { detail: "Restaurar datos de ejemplo" }); runBackupAndToast("restaurar"); limpiarDatos(); setData(crearDatosEjemplo()); toastShow("Datos de ejemplo restaurados"); setConfirm(null); } });
+    setConfirm({
+      title: "Restaurar datos de ejemplo",
+      message: "Se perderán los datos actuales y se reemplazarán por datos de ejemplo.",
+      variant: "warning",
+      confirmLabel: "Restaurar",
+      onConfirm: () => {
+        logAudit("backup:restore", { detail: "Restaurar datos de ejemplo" });
+        runBackupAndToast("restaurar");
+        limpiarDatos();
+        setData(crearDatosEjemplo());
+        toastShow("Datos de ejemplo restaurados", { type: "success" });
+        setConfirm(null);
+      },
+    });
   };
 
   const limpiarTodo = () => {
-    setConfirm({ msg: "⚠️ ¿Eliminar TODOS los datos? Esta acción no se puede deshacer.", cb: () => {
-      setConfirm({ msg: "🚨 ÚLTIMA CONFIRMACIÓN: Se borrará todo definitivamente. ¿Continuar?", cb: () => { logAudit("record:delete", { detail: "Limpiar todos los datos del sistema" }); runBackupAndToast("limpiar"); limpiarDatos(); setData({ ...crearDatosEjemplo(), cursos: [], ocs: [], practicantes: [], presupuesto: [], procesos: [], diplomas: [], cargaSemanal: [], contactos: [], evaluacionesPsicolaborales: [], valesGas: [], valesGasOrganizacion: [], reclutamiento: [] }); toastShow("Todos los datos eliminados"); setConfirm(null); } });
-    }});
+    setConfirm({
+      title: "Eliminar todos los datos",
+      message: "Esta acción no se puede deshacer. Se creará un respaldo antes de limpiar.",
+      variant: "warning",
+      confirmLabel: "Continuar",
+      onConfirm: () => {
+        setConfirm({
+          title: "Confirmación final",
+          message: "Se borrará todo definitivamente. ¿Deseas continuar?",
+          variant: "danger",
+          confirmLabel: "Eliminar definitivamente",
+          onConfirm: () => {
+            logAudit("record:delete", { detail: "Limpiar todos los datos del sistema" });
+            runBackupAndToast("limpiar");
+            limpiarDatos();
+            setData({
+              ...crearDatosEjemplo(),
+              cursos: [],
+              ocs: [],
+              practicantes: [],
+              presupuesto: [],
+              procesos: [],
+              diplomas: [],
+              cargaSemanal: [],
+              contactos: [],
+              evaluacionesPsicolaborales: [],
+              valesGas: [],
+              valesGasOrganizacion: [],
+              reclutamiento: [],
+            });
+            toastShow("Todos los datos eliminados", { type: "success" });
+            setConfirm(null);
+          },
+        });
+      },
+    });
   };
 
-  const logout = () => { logAudit("logout", { detail: "Cierre de sesión manual" }); authLogout(); setAuthenticated(false); toastShow("Sesión cerrada"); };
+  const logout = () => { logAudit("logout", { detail: "Cierre de sesión manual" }); authLogout(); setAuthenticated(false); toastShow("Sesión cerrada", { type: "info" }); };
 
   // ── CRUD OPERATIONS ────────────────────────
 
@@ -1203,8 +1587,11 @@ export default function App() {
       });
       if (usedIn.length > 0) {
         setConfirm({
-          msg: `Este contacto está asignado como responsable en: ${usedIn.join(", ")}. ¿Reasignar a "Sin responsable" y eliminar?`,
-          cb: () => {
+          title: "Eliminar contacto con reasignación",
+          message: `Este contacto está asignado como responsable en: ${usedIn.join(", ")}. ¿Reasignar a "Sin responsable" y eliminar?`,
+          variant: "warning",
+          confirmLabel: "Reasignar y eliminar",
+          onConfirm: () => {
             logAudit("record:delete", { module: "contactos", recordId: id, detail: "Eliminado con reasignación de responsable" });
             setData(d => {
               const nd = { ...d };
@@ -1214,17 +1601,25 @@ export default function App() {
               nd.contactos = nd.contactos.filter(c => c.id !== id);
               return nd;
             });
-            toastShow("Contacto eliminado y registros reasignados."); setConfirm(null);
+            toastShow("Contacto eliminado", { type: "success", message: "Los registros fueron reasignados a \"Sin responsable\"." });
+            setConfirm(null);
           }
         });
         return;
       }
     }
-    setConfirm({ msg: "¿Eliminar este registro? Esta acción no se puede deshacer.", cb: () => {
-      logAudit("record:delete", { module: modulo, recordId: id });
-      setData(d => { const nd = { ...d }; (nd as any)[modulo] = (nd as any)[modulo].filter((x: any) => x.id !== id); return nd; });
-      toastShow("Registro eliminado."); setConfirm(null);
-    }});
+    setConfirm({
+      title: "Eliminar registro",
+      message: "Esta acción no se puede deshacer.",
+      variant: "danger",
+      confirmLabel: "Eliminar",
+      onConfirm: () => {
+        logAudit("record:delete", { module: modulo, recordId: id });
+        setData(d => { const nd = { ...d }; (nd as any)[modulo] = (nd as any)[modulo].filter((x: any) => x.id !== id); return nd; });
+        toastShow("Registro eliminado", { type: "success" });
+        setConfirm(null);
+      },
+    });
   };
 
   const duplicateItem = (modulo: string, item: any) => {
@@ -1238,7 +1633,7 @@ export default function App() {
       (nd as any)[modulo] = arr;
       return nd;
     });
-    toastShow("Registro duplicado correctamente.");
+    toastShow("Registro duplicado correctamente", { type: "success" });
   };
 
   const saveItem = (modulo: string, item: any) => {
@@ -1258,7 +1653,7 @@ export default function App() {
       return nd;
     });
     closeModal();
-    toastShow(isEdit ? "Registro actualizado" : "Registro creado");
+    toastShow(isEdit ? "Registro actualizado" : "Registro creado", { type: "success" });
   };
 
   // ── CAPTURA RÁPIDA ─────────────────────────
@@ -1379,24 +1774,38 @@ export default function App() {
       (nd as any)[target.dataKey] = [...(nd as any)[target.dataKey], newItem];
       return nd;
     });
-    setLastCapturedModulo(target.modulo);
     setCaptureOpen(false);
-    toastShow("Captura guardada correctamente.");
+    toastShow("Captura guardada correctamente", {
+      type: "success",
+      action: {
+        label: "Ir al módulo",
+        onClick: () => setActiveModulo(target.modulo),
+      },
+    });
   };
 
   const markClosed = (modulo: string, id: string, closedState: string) => {
-    logAudit("record:close", { module: modulo, recordId: id });
-    setData(d => {
-      const nd = { ...d };
-      const arr = [...(nd as any)[modulo]];
-      const idx = arr.findIndex((x: any) => x.id === id);
-      if (idx >= 0) {
-        arr[idx] = markRecordClosed(modulo, arr[idx], closedState);
-      }
-      (nd as any)[modulo] = arr;
-      return nd;
+    setConfirm({
+      title: "Cerrar registro",
+      message: "Se marcará como cerrado. Esta acción no elimina información.",
+      variant: "warning",
+      confirmLabel: "Cerrar",
+      onConfirm: () => {
+        logAudit("record:close", { module: modulo, recordId: id });
+        setData(d => {
+          const nd = { ...d };
+          const arr = [...(nd as any)[modulo]];
+          const idx = arr.findIndex((x: any) => x.id === id);
+          if (idx >= 0) {
+            arr[idx] = markRecordClosed(modulo, arr[idx], closedState);
+          }
+          (nd as any)[modulo] = arr;
+          return nd;
+        });
+        toastShow("Estado actualizado", { type: "success" });
+        setConfirm(null);
+      },
     });
-    toastShow("Estado actualizado");
   };
 
   // Permission-gated action wrappers — pass undefined when role lacks the permission
@@ -1404,6 +1813,9 @@ export default function App() {
   const permDeleteItem = can(currentRole, "record:delete") ? deleteItem : undefined;
   const permDuplicateItem = can(currentRole, "record:duplicate") ? duplicateItem : undefined;
   const permMarkClosed = can(currentRole, "record:close") ? markClosed : undefined;
+  const canExportFull = can(currentRole, "data:export:full");
+  const canExportSummary = can(currentRole, "data:export:summary");
+  const canExportAnonymized = can(currentRole, "data:export:anonymized");
 
   // ── DASHBOARD DATA ─────────────────────────
 
@@ -1430,7 +1842,7 @@ export default function App() {
     const valesGasSaldoOrg = valesGasStockOrg - valesGasAsignados;
 
     // Bandeja priorizada
-    interface ItemBandeja { order: number; tipo: string; nombre: string; prioridad: string; estado: string; bloqueadoPor: string; proximaAccion: string; fechaProximaAccion: string; responsableId: string; modulo: string; }
+    interface ItemBandeja { order: number; tipo: string; nombre: string; prioridad: string; estado: string; bloqueadoPor: string; proximaAccion: string; fechaProximaAccion: string; responsableId: string; modulo: string; id?: string; }
     const bandeja: ItemBandeja[] = [];
 
     data.cursos.filter(c => !isClosedRecord(c, "cursos")).forEach(c => {
@@ -1558,6 +1970,31 @@ export default function App() {
   // ── MODULES RENDER ────────────────────────
 
   if (!authenticated) return <Login onLogin={() => setAuthenticated(true)} />;
+  if (unlockOpen) {
+    return (
+      <EncryptionUnlock
+        passphrase={unlockPassphrase}
+        setPassphrase={setUnlockPassphrase}
+        error={unlockError}
+        onUnlock={handleUnlock}
+      />
+    );
+  }
+  if (!dataReady) {
+    return (
+      <div className="min-h-screen bg-slate-50 px-6 py-8">
+        <div className="max-w-5xl mx-auto space-y-4">
+          <SkeletonCard />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
+          <SkeletonTable rows={6} />
+        </div>
+      </div>
+    );
+  }
 
   // ── INSTRUCTIONS MODAL ────────────────────
 
@@ -1626,7 +2063,7 @@ El dashboard responde:
 - Revisar bloqueos antes de pedir ayuda
   `.trim();
 
-  const copyInstructions = () => { navigator.clipboard.writeText(instructionsContent); toastShow("Instrucciones copiadas"); };
+  const copyInstructions = () => { navigator.clipboard.writeText(instructionsContent); toastShow("Instrucciones copiadas", { type: "success" }); };
   const downloadInstructions = () => {
     const blob = new Blob([instructionsContent], { type: "text/plain" });
     const a = document.createElement("a");
@@ -1635,7 +2072,7 @@ El dashboard responde:
     a.download = "instrucciones_kata_v5.txt";
     a.click();
     URL.revokeObjectURL(url);
-    toastShow("Instrucciones descargadas");
+    toastShow("Instrucciones descargadas", { type: "success" });
   };
 
   // ── MAIN RENDER ────────────────────────────
@@ -1649,7 +2086,7 @@ El dashboard responde:
           <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-base shrink-0 font-bold shadow-md shadow-blue-900/50">TC</div>
           {sidebarOpen && (
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-bold text-white leading-tight">TotalControlRH</div>
+              <div className="text-sm font-bold text-white leading-tight">PulsoLaboral</div>
               <div className="text-[10px] text-white/40 leading-tight">Control Operativo</div>
             </div>
           )}
@@ -1727,7 +2164,7 @@ El dashboard responde:
               <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/10 rounded-full -translate-y-12 translate-x-12" />
               <div className="absolute bottom-0 left-1/3 w-32 h-32 bg-blue-400/5 rounded-full translate-y-8" />
               <div className="relative">
-                <div className="text-xs font-semibold tracking-widest text-blue-300 uppercase mb-2">TotalControlRH</div>
+                <div className="text-xs font-semibold tracking-widest text-blue-300 uppercase mb-2">PulsoLaboral</div>
                 <h1 className="text-2xl font-bold mb-2 leading-tight">Control Operativo RH</h1>
                 <p className="text-blue-200 text-sm">Registra todo el mismo día · Revisa cada mañana · Cierra lo que termines</p>
               </div>
@@ -1773,8 +2210,18 @@ El dashboard responde:
                   <button onClick={() => { setActiveModulo("practicantes"); openNew("practicantes"); }} className="text-xs bg-blue-600 text-white rounded-xl px-3 py-2.5 hover:bg-blue-700 transition font-medium">+ Practicante</button>
                   <button onClick={() => { setActiveModulo("diplomas"); openNew("diplomas"); }} className="text-xs bg-blue-600 text-white rounded-xl px-3 py-2.5 hover:bg-blue-700 transition font-medium">+ Diploma</button>
                   <button onClick={() => { setActiveModulo("evaluaciones"); openNew("evaluaciones"); }} className="text-xs bg-violet-600 text-white rounded-xl px-3 py-2.5 hover:bg-violet-700 transition font-medium">+ Evaluación</button>
-                  <button onClick={exportJSON} className="text-xs bg-emerald-600 text-white rounded-xl px-3 py-2.5 hover:bg-emerald-700 transition font-medium">📥 Exportar JSON</button>
-                  <button onClick={exportXLSX} className="text-xs bg-emerald-600 text-white rounded-xl px-3 py-2.5 hover:bg-emerald-700 transition col-span-2 font-medium">📥 Exportar XLSX</button>
+                  {canExportFull && (
+                    <>
+                      <button onClick={exportJSON} className="text-xs bg-emerald-600 text-white rounded-xl px-3 py-2.5 hover:bg-emerald-700 transition font-medium">📥 Exportar JSON</button>
+                      <button onClick={exportXLSX} className="text-xs bg-emerald-600 text-white rounded-xl px-3 py-2.5 hover:bg-emerald-700 transition col-span-2 font-medium">📥 Exportar XLSX</button>
+                    </>
+                  )}
+                  {!canExportFull && canExportAnonymized && (
+                    <>
+                      <button onClick={exportJSONAnonymized} className="text-xs bg-emerald-600 text-white rounded-xl px-3 py-2.5 hover:bg-emerald-700 transition font-medium">📥 Exportar JSON anon.</button>
+                      <button onClick={exportXLSXAnonymized} className="text-xs bg-emerald-600 text-white rounded-xl px-3 py-2.5 hover:bg-emerald-700 transition col-span-2 font-medium">📥 Exportar XLSX anon.</button>
+                    </>
+                  )}
                 </div>
               </SectionCard>
             </div>
@@ -1901,17 +2348,20 @@ El dashboard responde:
             </SectionCard>
 
             {/* Gráficos */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <SectionCard title="Cursos por prioridad">
-                <div className="h-48"><Doughnut data={chartCursosPorPrioridad} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } } }} /></div>
-              </SectionCard>
-              <SectionCard title="Evaluaciones por estado">
-                <div className="h-48"><Doughnut data={chartEvaluacionesPorEstado} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } } }} /></div>
-              </SectionCard>
-              <SectionCard title="Presupuesto: usado vs disponible">
-                <div className="h-48"><Bar data={chartPresupuesto} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } }, scales: { x: { stacked: true }, y: { stacked: true } } }} /></div>
-              </SectionCard>
-            </div>
+            <Suspense
+              fallback={
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <SkeletonCard />
+                  <SkeletonCard />
+                </div>
+              }
+            >
+              <ChartsPanel
+                chartCursosPorPrioridad={chartCursosPorPrioridad}
+                chartEvaluacionesPorEstado={chartEvaluacionesPorEstado}
+                chartPresupuesto={chartPresupuesto}
+              />
+            </Suspense>
 
             {/* Reporte Mensual Ejecutivo */}
             <div className="border-t border-slate-200 pt-6">
@@ -1920,23 +2370,26 @@ El dashboard responde:
           </div>
         )}
 
-        {activeModulo === "cursos" && <ModuloCursos data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} markClosed={permMarkClosed} getResponsableName={getResponsableName} />}
-        {activeModulo === "ocs" && <ModuloOCs data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} markClosed={permMarkClosed} getResponsableName={getResponsableName} />}
-        {activeModulo === "practicantes" && <ModuloPracticantes data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} markClosed={permMarkClosed} getResponsableName={getResponsableName} />}
+        {activeModulo === "cursos" && <ModuloCursos data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} markClosed={permMarkClosed} getResponsableName={getResponsableName} tableLoading={tableLoading} />}
+        {activeModulo === "ocs" && <ModuloOCs data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} markClosed={permMarkClosed} getResponsableName={getResponsableName} tableLoading={tableLoading} />}
+        {activeModulo === "practicantes" && <ModuloPracticantes data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} markClosed={permMarkClosed} getResponsableName={getResponsableName} tableLoading={tableLoading} />}
         {activeModulo === "presupuesto" && <ModuloPresupuesto data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} getResponsableName={getResponsableName} />}
-        {activeModulo === "procesos" && <ModuloProcesos data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} getResponsableName={getResponsableName} />}
-        {activeModulo === "diplomas" && <ModuloDiplomas data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} markClosed={permMarkClosed} getResponsableName={getResponsableName} />}
-        {activeModulo === "evaluaciones" && <ModuloEvaluaciones data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} duplicateItem={permDuplicateItem} markClosed={permMarkClosed} getResponsableName={getResponsableName} />}
-        {activeModulo === "cargaSemanal" && <ModuloCargaSemanal data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} duplicateItem={permDuplicateItem} />}
-        {activeModulo === "contactos" && <ModuloContactos data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} />}
-        {activeModulo === "valesGas" && <ModuloValesGas data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} getResponsableName={getResponsableName} />}
-        {activeModulo === "reclutamiento" && <ModuloReclutamiento data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} duplicateItem={permDuplicateItem} markClosed={permMarkClosed} getResponsableName={getResponsableName} />}
+        {activeModulo === "procesos" && <ModuloProcesos data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} getResponsableName={getResponsableName} tableLoading={tableLoading} />}
+        {activeModulo === "diplomas" && <ModuloDiplomas data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} markClosed={permMarkClosed} getResponsableName={getResponsableName} tableLoading={tableLoading} />}
+        {activeModulo === "evaluaciones" && <ModuloEvaluaciones data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} duplicateItem={permDuplicateItem} markClosed={permMarkClosed} getResponsableName={getResponsableName} tableLoading={tableLoading} />}
+        {activeModulo === "cargaSemanal" && <ModuloCargaSemanal data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} duplicateItem={permDuplicateItem} tableLoading={tableLoading} />}
+        {activeModulo === "contactos" && <ModuloContactos data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} tableLoading={tableLoading} />}
+        {activeModulo === "valesGas" && <ModuloValesGas data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} getResponsableName={getResponsableName} tableLoading={tableLoading} />}
+        {activeModulo === "reclutamiento" && <ModuloReclutamiento data={data} search={search} setSearch={setSearch} openNew={openNew} openEdit={openEdit} deleteItem={permDeleteItem} duplicateItem={permDuplicateItem} markClosed={permMarkClosed} getResponsableName={getResponsableName} tableLoading={tableLoading} />}
         {activeModulo === "configuracion" && (
           <ModuloConfiguracion
             data={data}
             exportJSON={exportJSON}
+            exportJSONSummary={exportJSONSummary}
+            exportJSONAnonymized={exportJSONAnonymized}
             importJSON={importJSON}
             exportXLSX={exportXLSX}
+            exportXLSXAnonymized={exportXLSXAnonymized}
             exportLimpia={exportLimpia}
             restaurarEjemplos={restaurarEjemplos}
             limpiarTodo={limpiarTodo}
@@ -1950,11 +2403,23 @@ El dashboard responde:
             toastShow={toastShow}
             downloadXlsxTemplate={downloadXlsxTemplate}
             parseXlsxFile={parseXlsxFile}
+            canExportFull={canExportFull}
+            canExportSummary={canExportSummary}
+            canExportAnonymized={canExportAnonymized}
+            encryptionEnabled={encryptionEnabled}
+            openEncryptionSetup={openEncryptionSetup}
+            disableEncryption={handleDisableEncryption}
+            exporting={exporting}
           />
         )}
 
         {/* Modals */}
-        <Modal open={modalOpen} onClose={closeModal} title={editItem ? "Editar registro" : "Nuevo registro"} wide={modalModulo === "cursos" || modalModulo === "diplomas" || modalModulo === "evaluaciones"}>
+        <Modal
+          isOpen={modalOpen}
+          onClose={closeModal}
+          title={editItem ? "Editar registro" : "Nuevo registro"}
+          size={modalModulo === "cursos" || modalModulo === "diplomas" || modalModulo === "evaluaciones" ? "xl" : "lg"}
+        >
           {modalModulo === "cursos" && <FormCursos data={data} editItem={editItem} closeModal={closeModal} saveItem={saveItem} />}
           {modalModulo === "ocs" && <FormOCs data={data} editItem={editItem} closeModal={closeModal} saveItem={saveItem} />}
           {modalModulo === "practicantes" && <FormPracticantes data={data} editItem={editItem} closeModal={closeModal} saveItem={saveItem} />}
@@ -1969,9 +2434,51 @@ El dashboard responde:
           {modalModulo === "reclutamiento" && <FormReclutamiento data={data} editItem={editItem} closeModal={closeModal} saveItem={saveItem} />}
         </Modal>
 
-        <ConfirmModal open={!!confirm} message={confirm?.msg || ""} onConfirm={() => confirm?.cb()} onCancel={() => setConfirm(null)} />
+        <ConfirmDialog
+          isOpen={!!confirm}
+          title={confirm?.title || "Confirmar acción"}
+          message={confirm?.message}
+          variant={confirm?.variant || "default"}
+          confirmLabel={confirm?.confirmLabel}
+          cancelLabel={confirm?.cancelLabel}
+          onConfirm={() => { const cb = confirm?.onConfirm; if (cb) cb(); }}
+          onCancel={() => setConfirm(null)}
+        />
 
-        <Modal open={showInstructions} onClose={() => setShowInstructions(false)} title="📖 Instrucciones de uso" wide>
+        <Modal isOpen={encryptionSetupOpen} onClose={() => setEncryptionSetupOpen(false)} title="🔐 Activar cifrado local" size="sm">
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600">La clave protege los datos sensibles en este navegador. No se puede recuperar si la olvidas.</p>
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">Nueva clave</label>
+              <input
+                type="password"
+                value={encryptionPassphrase}
+                onChange={(e) => setEncryptionPassphrase(e.target.value)}
+                className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Mínimo 8 caracteres"
+                autoComplete="new-password"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">Confirmar clave</label>
+              <input
+                type="password"
+                value={encryptionPassphraseConfirm}
+                onChange={(e) => setEncryptionPassphraseConfirm(e.target.value)}
+                className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Repite la clave"
+                autoComplete="new-password"
+              />
+            </div>
+            {encryptionSetupError && <p className="text-red-600 text-sm">{encryptionSetupError}</p>}
+            <div className="flex justify-end gap-3 pt-2">
+              <button onClick={() => setEncryptionSetupOpen(false)} className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition">Cancelar</button>
+              <button onClick={handleEnableEncryption} className="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition">Activar cifrado</button>
+            </div>
+          </div>
+        </Modal>
+
+        <Modal isOpen={showInstructions} onClose={() => setShowInstructions(false)} title="📖 Instrucciones de uso" size="xl">
           <div className="space-y-3">
             {[
               { title: "1. Regla de oro", body: "Si no está registrado aquí, no existe para seguimiento." },
@@ -1995,7 +2502,7 @@ El dashboard responde:
         </Modal>
 
         {/* CAPTURA RÁPIDA: Modal global */}
-        <Modal open={captureOpen} onClose={() => setCaptureOpen(false)} title="⚡ Captura rápida">
+        <Modal isOpen={captureOpen} onClose={() => setCaptureOpen(false)} title="⚡ Captura rápida" size="md">
           <FormCapturaRapida data={data} onCancel={() => setCaptureOpen(false)} onSave={saveCaptura} />
         </Modal>
 
@@ -2009,30 +2516,12 @@ El dashboard responde:
           <span className="hidden sm:inline">+ Captura rápida</span>
         </button>
 
-        {/* Toast con link "Ir al módulo" cuando hay captura reciente */}
-        {toast && (
-          <div
-            role="alert"
-            aria-live="polite"
-            className={`fixed bottom-6 right-6 z-[70] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl text-sm font-medium animate-fade-in
-            ${toast.startsWith("⚠") || toast.toLowerCase().includes("error") || toast.toLowerCase().includes("lleno")
-              ? "bg-amber-900 text-amber-100 border border-amber-700"
-              : toast.toLowerCase().includes("elimin") || toast.toLowerCase().includes("borr")
-              ? "bg-red-900 text-red-100 border border-red-700"
-              : "bg-slate-900 text-white border border-slate-700"
-            }`}
-          >
-            <span className="leading-snug">{toast}</span>
-            {lastCapturedModulo && toast === "Captura guardada correctamente." && (
-              <button
-                onClick={() => { setActiveModulo(lastCapturedModulo); setLastCapturedModulo(null); }}
-                className="text-blue-300 hover:text-blue-200 underline text-xs whitespace-nowrap ml-1"
-              >
-                Ir al módulo →
-              </button>
-            )}
-          </div>
-        )}
+        <div aria-live="polite">
+          <ToastContainer toasts={toasts.map(({ id, ...rest }) => rest)} onRemove={(index) => {
+            const target = toasts[index];
+            if (target) removeToast(target.id);
+          }} />
+        </div>
       </main>
     </div>
   );
@@ -2286,7 +2775,7 @@ function ModuloMiDia({ data, setActiveModulo, onCapturaRapida }: { data: AppData
 
 // ── MODULE COMPONENTS ────────────────────────
 
-function ModuloCursos({ data, search, setSearch, openNew, openEdit, deleteItem, markClosed, getResponsableName }: any) {
+function ModuloCursos({ data, search, setSearch, openNew, openEdit, deleteItem, markClosed, getResponsableName, tableLoading }: any) {
   const [filtroPrioridad, setFiltroPrioridad] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("");
   const [filtroOrigen, setFiltroOrigen] = useState("");
@@ -2315,6 +2804,7 @@ function ModuloCursos({ data, search, setSearch, openNew, openEdit, deleteItem, 
       <Table
         columns={columns}
         rows={filtered}
+        loading={tableLoading}
         onEdit={(r: any) => openEdit("cursos", r)}
         onDelete={deleteItem ? (id: string) => deleteItem("cursos", id) : undefined}
         onMarkClosed={markClosed ? (id: string) => markClosed("cursos", id, "Cerrado") : undefined}
@@ -2327,7 +2817,7 @@ function ModuloCursos({ data, search, setSearch, openNew, openEdit, deleteItem, 
   );
 }
 
-function ModuloOCs({ data, search, setSearch, openNew, openEdit, deleteItem, markClosed, getResponsableName }: any) {
+function ModuloOCs({ data, search, setSearch, openNew, openEdit, deleteItem, markClosed, getResponsableName, tableLoading }: any) {
   const [filtroEstado, setFiltroEstado] = useState("");
   const [filtroPrioridad, setFiltroPrioridad] = useState("");
   const [filtroCategoria, setFiltroCategoria] = useState("");
@@ -2352,6 +2842,7 @@ function ModuloOCs({ data, search, setSearch, openNew, openEdit, deleteItem, mar
       <Table
         columns={columns}
         rows={filtered}
+        loading={tableLoading}
         onEdit={(r: any) => openEdit("ocs", r)}
         onDelete={deleteItem ? (id: string) => deleteItem("ocs", id) : undefined}
         onMarkClosed={markClosed ? (id: string) => markClosed("ocs", id, "Cerrada") : undefined}
@@ -2364,7 +2855,7 @@ function ModuloOCs({ data, search, setSearch, openNew, openEdit, deleteItem, mar
   );
 }
 
-function ModuloPracticantes({ data, search, setSearch, openNew, openEdit, deleteItem, markClosed, getResponsableName }: any) {
+function ModuloPracticantes({ data, search, setSearch, openNew, openEdit, deleteItem, markClosed, getResponsableName, tableLoading }: any) {
   const [filtroEstado, setFiltroEstado] = useState("");
   const filtered = data.practicantes.filter((p: Practicante) => {
     if (filtroEstado && p.estado !== filtroEstado) return false;
@@ -2386,6 +2877,7 @@ function ModuloPracticantes({ data, search, setSearch, openNew, openEdit, delete
       <Table
         columns={columns}
         rows={filtered}
+        loading={tableLoading}
         onEdit={(r: any) => openEdit("practicantes", r)}
         onDelete={deleteItem ? (id: string) => deleteItem("practicantes", id) : undefined}
         onMarkClosed={markClosed ? (id: string) => markClosed("practicantes", id, "Finalizado") : undefined}
@@ -2692,7 +3184,7 @@ function ModuloPresupuesto({ data, search, setSearch, openNew: _openNew, openEdi
   );
 }
 
-function ModuloProcesos({ data, search, setSearch, openNew, openEdit, deleteItem, getResponsableName }: any) {
+function ModuloProcesos({ data, search, setSearch, openNew, openEdit, deleteItem, getResponsableName, tableLoading }: any) {
   const [filtroTipo, setFiltroTipo] = useState("");
   const [filtroPrioridad, setFiltroPrioridad] = useState("");
   const filtered = data.procesos.filter((p: Proceso) => {
@@ -2715,6 +3207,7 @@ function ModuloProcesos({ data, search, setSearch, openNew, openEdit, deleteItem
       <Table
         columns={columns}
         rows={filtered}
+        loading={tableLoading}
         onEdit={(r: any) => openEdit("procesos", r)}
         onDelete={deleteItem ? (id: string) => deleteItem("procesos", id) : undefined}
         emptyMessage="Aún no hay procesos pendientes"
@@ -2725,7 +3218,7 @@ function ModuloProcesos({ data, search, setSearch, openNew, openEdit, deleteItem
   );
 }
 
-function ModuloDiplomas({ data, search, setSearch, openNew, openEdit, deleteItem, markClosed, getResponsableName }: any) {
+function ModuloDiplomas({ data, search, setSearch, openNew, openEdit, deleteItem, markClosed, getResponsableName, tableLoading }: any) {
   const [filtroEtapa, setFiltroEtapa] = useState("");
   const [filtroBUK, setFiltroBUK] = useState("");
   const [filtroPrioridad, setFiltroPrioridad] = useState("");
@@ -2760,6 +3253,7 @@ function ModuloDiplomas({ data, search, setSearch, openNew, openEdit, deleteItem
       <Table
         columns={columns}
         rows={filtered}
+        loading={tableLoading}
         onEdit={(r: any) => openEdit("diplomas", r)}
         onDelete={deleteItem ? (id: string) => deleteItem("diplomas", id) : undefined}
         onMarkClosed={markClosed ? (id: string) => markClosed("diplomas", id, "Subido") : undefined}
@@ -2772,7 +3266,7 @@ function ModuloDiplomas({ data, search, setSearch, openNew, openEdit, deleteItem
   );
 }
 
-function ModuloEvaluaciones({ data, search, setSearch, openNew, openEdit, deleteItem, duplicateItem, markClosed: _markClosed, getResponsableName }: any) {
+function ModuloEvaluaciones({ data, search, setSearch, openNew, openEdit, deleteItem, duplicateItem, markClosed: _markClosed, getResponsableName, tableLoading }: any) {
   const [filtroMes, setFiltroMes] = useState("");
   const [filtroAno, setFiltroAno] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("");
@@ -2831,6 +3325,7 @@ function ModuloEvaluaciones({ data, search, setSearch, openNew, openEdit, delete
       <Table
         columns={columns}
         rows={filtered}
+        loading={tableLoading}
         onEdit={(r: any) => openEdit("evaluaciones", r)}
         onDelete={deleteItem ? (id: string) => deleteItem("evaluacionesPsicolaborales", id) : undefined}
         onDuplicate={duplicateItem ? (r: any) => duplicateItem("evaluacionesPsicolaborales", r) : undefined}
@@ -2842,7 +3337,7 @@ function ModuloEvaluaciones({ data, search, setSearch, openNew, openEdit, delete
   );
 }
 
-function ModuloCargaSemanal({ data, search, setSearch, openNew, openEdit, deleteItem, duplicateItem }: any) {
+function ModuloCargaSemanal({ data, search, setSearch, openNew, openEdit, deleteItem, duplicateItem, tableLoading }: any) {
   const filtered = data.cargaSemanal.filter((c: CargaSemanal) => { if (search && !c.semana.toLowerCase().includes(search.toLowerCase()) && !c.comentario.toLowerCase().includes(search.toLowerCase())) return false; return true; });
   const columns = [{ key: "semana", label: "Semana" }, { key: "cursosPlanificados", label: "Planificados" }, { key: "cursosUrgentesNuevos", label: "Urgentes nuevos" }, { key: "cursosNoPlanificados", label: "No planificados" }, { key: "ocsNuevas", label: "OCs nuevas" }, { key: "diplomasPendientes", label: "Diplomas pend." }, { key: "procesosBloqueados", label: "Proc. bloqueados" }, { key: "comentario", label: "Comentario" }];
 
@@ -2858,6 +3353,7 @@ function ModuloCargaSemanal({ data, search, setSearch, openNew, openEdit, delete
       <Table
         columns={columns}
         rows={filtered}
+        loading={tableLoading}
         onEdit={(r: any) => openEdit("cargaSemanal", r)}
         onDelete={deleteItem ? (id: string) => deleteItem("cargaSemanal", id) : undefined}
         onDuplicate={duplicateItem ? (r: any) => duplicateItem("cargaSemanal", r) : undefined}
@@ -2869,7 +3365,7 @@ function ModuloCargaSemanal({ data, search, setSearch, openNew, openEdit, delete
   );
 }
 
-function ModuloContactos({ data, search, setSearch, openNew, openEdit, deleteItem }: any) {
+function ModuloContactos({ data, search, setSearch, openNew, openEdit, deleteItem, tableLoading }: any) {
   const [filtroRelacion, setFiltroRelacion] = useState("");
   const [filtroActivo, setFiltroActivo] = useState("");
   const filtered = data.contactos.filter((c: Contacto) => {
@@ -2896,6 +3392,7 @@ function ModuloContactos({ data, search, setSearch, openNew, openEdit, deleteIte
       <Table
         columns={columns}
         rows={filtered}
+        loading={tableLoading}
         onEdit={(r: any) => openEdit("contactos", r)}
         onDelete={deleteItem ? (id: string) => deleteItem("contactos", id) : undefined}
         emptyMessage="Aún no hay contactos registrados"
@@ -2906,11 +3403,12 @@ function ModuloContactos({ data, search, setSearch, openNew, openEdit, deleteIte
   );
 }
 
-function XlsxImportPreview({ parseResult, onConfirmReplace, onConfirmMerge, onCancel }: {
+function XlsxImportPreview({ parseResult, onConfirmReplace, onConfirmMerge, onCancel, loading }: {
   parseResult: XlsxParseResult;
   onConfirmReplace: () => void;
   onConfirmMerge: () => void;
   onCancel: () => void;
+  loading?: boolean;
 }) {
   const totalRegistros = parseResult.hojas.reduce((s, h) => s + h.total, 0);
   const totalErrores = parseResult.hojas.reduce((s, h) => s + h.errores, 0);
@@ -3018,11 +3516,19 @@ function XlsxImportPreview({ parseResult, onConfirmReplace, onConfirmMerge, onCa
             <button onClick={onCancel} className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-medium hover:bg-slate-200 transition-colors">
               Cancelar
             </button>
-            <button onClick={onConfirmMerge} className="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">
-              🔀 Fusionar con base actual
+            <button
+              onClick={onConfirmMerge}
+              disabled={loading}
+              className="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-60"
+            >
+              {loading ? "⏳ Procesando importación..." : "🔀 Fusionar con base actual"}
             </button>
-            <button onClick={onConfirmReplace} className="px-5 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-medium hover:bg-orange-700 transition-colors shadow-sm">
-              ♻️ Reemplazar base actual
+            <button
+              onClick={onConfirmReplace}
+              disabled={loading}
+              className="px-5 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-medium hover:bg-orange-700 transition-colors shadow-sm disabled:opacity-60"
+            >
+              {loading ? "⏳ Procesando importación..." : "♻️ Reemplazar base actual"}
             </button>
           </div>
           <p className="text-xs text-slate-400 mt-2 text-right">
@@ -3035,9 +3541,11 @@ function XlsxImportPreview({ parseResult, onConfirmReplace, onConfirmMerge, onCa
 }
 
 function ModuloConfiguracion({
-  data, exportJSON, importJSON, exportXLSX, exportLimpia, restaurarEjemplos, limpiarTodo, showInstructions,
+  data, exportJSON, exportJSONSummary, exportJSONAnonymized, importJSON, exportXLSX, exportXLSXAnonymized, exportLimpia,
+  restaurarEjemplos, limpiarTodo, showInstructions,
   backups, setBackups, lastJSONExport, lastXLSXExport, runBackupAndToast, setData, toastShow,
-  downloadXlsxTemplate, parseXlsxFile
+  downloadXlsxTemplate, parseXlsxFile, canExportFull, canExportSummary, canExportAnonymized,
+  encryptionEnabled, openEncryptionSetup, disableEncryption, exporting
 }: any) {
   const counts: Record<string, number> = {
     cursos: data.cursos.length,
@@ -3051,9 +3559,15 @@ function ModuloConfiguracion({
     contactos: data.contactos.length
   };
 
+  const [confirm, setConfirm] = useState<ConfirmState | null>(null);
   const [xlsxParseResult, setXlsxParseResult] = useState<XlsxParseResult | null>(null);
   const [xlsxImporting, setXlsxImporting] = useState(false);
+  const [xlsxApplying, setXlsxApplying] = useState(false);
   const xlsxFileInputRef = React.useRef<HTMLInputElement>(null);
+  const exportingXlsx = exporting === "xlsx" || exporting === "xlsxAnon";
+  const exportingJson = exporting === "json" || exporting === "jsonSummary" || exporting === "jsonAnon";
+  const exportingTemplate = exporting === "template";
+  const exportingCleanTemplate = exporting === "cleanTemplate";
 
   const handleXlsxFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -3063,7 +3577,10 @@ function ModuloConfiguracion({
       const result = await parseXlsxFile(file);
       setXlsxParseResult(result);
     } catch {
-      toastShow("Error al leer el archivo XLSX. Verifica que sea un archivo válido.");
+      toastShow("Error al leer el archivo XLSX", {
+        type: "error",
+        message: "Verifica que el archivo sea válido.",
+      });
     } finally {
       setXlsxImporting(false);
       if (xlsxFileInputRef.current) xlsxFileInputRef.current.value = "";
@@ -3072,51 +3589,82 @@ function ModuloConfiguracion({
 
   const applyXlsxImport = (mode: "merge" | "replace") => {
     if (!xlsxParseResult) return;
-    logAudit("data:import", { detail: `Importación XLSX modo ${mode}` });
-    runBackupAndToast("importar-xlsx");
-    const parsed = xlsxParseResult.parsedData;
-    const newData = { ...data };
-    const modules: (keyof AppData)[] = ["contactos","cursos","ocs","practicantes","presupuesto","procesos","diplomas","evaluacionesPsicolaborales","cargaSemanal","valesGas","valesGasOrganizacion","reclutamiento"];
-    modules.forEach(mod => {
-      if (!(mod in parsed)) return;
-      const incoming = (parsed as any)[mod] as any[];
-      if (mode === "replace") {
-        (newData as any)[mod] = incoming;
-      } else {
-        const existing = (newData as any)[mod] as any[];
-        const merged = [...existing];
-        incoming.forEach((item: any) => {
-          const idx = merged.findIndex((e: any) => e.id === item.id);
-          if (idx >= 0) merged[idx] = { ...merged[idx], ...item };
-          else merged.push(item);
-        });
-        (newData as any)[mod] = merged;
-      }
-    });
-    if (mode === "merge" && xlsxParseResult.contactosNuevos.length > 0) {
-      const existingIds = new Set(newData.contactos.map((c: any) => c.id));
-      xlsxParseResult.contactosNuevos.forEach((c: any) => {
-        if (!existingIds.has(c.id)) newData.contactos.push(c);
+    setXlsxApplying(true);
+    try {
+      logAudit("data:import", { detail: `Importación XLSX modo ${mode}` });
+      runBackupAndToast("importar-xlsx");
+      const parsed = xlsxParseResult.parsedData;
+      const newData = { ...data };
+      const modules: (keyof AppData)[] = ["contactos","cursos","ocs","practicantes","presupuesto","procesos","diplomas","evaluacionesPsicolaborales","cargaSemanal","valesGas","valesGasOrganizacion","reclutamiento"];
+      modules.forEach(mod => {
+        if (!(mod in parsed)) return;
+        const incoming = (parsed as any)[mod] as any[];
+        if (mode === "replace") {
+          (newData as any)[mod] = incoming;
+        } else {
+          const existing = (newData as any)[mod] as any[];
+          const merged = [...existing];
+          incoming.forEach((item: any) => {
+            const idx = merged.findIndex((e: any) => e.id === item.id);
+            if (idx >= 0) merged[idx] = { ...merged[idx], ...item };
+            else merged.push(item);
+          });
+          (newData as any)[mod] = merged;
+        }
       });
+      if (mode === "merge" && xlsxParseResult.contactosNuevos.length > 0) {
+        const existingIds = new Set(newData.contactos.map((c: any) => c.id));
+        xlsxParseResult.contactosNuevos.forEach((c: any) => {
+          if (!existingIds.has(c.id)) newData.contactos.push(c);
+        });
+      }
+      newData.meta = { ...newData.meta, actualizado: new Date().toISOString() };
+      setData(newData);
+      setXlsxParseResult(null);
+      const hojas = xlsxParseResult.hojas.length;
+      const total = xlsxParseResult.hojas.reduce((s, h) => s + h.validos, 0);
+      toastShow("XLSX importado correctamente", {
+        type: "success",
+        message: `${total} registros en ${hojas} módulos (modo: ${mode === "merge" ? "fusión" : "reemplazo"}).`,
+      });
+    } finally {
+      setXlsxApplying(false);
     }
-    newData.meta = { ...newData.meta, actualizado: new Date().toISOString() };
-    setData(newData);
-    setXlsxParseResult(null);
-    const hojas = xlsxParseResult.hojas.length;
-    const total = xlsxParseResult.hojas.reduce((s, h) => s + h.validos, 0);
-    toastShow(`XLSX importado correctamente: ${total} registros en ${hojas} modulos (modo: ${mode === "merge" ? "fusion" : "reemplazo"})`);
+  };
+
+  const confirmXlsxImport = (mode: "merge" | "replace") => {
+    const label = mode === "merge" ? "Fusionar" : "Reemplazar";
+    setConfirm({
+      title: `Confirmar importación XLSX (${label})`,
+      message: mode === "merge"
+        ? "Se fusionarán registros existentes y se crearán nuevos. Se generará un respaldo antes de importar."
+        : "Se reemplazarán los módulos presentes en el XLSX. Se generará un respaldo antes de importar.",
+      variant: "warning",
+      confirmLabel: "Importar",
+      onConfirm: () => {
+        applyXlsxImport(mode);
+        setConfirm(null);
+      },
+    });
   };
 
   const handleRestaurarBackup = (backup: BackupItem) => {
-    if (confirm(`¿Seguro que deseas restaurar este respaldo del ${new Date(backup.fecha).toLocaleString("es-CL")}? Se creará un respaldo de seguridad del estado actual antes de restaurar.`)) {
-      runBackupAndToast("antes de restaurar");
-      if (backup.data && typeof backup.data === "object") {
-        setData(backup.data);
-        toastShow("Respaldo restaurado exitosamente.");
-      } else {
-        toastShow("Respaldo corrupto o inválido");
-      }
-    }
+    setConfirm({
+      title: "Restaurar respaldo",
+      message: `¿Restaurar respaldo del ${new Date(backup.fecha).toLocaleString("es-CL")}? Se creará un respaldo de seguridad antes de restaurar.`,
+      variant: "warning",
+      confirmLabel: "Restaurar",
+      onConfirm: () => {
+        runBackupAndToast("antes de restaurar");
+        if (backup.data && typeof backup.data === "object") {
+          setData(backup.data);
+          toastShow("Respaldo restaurado exitosamente", { type: "success" });
+        } else {
+          toastShow("Respaldo corrupto o inválido", { type: "error" });
+        }
+        setConfirm(null);
+      },
+    });
   };
 
   const handleDescargarBackup = (backup: BackupItem) => {
@@ -3127,21 +3675,28 @@ function ModuloConfiguracion({
     a.download = `respaldo_local_kata_${new Date(backup.fecha).toISOString().slice(0,10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    toastShow("JSON de respaldo descargado.");
+    toastShow("JSON de respaldo descargado", { type: "success" });
   };
 
   const handleEliminarBackup = (id: string) => {
-    if (confirm("¿Seguro que deseas eliminar este respaldo local de forma permanente?")) {
-      const updated = backups.filter((b: BackupItem) => b.id !== id);
-      saveLocalBackups(updated);
-      setBackups(updated);
-      toastShow("Respaldo eliminado.");
-    }
+    setConfirm({
+      title: "Eliminar respaldo",
+      message: "¿Seguro que deseas eliminar este respaldo local de forma permanente?",
+      variant: "danger",
+      confirmLabel: "Eliminar",
+      onConfirm: () => {
+        const updated = backups.filter((b: BackupItem) => b.id !== id);
+        saveLocalBackups(updated);
+        setBackups(updated);
+        toastShow("Respaldo eliminado", { type: "success" });
+        setConfirm(null);
+      },
+    });
   };
 
   const handleCrearBackupManual = () => {
     runBackupAndToast("manual");
-    toastShow("Respaldo manual creado correctamente.");
+    toastShow("Respaldo manual creado correctamente", { type: "success" });
   };
 
   const lastLocalBackupDate = backups[0]?.fecha;
@@ -3175,8 +3730,12 @@ function ModuloConfiguracion({
               <p className="text-sm font-semibold text-slate-700">Descargar plantilla</p>
               <p className="text-xs text-slate-500 mt-0.5">Plantilla oficial con todos los módulos y ejemplos incluidos.</p>
             </div>
-            <button onClick={downloadXlsxTemplate} className="w-full bg-indigo-600 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-indigo-700 transition">
-              📋 Descargar plantilla XLSX
+            <button
+              onClick={downloadXlsxTemplate}
+              disabled={exportingTemplate}
+              className="w-full bg-indigo-600 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-indigo-700 transition disabled:opacity-60"
+            >
+              {exportingTemplate ? "⏳ Generando plantilla..." : "📋 Descargar plantilla XLSX"}
             </button>
           </div>
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
@@ -3192,16 +3751,46 @@ function ModuloConfiguracion({
             >
               {xlsxImporting ? "⏳ Procesando..." : "📤 Subir e importar XLSX"}
             </button>
+            {xlsxImporting && (
+              <div className="flex justify-center">
+                <LoadingSpinner size="sm" label="Procesando archivo XLSX..." />
+              </div>
+            )}
           </div>
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
             <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center text-lg">3️⃣</div>
             <div>
               <p className="text-sm font-semibold text-slate-700">Exportar datos</p>
-              <p className="text-xs text-slate-500 mt-0.5">Descarga todos los módulos en un archivo Excel con todos los registros actuales.</p>
+              <p className="text-xs text-slate-500 mt-0.5">Descarga el XLSX completo o una versión anonimizada para compartir.</p>
             </div>
-            <button onClick={exportXLSX} className="w-full bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-emerald-700 transition">
-              📥 Exportar XLSX completo
-            </button>
+            <div className="space-y-2">
+              {canExportFull && (
+                <button
+                  onClick={exportXLSX}
+                  disabled={exportingXlsx}
+                  className="w-full bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-emerald-700 transition disabled:opacity-60"
+                >
+                  {exporting === "xlsx" ? "⏳ Generando XLSX..." : "📥 Exportar XLSX completo"}
+                </button>
+              )}
+              {canExportAnonymized && (
+                <button
+                  onClick={exportXLSXAnonymized}
+                  disabled={exportingXlsx}
+                  className="w-full bg-emerald-500 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-emerald-600 transition disabled:opacity-60"
+                >
+                  {exporting === "xlsxAnon" ? "⏳ Generando XLSX anon..." : "🫥 Exportar XLSX anon."}
+                </button>
+              )}
+              {!canExportFull && !canExportAnonymized && (
+                <p className="text-[11px] text-slate-400">Sin permisos de exportación</p>
+              )}
+            </div>
+            {exportingXlsx && (
+              <div className="flex justify-center">
+                <LoadingSpinner size="sm" label="Generando XLSX..." />
+              </div>
+            )}
           </div>
         </div>
         <p className="text-xs text-slate-400 mt-3">Modos al importar: <strong>Fusionar</strong> agrega/actualiza sin borrar · <strong>Reemplazar</strong> sobreescribe los módulos presentes en el archivo.</p>
@@ -3218,10 +3807,68 @@ function ModuloConfiguracion({
             <div className="flex justify-between py-1"><span>Versión</span><span className="font-semibold text-slate-800">v{data.meta.version}</span></div>
           </div>
           <div className="flex flex-wrap gap-2 pt-4 border-t border-slate-100 mt-3">
-            <button onClick={exportJSON} className="bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-emerald-700 transition">📥 Exportar JSON</button>
+            {canExportFull && (
+              <button
+                onClick={exportJSON}
+                disabled={exportingJson}
+                className="bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-emerald-700 transition disabled:opacity-60"
+              >
+                {exporting === "json" ? "⏳ Generando JSON..." : "📥 Exportar JSON completo"}
+              </button>
+            )}
+            {canExportSummary && (
+              <button
+                onClick={exportJSONSummary}
+                disabled={exportingJson}
+                className="bg-emerald-500 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-emerald-600 transition disabled:opacity-60"
+              >
+                {exporting === "jsonSummary" ? "⏳ Generando resumen..." : "📥 Exportar resumen"}
+              </button>
+            )}
+            {canExportAnonymized && (
+              <button
+                onClick={exportJSONAnonymized}
+                disabled={exportingJson}
+                className="bg-emerald-500 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-emerald-600 transition disabled:opacity-60"
+              >
+                {exporting === "jsonAnon" ? "⏳ Generando JSON anon..." : "🫥 Exportar JSON anon."}
+              </button>
+            )}
             <button onClick={importJSON} className="bg-blue-600 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-blue-700 transition">📤 Importar JSON</button>
-            <button onClick={exportLimpia} className="bg-slate-500 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-slate-600 transition">📋 Plantilla limpia</button>
+            <button
+              onClick={exportLimpia}
+              disabled={exportingCleanTemplate}
+              className="bg-slate-500 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-slate-600 transition disabled:opacity-60"
+            >
+              {exportingCleanTemplate ? "⏳ Generando plantilla..." : "📋 Plantilla limpia"}
+            </button>
           </div>
+          {exportingJson && (
+            <div className="mt-3 flex justify-center">
+              <LoadingSpinner size="sm" label="Generando exportación..." />
+            </div>
+          )}
+        </SectionCard>
+
+        <SectionCard title="🔐 Cifrado local">
+          <p className="text-sm text-slate-600 mb-3">Protege datos sensibles en este navegador con una clave local.</p>
+          <div className="flex justify-between items-center text-xs text-slate-600 mb-4">
+            <span>Estado</span>
+            <span className={`font-semibold ${encryptionEnabled ? "text-emerald-600" : "text-slate-500"}`}>
+              {encryptionEnabled ? "Activo" : "Desactivado"}
+            </span>
+          </div>
+          {!encryptionEnabled && (
+            <button onClick={openEncryptionSetup} className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-emerald-700 transition">
+              Activar cifrado
+            </button>
+          )}
+          {encryptionEnabled && (
+            <button onClick={disableEncryption} className="bg-amber-500 text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-amber-600 transition">
+              Desactivar cifrado
+            </button>
+          )}
+          <p className="text-[11px] text-slate-400 mt-3">La clave se solicita al iniciar y no se guarda en localStorage.</p>
         </SectionCard>
 
         {/* Contador */}
@@ -3342,14 +3989,25 @@ function ModuloConfiguracion({
         )}
       </div>
 
-      {xlsxParseResult && (
-        <XlsxImportPreview
-          parseResult={xlsxParseResult}
-          onConfirmMerge={() => applyXlsxImport("merge")}
-          onConfirmReplace={() => applyXlsxImport("replace")}
-          onCancel={() => setXlsxParseResult(null)}
-        />
-      )}
+        {xlsxParseResult && (
+          <XlsxImportPreview
+            parseResult={xlsxParseResult}
+            onConfirmMerge={() => confirmXlsxImport("merge")}
+            onConfirmReplace={() => confirmXlsxImport("replace")}
+            onCancel={() => setXlsxParseResult(null)}
+            loading={xlsxApplying}
+          />
+        )}
+      <ConfirmDialog
+        isOpen={!!confirm}
+        title={confirm?.title || "Confirmar acción"}
+        message={confirm?.message}
+        variant={confirm?.variant || "default"}
+        confirmLabel={confirm?.confirmLabel}
+        cancelLabel={confirm?.cancelLabel}
+        onConfirm={() => { const cb = confirm?.onConfirm; if (cb) cb(); }}
+        onCancel={() => setConfirm(null)}
+      />
     </div>
   );
 }
@@ -3370,8 +4028,9 @@ function FormCursos({ data, editItem, closeModal, saveItem }: any) {
   const [vWarn, setVWarn] = useState<string[]>([]);
   const save = () => {
     const { errors, warnings } = validateGeneral(form, "curso", "Nombre del curso");
+    const hasErrors = Object.keys(errors).length > 0;
     setVErr(errors); setVWarn(warnings);
-    if (Object.keys(errors).length > 0) return;
+    if (hasErrors) { notifyValidationError(); return; }
     saveItem("cursos", form);
   };
   return (
@@ -3405,8 +4064,9 @@ function FormOCs({ data, editItem, closeModal, saveItem }: any) {
   const [vWarn, setVWarn] = useState<string[]>([]);
   const save = () => {
     const { errors, warnings } = validateGeneral(form, "numeroOC", "N° OC o servicio");
+    if (Number(form.monto) < 0) errors.monto = "El monto no puede ser negativo.";
     setVErr(errors); setVWarn(warnings);
-    if (Object.keys(errors).length > 0) return;
+    if (Object.keys(errors).length > 0) { notifyValidationError(); return; }
     saveItem("ocs", form);
   };
   return (
@@ -3415,7 +4075,14 @@ function FormOCs({ data, editItem, closeModal, saveItem }: any) {
       <Field label="Categoría OC" required><Select value={form.categoriaOC} onChange={v => set("categoriaOC", v)} options={CATEGORIAS_OC} placeholder="Seleccionar categoría..." /></Field>
       <Field label="Curso / Servicio asociado"><Input value={form.cursoAsociado} onChange={e => set("cursoAsociado", e.target.value)} /></Field>
       <Field label="Proveedor"><Input value={form.proveedor} onChange={e => set("proveedor", e.target.value)} /></Field>
-      <Field label="Monto (CLP)"><Input type="number" value={form.monto} onChange={e => set("monto", Number(e.target.value) || 0)} /></Field>
+      <ValidatedInput
+        label="Monto (CLP)"
+        type="number"
+        value={String(form.monto ?? "")}
+        onChange={(v) => set("monto", Number(v) || 0)}
+        error={vErr.monto}
+        hint="Solo números, sin puntos ni símbolo $"
+      />
       <Field label="Fecha solicitud"><DateInput value={form.fechaSolicitud} onChange={v => set("fechaSolicitud", v)} /></Field>
       <Field label="Fecha límite"><DateInput value={form.fechaLimite} onChange={v => set("fechaLimite", v)} /></Field>
       <Field label="Estado OC"><Select value={form.estadoOC} onChange={v => set("estadoOC", v)} options={ESTADOS_OC} /></Field>
@@ -3436,8 +4103,9 @@ function FormPracticantes({ data, editItem, closeModal, saveItem }: any) {
   const [vWarn, setVWarn] = useState<string[]>([]);
   const save = () => {
     const { errors, warnings } = validateGeneral(form, "nombre", "Nombre del practicante");
+    if (Number(form.costoMensual) < 0) errors.costoMensual = "El costo mensual no puede ser negativo.";
     setVErr(errors); setVWarn(warnings);
-    if (Object.keys(errors).length > 0) return;
+    if (Object.keys(errors).length > 0) { notifyValidationError(); return; }
     saveItem("practicantes", form);
   };
   return (
@@ -3447,7 +4115,14 @@ function FormPracticantes({ data, editItem, closeModal, saveItem }: any) {
       <Field label="Especialidad"><Input value={form.especialidad} onChange={e => set("especialidad", e.target.value)} /></Field>
       <Field label="Fecha inicio"><DateInput value={form.fechaInicio} onChange={v => set("fechaInicio", v)} /></Field>
       <Field label="Fecha término"><DateInput value={form.fechaTermino} onChange={v => set("fechaTermino", v)} /></Field>
-      <Field label="Costo mensual (CLP)"><Input type="number" value={form.costoMensual} onChange={e => set("costoMensual", Number(e.target.value) || 0)} /></Field>
+      <ValidatedInput
+        label="Costo mensual (CLP)"
+        type="number"
+        value={String(form.costoMensual ?? "")}
+        onChange={(v) => set("costoMensual", Number(v) || 0)}
+        error={vErr.costoMensual}
+        hint="Solo números, sin puntos ni símbolo $"
+      />
       <Field label="Estado"><Select value={form.estado} onChange={v => set("estado", v)} options={ESTADOS_PRACTICANTE} /></Field>
       <Field label="Responsable" error={vErr.responsableId}><SelectContact value={form.responsableId} onChange={v => set("responsableId", v)} data={data} /></Field>
       <Field label="Próximo paso"><Input value={form.proximoPaso} onChange={e => set("proximoPaso", e.target.value)} /></Field>
@@ -3469,7 +4144,7 @@ function FormPresupuesto({ data: _data, editItem, closeModal, saveItem }: any) {
     const total = Number(form.presupuestoTotal) || 0;
     if (total < 0) errors.presupuestoTotal = "El presupuesto asignado no puede ser negativo.";
     setVErr(errors);
-    if (Object.keys(errors).length > 0) return;
+    if (Object.keys(errors).length > 0) { notifyValidationError(); return; }
     saveItem("presupuesto", { ...form, presupuestoTotal: total });
   };
 
@@ -3478,9 +4153,15 @@ function FormPresupuesto({ data: _data, editItem, closeModal, saveItem }: any) {
       <div className="bg-slate-50 rounded-xl px-4 py-2.5 text-sm text-slate-500 border border-slate-200">
         Módulo: <span className="font-semibold text-slate-700">{form.concepto}</span>
       </div>
-      <Field label="Presupuesto asignado (CLP)" required error={vErr.presupuestoTotal}>
-        <Input type="number" value={form.presupuestoTotal} onChange={e => set("presupuestoTotal", Number(e.target.value) || 0)} />
-      </Field>
+      <ValidatedInput
+        label="Presupuesto asignado (CLP)"
+        type="number"
+        value={String(form.presupuestoTotal ?? "")}
+        onChange={(v) => set("presupuestoTotal", Number(v) || 0)}
+        error={vErr.presupuestoTotal}
+        required
+        hint="Solo números, sin puntos ni símbolo $"
+      />
       <Field label="Observaciones">
         <Textarea value={form.observaciones} onChange={e => set("observaciones", e.target.value)} />
       </Field>
@@ -3499,7 +4180,7 @@ function FormProcesos({ data, editItem, closeModal, saveItem }: any) {
   const save = () => {
     const { errors, warnings } = validateGeneral(form, "proceso", "Nombre del proceso");
     setVErr(errors); setVWarn(warnings);
-    if (Object.keys(errors).length > 0) return;
+    if (Object.keys(errors).length > 0) { notifyValidationError(); return; }
     saveItem("procesos", form);
   };
   return (
@@ -3541,7 +4222,7 @@ function FormDiplomas({ data, editItem, closeModal, saveItem }: any) {
       warnings.push("El documento está completado pero no tiene fecha de subida a BUK.");
     }
     setVErr(errors); setVWarn(warnings);
-    if (Object.keys(errors).length > 0) return;
+    if (Object.keys(errors).length > 0) { notifyValidationError(); return; }
     saveItem("diplomas", form);
   };
   return (
@@ -3572,6 +4253,7 @@ function FormEvaluaciones({ data, editItem, closeModal, saveItem }: any) {
   const { form, set } = useForm({ mes: "Enero", ano: 2026, cargo: "", area: "", candidato: "", rut: "", tipoEvaluacion: "Psicolaboral", proveedor: "", fechaSolicitud: "", fechaEvaluacion: "", fechaEntregaInforme: "", estado: "Pendiente solicitar", resultado: "Pendiente", prioridad: "P3 Medio", responsableId: "", costo: 0, requiereOC: "No", numeroOC: "", proximaAccion: "", fechaProximaAccion: "", bloqueadoPor: "Sin bloqueo", observaciones: "" }, editItem);
   const [vErr, setVErr] = useState<VError>({});
   const [vWarn, setVWarn] = useState<string[]>([]);
+  const [fieldWarn, setFieldWarn] = useState<Record<string, string>>({});
   const save = () => {
     const { errors, warnings } = validateGeneral(form, "cargo", "Cargo");
     if (!form.candidato?.trim()) errors.candidato = "El nombre del candidato es obligatorio.";
@@ -3582,8 +4264,15 @@ function FormEvaluaciones({ data, editItem, closeModal, saveItem }: any) {
     if (form.requiereOC === "Sí" && !form.numeroOC?.trim() && form.bloqueadoPor !== "Falta OC") {
       warnings.push("Requiere OC pero no tiene N° OC ni bloqueo \"Falta OC\". Recuerda gestionarla.");
     }
+    if (Number(form.costo) < 0) errors.costo = "El costo no puede ser negativo.";
+    const fieldWarnings: Record<string, string> = {};
+    const rut = form.rut?.trim();
+    if (rut && !isValidRut(rut)) {
+      fieldWarnings.rut = "Formato de RUT poco usual.";
+    }
     setVErr(errors); setVWarn(warnings);
-    if (Object.keys(errors).length > 0) return;
+    setFieldWarn(fieldWarnings);
+    if (Object.keys(errors).length > 0) { notifyValidationError(); return; }
     saveItem("evaluacionesPsicolaborales", { ...form, costo: Number(form.costo) || 0 });
   };
   return (
@@ -3593,23 +4282,44 @@ function FormEvaluaciones({ data, editItem, closeModal, saveItem }: any) {
       <Field label="Cargo" required error={vErr.cargo}><Input value={form.cargo} onChange={e => set("cargo", e.target.value)} /></Field>
       <Field label="Área"><Input value={form.area} onChange={e => set("area", e.target.value)} /></Field>
       <Field label="Candidato" required error={vErr.candidato}><Input value={form.candidato} onChange={e => set("candidato", e.target.value)} /></Field>
-      <Field label="RUT"><Input value={form.rut} onChange={e => set("rut", e.target.value)} /></Field>
+      <ValidatedInput
+        label="RUT"
+        value={form.rut}
+        onChange={(v) => set("rut", v)}
+        warning={fieldWarn.rut}
+        hint="Ej: 12.345.678-9"
+      />
       <Field label="Tipo evaluación"><Select value={form.tipoEvaluacion} onChange={v => set("tipoEvaluacion", v)} options={TIPOS_EVALUACION} /></Field>
       <Field label="Proveedor / Psicólogo"><Input value={form.proveedor} onChange={e => set("proveedor", e.target.value)} /></Field>
       <Field label="Fecha solicitud"><DateInput value={form.fechaSolicitud} onChange={v => set("fechaSolicitud", v)} /></Field>
       <Field label="Fecha evaluación" error={vErr.fechaEvaluacion}><DateInput value={form.fechaEvaluacion} onChange={v => set("fechaEvaluacion", v)} /></Field>
       <Field label="Fecha entrega informe" error={vErr.fechaEntregaInforme}><DateInput value={form.fechaEntregaInforme} onChange={v => set("fechaEntregaInforme", v)} /></Field>
-      <Field label="Estado"><Select value={form.estado} onChange={v => set("estado", v)} options={ESTADOS_EVALUACION} /></Field>
-      <Field label="Resultado" error={vErr.resultado}><Select value={form.resultado} onChange={v => set("resultado", v)} options={RESULTADOS_EVALUACION} /></Field>
-      <Field label="Prioridad"><Select value={form.prioridad} onChange={v => set("prioridad", v)} options={PRIORIDADES} /></Field>
-      <Field label="Responsable" error={vErr.responsableId}><SelectContact value={form.responsableId} onChange={v => set("responsableId", v)} data={data} /></Field>
-      <Field label="Costo (CLP)"><Input type="number" value={form.costo} onChange={e => set("costo", Number(e.target.value) || 0)} /></Field>
-      <Field label="Requiere OC"><Select value={form.requiereOC} onChange={v => set("requiereOC", v)} options={["Sí", "No"]} /></Field>
-      <Field label="N° OC asociada"><Input value={form.numeroOC} onChange={e => set("numeroOC", e.target.value)} /></Field>
-      <Field label="Próxima acción" error={vErr.proximaAccion}><Input value={form.proximaAccion} onChange={e => set("proximaAccion", e.target.value)} /></Field>
-      <Field label="Fecha próxima acción" error={vErr.fechaProximaAccion}><DateInput value={form.fechaProximaAccion} onChange={v => set("fechaProximaAccion", v)} /></Field>
-      <Field label="Bloqueado por" error={vErr.bloqueadoPor}><Select value={form.bloqueadoPor} onChange={v => set("bloqueadoPor", v)} options={BLOQUEOS} /></Field>
-      <Field label="Observaciones" error={vErr.observaciones}><Textarea value={form.observaciones} onChange={e => set("observaciones", e.target.value)} /></Field>
+      <div className="md:col-span-2">
+        <ExpandableSection title="Seguimiento y control" defaultOpen={false}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Field label="Estado"><Select value={form.estado} onChange={v => set("estado", v)} options={ESTADOS_EVALUACION} /></Field>
+            <Field label="Resultado" error={vErr.resultado}><Select value={form.resultado} onChange={v => set("resultado", v)} options={RESULTADOS_EVALUACION} /></Field>
+            <Field label="Prioridad"><Select value={form.prioridad} onChange={v => set("prioridad", v)} options={PRIORIDADES} /></Field>
+            <Field label="Responsable" error={vErr.responsableId}><SelectContact value={form.responsableId} onChange={v => set("responsableId", v)} data={data} /></Field>
+            <ValidatedInput
+              label="Costo (CLP)"
+              type="number"
+              value={String(form.costo ?? "")}
+              onChange={(v) => set("costo", Number(v) || 0)}
+              error={vErr.costo}
+              hint="Solo números, sin puntos ni símbolo $"
+            />
+            <Field label="Requiere OC"><Select value={form.requiereOC} onChange={v => set("requiereOC", v)} options={["Sí", "No"]} /></Field>
+            <Field label="N° OC asociada"><Input value={form.numeroOC} onChange={e => set("numeroOC", e.target.value)} /></Field>
+            <Field label="Próxima acción" error={vErr.proximaAccion}><Input value={form.proximaAccion} onChange={e => set("proximaAccion", e.target.value)} /></Field>
+            <Field label="Fecha próxima acción" error={vErr.fechaProximaAccion}><DateInput value={form.fechaProximaAccion} onChange={v => set("fechaProximaAccion", v)} /></Field>
+            <Field label="Bloqueado por" error={vErr.bloqueadoPor}><Select value={form.bloqueadoPor} onChange={v => set("bloqueadoPor", v)} options={BLOQUEOS} /></Field>
+            <div className="md:col-span-2">
+              <Field label="Observaciones" error={vErr.observaciones}><Textarea value={form.observaciones} onChange={e => set("observaciones", e.target.value)} /></Field>
+            </div>
+          </div>
+        </ExpandableSection>
+      </div>
       <FormMessages errors={vErr} warnings={vWarn} />
       <div className="md:col-span-2 flex gap-3 justify-end pt-2"><button onClick={closeModal} className="px-5 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-medium hover:bg-slate-200 transition-colors">Cancelar</button><button onClick={save} className="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">Guardar</button></div>
     </div>
@@ -3622,6 +4332,7 @@ function FormCargaSemanal({ data: _data, editItem, closeModal, saveItem }: any) 
   const save = () => {
     if (!form.semana.trim()) {
       setVErr({ semana: "El campo Semana es obligatorio." });
+      notifyValidationError();
       return;
     }
     saveItem("cargaSemanal", form);
@@ -3661,16 +4372,29 @@ function FormContactos({ data, editItem, closeModal, saveItem }: any) {
   const { form, set } = useForm({ nombre: "", rol: "", areaEmpresa: "", correo: "", telefono: "", relacion: "Interno", activo: "Sí", observaciones: "" }, editItem);
   const [vErr, setVErr] = useState<VError>({});
   const [vWarn, setVWarn] = useState<string[]>([]);
+  const [fieldWarn, setFieldWarn] = useState<Record<string, string>>({});
   const save = () => {
     const errors: VError = {};
     const warnings: string[] = [];
+    const fieldWarnings: Record<string, string> = {};
     if (!form.nombre.trim()) errors.nombre = "El nombre es obligatorio.";
     // Duplicate check (ignoring self if editing)
     const norm = form.nombre.trim().toLowerCase().replace(/\s+/g, " ");
     const dup = data.contactos.find((c: any) => c.nombre.trim().toLowerCase().replace(/\s+/g, " ") === norm && (!editItem || c.id !== editItem.id));
     if (dup) warnings.push(`Ya existe un contacto llamado "${dup.nombre}". ¿Estás segura de que no es duplicado?`);
+    const email = form.correo.trim();
+    if (email && !isValidEmail(email)) {
+      if (editItem) fieldWarnings.correo = "Formato de correo poco usual.";
+      else errors.correo = "El correo no tiene un formato válido.";
+    }
+    const telefono = form.telefono.trim();
+    if (telefono && !isValidPhone(telefono)) {
+      if (editItem) fieldWarnings.telefono = "Formato de teléfono poco usual.";
+      else errors.telefono = "El teléfono no tiene un formato válido.";
+    }
     setVErr(errors); setVWarn(warnings);
-    if (Object.keys(errors).length > 0) return;
+    setFieldWarn(fieldWarnings);
+    if (Object.keys(errors).length > 0) { notifyValidationError(); return; }
     saveItem("contactos", form);
   };
   return (
@@ -3678,8 +4402,23 @@ function FormContactos({ data, editItem, closeModal, saveItem }: any) {
       <Field label="Nombre" required error={vErr.nombre}><Input value={form.nombre} onChange={e => set("nombre", e.target.value)} /></Field>
       <Field label="Rol"><Input value={form.rol} onChange={e => set("rol", e.target.value)} /></Field>
       <Field label="Área / Empresa"><Input value={form.areaEmpresa} onChange={e => set("areaEmpresa", e.target.value)} /></Field>
-      <Field label="Correo"><Input type="email" value={form.correo} onChange={e => set("correo", e.target.value)} /></Field>
-      <Field label="Teléfono"><Input value={form.telefono} onChange={e => set("telefono", e.target.value)} /></Field>
+      <ValidatedInput
+        label="Correo"
+        type="email"
+        value={form.correo}
+        onChange={(v) => set("correo", v)}
+        error={vErr.correo}
+        warning={fieldWarn.correo}
+        hint="Ej: nombre@empresa.cl"
+      />
+      <ValidatedInput
+        label="Teléfono"
+        value={form.telefono}
+        onChange={(v) => set("telefono", v)}
+        error={vErr.telefono}
+        warning={fieldWarn.telefono}
+        hint="Ej: +56912345678"
+      />
       <Field label="Relación"><Select value={form.relacion} onChange={v => set("relacion", v)} options={RELACIONES} /></Field>
       <Field label="Activo"><select value={form.activo} onChange={e => set("activo", e.target.value)} className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"><option value="Sí">Sí</option><option value="No">No</option></select></Field>
       <Field label="Observaciones"><Textarea value={form.observaciones} onChange={e => set("observaciones", e.target.value)} /></Field>
@@ -3690,7 +4429,6 @@ function FormContactos({ data, editItem, closeModal, saveItem }: any) {
 }
 
 // ── CAPTURA RÁPIDA FORM ─────────────────────────
-const TIPOS_CAPTURA = ["Curso", "OC", "Practicante", "Diploma / Certificado / Licencia", "Evaluación Psicolaboral", "Vale de Gas", "Proceso Pendiente"];
 
 function FormCapturaRapida({ data, onCancel, onSave }: { data: AppData; onCancel: () => void; onSave: (capture: any) => void; }) {
   const [form, setForm] = useState({
@@ -3702,11 +4440,11 @@ function FormCapturaRapida({ data, onCancel, onSave }: { data: AppData; onCancel
 
   const handleSave = () => {
     setError("");
-    if (!form.tipo) return setError("El tipo de registro es obligatorio.");
-    if (!form.nombre.trim()) return setError("El nombre o asunto es obligatorio.");
-    if (!form.prioridad) return setError("La prioridad es obligatoria.");
-    if (!form.proximaAccion.trim()) return setError("La próxima acción es obligatoria.");
-    if (form.prioridad === "P1 Crítico" && !form.fechaProximaAccion) return setError("Si la prioridad es P1 Crítico, la fecha próxima acción es obligatoria.");
+    if (!form.tipo) { setError("El tipo de registro es obligatorio."); notifyValidationError(); return; }
+    if (!form.nombre.trim()) { setError("El nombre o asunto es obligatorio."); notifyValidationError(); return; }
+    if (!form.prioridad) { setError("La prioridad es obligatoria."); notifyValidationError(); return; }
+    if (!form.proximaAccion.trim()) { setError("La próxima acción es obligatoria."); notifyValidationError(); return; }
+    if (form.prioridad === "P1 Crítico" && !form.fechaProximaAccion) { setError("Si la prioridad es P1 Crítico, la fecha próxima acción es obligatoria."); notifyValidationError(); return; }
 
     onSave({ ...form });
   };
@@ -3762,7 +4500,7 @@ function FormCapturaRapida({ data, onCancel, onSave }: { data: AppData; onCancel
 
 // ── REPORTE MENSUAL EJECUTIVO COMPONENT ─────────────────────────
 
-function ModuloReporteMensual({ data, toastShow }: { data: AppData; toastShow: (msg: string) => void }) {
+function ModuloReporteMensual({ data, toastShow }: { data: AppData; toastShow: (msg: string, opts?: any) => void }) {
   const currentMonth = MESES[new Date().getMonth()] || "Enero";
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -3926,7 +4664,8 @@ function ModuloReporteMensual({ data, toastShow }: { data: AppData; toastShow: (
   const diffPlanificadoReal = totalCursosReal - cursosPlanificados;
 
   // Exports
-  const exportReportXLSX = () => {
+  const exportReportXLSX = async () => {
+    const XLSX = await getXlsx();
     const wb = XLSX.utils.book_new();
     const reportData = [
       ["REPORTE MENSUAL EJECUTIVO", `${selectedMonth} ${selectedYear}`],
@@ -4021,7 +4760,7 @@ function ModuloReporteMensual({ data, toastShow }: { data: AppData; toastShow: (
     const ws = XLSX.utils.aoa_to_sheet(reportData);
     XLSX.utils.book_append_sheet(wb, ws, "Reporte Mensual");
     XLSX.writeFile(wb, `reporte_mensual_kata_v5_${selectedMonth}_${selectedYear}.xlsx`);
-    toastShow("Reporte mensual XLSX descargado");
+    toastShow("Reporte mensual XLSX descargado", { type: "success" });
   };
 
   const exportReportJSON = () => {
@@ -4045,7 +4784,7 @@ function ModuloReporteMensual({ data, toastShow }: { data: AppData; toastShow: (
     a.download = `reporte_mensual_${selectedMonth}_${selectedYear}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    toastShow("Reporte mensual JSON descargado");
+    toastShow("Reporte mensual JSON descargado", { type: "success" });
   };
 
   const copyExecutiveSummary = () => {
@@ -4083,7 +4822,7 @@ ${diffPlanificadoReal > 0
     `.trim();
 
     navigator.clipboard.writeText(summaryText);
-    toastShow("Resumen ejecutivo copiado al portapapeles");
+    toastShow("Resumen ejecutivo copiado al portapapeles", { type: "success" });
   };
 
   return (
@@ -4358,7 +5097,7 @@ ${diffPlanificadoReal > 0
 
 // ── MÓDULO VALES DE GAS ─────────────────────────
 
-function ModuloValesGas({ data, search, setSearch, openNew, openEdit, deleteItem, getResponsableName }: any) {
+function ModuloValesGas({ data, search, setSearch, openNew, openEdit, deleteItem, getResponsableName, tableLoading }: any) {
   const [filterEstado, setFilterEstado] = useState("");
   const [filterArea, setFilterArea] = useState("");
   const [filterPeriodo, setFilterPeriodo] = useState("");
@@ -4494,6 +5233,7 @@ function ModuloValesGas({ data, search, setSearch, openNew, openEdit, deleteItem
           <Table
             columns={columnsOrg}
             rows={filteredOrg}
+            loading={tableLoading}
             onEdit={(r: ValeGasOrg) => openEdit("valesGasOrganizacion", r)}
             onDelete={deleteItem ? (id: string) => deleteItem("valesGasOrganizacion", id) : undefined}
           />
@@ -4535,6 +5275,7 @@ function ModuloValesGas({ data, search, setSearch, openNew, openEdit, deleteItem
           <Table
             columns={columnsColabs}
             rows={filtered}
+            loading={tableLoading}
             onEdit={(r: ValeGas) => openEdit("valesGas", r)}
             onDelete={deleteItem ? (id: string) => deleteItem("valesGas", id) : undefined}
           />
@@ -4577,7 +5318,7 @@ function FormValesGas({ data, editItem, closeModal, saveItem }: any) {
     if (form.estado === "En descuento" && !form.fechaProximaRevision) errors.fechaProximaRevision = "La fecha de próxima revisión es obligatoria cuando el vale está en descuento.";
     if (form.estado === "Cerrado" && saldoCalculado > 0) warnings.push("El estado es 'Cerrado' pero hay saldo pendiente del colaborador. Verifique si corresponde cerrar el registro.");
     setVErr(errors); setVWarn(warnings);
-    if (Object.keys(errors).length > 0) return;
+    if (Object.keys(errors).length > 0) { notifyValidationError(); return; }
     saveItem("valesGas", {
       ...form,
       saldoVales: saldoCalculado,
@@ -4659,7 +5400,7 @@ function FormValeGasOrg({ data, editItem, closeModal, saveItem }: any) {
     if (!form.tipoMovimiento) errors.tipoMovimiento = "El tipo de movimiento es obligatorio.";
     if ((form.cantidadVales || 0) <= 0) errors.cantidadVales = "La cantidad de vales debe ser mayor a 0.";
     setVErr(errors);
-    if (Object.keys(errors).length > 0) return;
+    if (Object.keys(errors).length > 0) { notifyValidationError(); return; }
     saveItem("valesGasOrganizacion", { ...form, ultimaActualizacion: today });
     closeModal();
   };
@@ -4689,7 +5430,7 @@ function FormValeGasOrg({ data, editItem, closeModal, saveItem }: any) {
 
 // ── MÓDULO RECLUTAMIENTO ─────────────────────────
 
-function ModuloReclutamiento({ data, search, setSearch, openNew, openEdit, deleteItem, duplicateItem, markClosed }: any) {
+function ModuloReclutamiento({ data, search, setSearch, openNew, openEdit, deleteItem, duplicateItem, markClosed, tableLoading }: any) {
   const [filtroEstado, setFiltroEstado] = useState("");
   const [filtroPlanta, setFiltroPlanta] = useState("");
   const [filtroTipo, setFiltroTipo] = useState("");
@@ -4778,6 +5519,7 @@ function ModuloReclutamiento({ data, search, setSearch, openNew, openEdit, delet
       <Table
         columns={columns}
         rows={filtered}
+        loading={tableLoading}
         onEdit={(r: any) => openEdit("reclutamiento", r)}
         onDelete={deleteItem ? (id: string) => deleteItem("reclutamiento", id) : undefined}
         onDuplicate={duplicateItem ? (r: any) => duplicateItem("reclutamiento", r) : undefined}
@@ -4819,7 +5561,7 @@ function FormReclutamiento({ data, editItem, closeModal, saveItem }: any) {
       warnings.push("El proceso está Pausado pero no tiene bloqueante indicado.");
     }
     setVErr(errors); setVWarn(warnings);
-    if (Object.keys(errors).length > 0) return;
+    if (Object.keys(errors).length > 0) { notifyValidationError(); return; }
     saveItem("reclutamiento", form);
   };
 

@@ -48,3 +48,152 @@ body {
 .table-stripe tr:nth-child(even) {
   background: #F8FAFC;
 }
+
+/* ── UI/UX Pro Max Animation Enhancements ── */
+
+/* Smooth transitions for all interactive elements */
+button,
+[role="button"],
+input,
+select,
+textarea,
+a {
+  @apply transition-all duration-200 ease-out;
+}
+
+/* Subtle fade and slide animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInDown {
+  from { transform: translateY(-8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideInUp {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-8px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(8px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes pulse-smooth {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.animate-in {
+  animation: fadeIn 300ms ease-out forwards;
+}
+
+.animate-in.fade-in {
+  animation: fadeIn 300ms ease-out forwards;
+}
+
+.animate-in.slide-in-from-top {
+  animation: slideInDown 300ms ease-out forwards;
+}
+
+.animate-in.slide-in-from-bottom {
+  animation: slideInUp 300ms ease-out forwards;
+}
+
+.animate-in.slide-in-from-left {
+  animation: slideInLeft 300ms ease-out forwards;
+}
+
+.animate-in.slide-in-from-right {
+  animation: slideInRight 300ms ease-out forwards;
+}
+
+.animate-in.scale-in {
+  animation: scaleIn 300ms ease-out forwards;
+}
+
+.animate-pulse-smooth {
+  animation: pulse-smooth 2s ease-in-out infinite;
+}
+
+/* Duration modifiers */
+.duration-200 {
+  animation-duration: 200ms;
+}
+
+.duration-300 {
+  animation-duration: 300ms;
+}
+
+.duration-500 {
+  animation-duration: 500ms;
+}
+
+/* Button hover/active states with smooth transitions */
+button:active {
+  transform: scale(0.98);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Enhanced input focus states */
+input:focus,
+select:focus,
+textarea:focus {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  @apply border-blue-400;
+}
+
+/* Better card hover state */
+.hover\:shadow-md:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Modal/Overlay animations */
+.modal-overlay {
+  animation: fadeIn 200ms ease-out forwards;
+}
+
+.modal-content {
+  animation: slideInDown 300ms ease-out forwards;
+}
+
+/* Toast animations */
+.toast {
+  animation: slideInUp 300ms ease-out forwards;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Better hover states for links */
+a {
+  @apply transition-all duration-200;
+}
+
+a:hover {
+  @apply opacity-80;
+}
+
+/* Enhanced form field states */
+.form-field:focus-within {
+  @apply ring-2 ring-blue-300;
+}

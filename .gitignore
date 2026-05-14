@@ -45,3 +45,7 @@ Comandos.txt
 *.tgz
 *.zip
 *.swp
+
+# Claude Code harness
+.agents/
+skills-lock.json

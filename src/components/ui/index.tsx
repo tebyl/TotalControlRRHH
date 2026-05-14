@@ -269,3 +269,16 @@ export function ActionBar({
     </div>
   );
 }
+
+// ──────────────────────────────────────────────
+// Re-export new UX-Pro-Max components
+// ──────────────────────────────────────────────
+
+export { SkeletonLoader, SkeletonCard, SkeletonTable } from "./SkeletonLoader";
+export { ExpandableSection, CollapsibleForm } from "./ExpandableSection";
+export { Toast, ToastContainer } from "./Toast";
+export { ErrorBoundary, FormError } from "./ErrorBoundary";
+export { ProgressBar, CircularProgress } from "./ProgressIndicator";
+export { LoadingSpinner, PulseLoader, DotsLoader, SkeletonText } from "./LoadingAnimations";
+export { Modal, ConfirmDialog } from "./EnhancedModal";
+export { ResponsiveCard, ResponsiveGrid, TouchFriendlyButton } from "./ResponsiveComponents";

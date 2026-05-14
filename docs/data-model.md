@@ -75,8 +75,8 @@ Al eliminar un `Contacto`, el sistema verifica referencias activas y ofrece reas
 
 | Clave localStorage | Contenido |
 |-------------------|-----------|
-| `control_operativo_kata_v5` | AppData principal |
-| `kata_backups` | BackupItem[] (hasta 10) |
+| `control_operativo_kata_v5` | AppData principal (o payload cifrado si cifrado local activo) |
+| `controlOperativo_backups` | BackupItem[] (hasta 10) |
 | `kata_last_json_export` | timestamp ISO |
 | `kata_last_xlsx_export` | timestamp ISO |
 | `kata_focus_mode` | "true" / "false" |

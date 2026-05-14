@@ -1,4 +1,5 @@
 import React, { useId, useState } from "react";
+import { SkeletonTable } from "../ui";
 import { isTableRowClosed } from "../../domain/status";
 
 type Column = { key: string; label: string; render?: (row: any) => React.ReactNode };
@@ -31,6 +32,7 @@ export function DataTable({
   emptyHint,
   pageSize: defaultPageSize = 25,
   "aria-label": ariaLabel,
+  loading = false,
 }: {
   columns: Column[];
   rows: any[];
@@ -43,6 +45,7 @@ export function DataTable({
   emptyHint?: string;
   pageSize?: number;
   "aria-label"?: string;
+  loading?: boolean;
 }) {
   const [page, setPage] = useState(1);
   const [size, setSize] = useState(defaultPageSize);
@@ -54,6 +57,10 @@ export function DataTable({
   const pageRows = rows.slice((safePageNum - 1) * size, safePageNum * size);
   // +1 accounts for the "Acciones" column
   const totalCols = columns.length + 1;
+
+  if (loading) {
+    return <SkeletonTable rows={Math.min(size, 6)} />;
+  }
 
   return (
     <div className="space-y-2">

@@ -1,4 +1,3 @@
-import * as XLSX from "xlsx";
 import type { AppData } from "../domain/types";
 
 export interface XlsxParseResult {
@@ -18,10 +17,13 @@ export interface XlsxParseResult {
   tieneErroresCriticos: boolean;
 }
 
-export function xlsxSheetToObjects(ws: XLSX.WorkSheet | null): any[] {
+export function xlsxSheetToObjects(
+  ws: unknown,
+  utils: { sheet_to_json: (sheet: any, opts: { defval: string; raw: boolean }) => any[] }
+): any[] {
   if (!ws) return [];
   try {
-    return XLSX.utils.sheet_to_json(ws, { defval: "", raw: false });
+    return utils.sheet_to_json(ws, { defval: "", raw: false });
   } catch {
     return [];
   }

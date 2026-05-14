@@ -8,6 +8,21 @@
 - Genera: `total-control-rh-backup-YYYY-MM-DD.json`
 - Contenido: snapshot completo de AppData
 - Auditoría: registra `data:export` con detalle "Exportación JSON completa"
+- Seguridad: requiere confirmación por incluir datos sensibles
+
+### JSON (resumen)
+
+- Función: `exportJSONSummary()` en App.tsx
+- Genera: `total-control-rh-resumen-YYYY-MM-DD.json`
+- Contenido: conteos por módulo y versión de esquema (sin datos personales)
+- Auditoría: registra `data:export` con detalle "Exportación JSON resumen"
+
+### JSON (anonimizado)
+
+- Función: `exportJSONAnonymized()` en App.tsx
+- Genera: `total-control-rh-backup-anon-YYYY-MM-DD.json`
+- Contenido: datos completos con campos personales redactados
+- Auditoría: registra `data:export` con detalle "Exportación JSON anonimizada"
 
 ### XLSX (completo)
 
@@ -15,6 +30,14 @@
 - Genera: `control_operativo_kata_v5_YYYY-MM-DD.xlsx`
 - Hojas: Contactos, Cursos, OCs, Practicantes, Presupuesto, Procesos, Diplomas, Evaluaciones, CargaSemanal, ValesGas, ValesGasOrg, Reclutamiento
 - Auditoría: registra `data:export` con detalle "Exportación XLSX completa"
+- Seguridad: requiere confirmación por incluir datos sensibles
+
+### XLSX (anonimizado)
+
+- Función: `exportXLSXAnonymized()` en App.tsx
+- Genera: `control_operativo_kata_v5_anon_YYYY-MM-DD.xlsx`
+- Contenido: datos completos con campos personales redactados
+- Auditoría: registra `data:export` con detalle "Exportación XLSX anonimizada"
 
 ### XLSX (limpia)
 

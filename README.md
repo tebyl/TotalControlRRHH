@@ -78,6 +78,7 @@ Ver [docs/security.md](docs/security.md) para el análisis de riesgos y controle
 
 Ver [docs/architecture.md](docs/architecture.md) para el diagrama de módulos y decisiones de diseño.
 
+
 ## Modelo de datos
 
 Ver [docs/data-model.md](docs/data-model.md) para la descripción de tipos y esquema actual.
@@ -86,11 +87,25 @@ Ver [docs/data-model.md](docs/data-model.md) para la descripción de tipos y esq
 
 Ver [docs/import-export.md](docs/import-export.md) para el flujo XLSX y las validaciones aplicadas.
 
+## Experiencia de usuario (UX)
+
+La aplicación incorpora patrones avanzados de UX desde el skill **ui-ux-pro-max**:
+
+- **Skeleton Loading**: Pantallas de carga con contenido estructurado
+- **Progressive Disclosure**: Formularios colapsables para reducir cognición
+- **Validación en tiempo real**: Feedback inmediato con errores, advertencias y sugerencias
+- **Animaciones suaves**: Transiciones fluidas (fade, slide, scale) para mejor experiencia
+- **Responsive design**: Optimizado para móvil y desktop con botones touch-friendly
+- **Modal mejorado**: Gestión de focus, cierre con Escape, confirmaciones claras
+
+Ver [docs/ux-enhancements.md](docs/ux-enhancements.md) para documentación completa de componentes UX/UI.
+
 ## Gestión de datos
 
 - Los datos se guardan automáticamente en `localStorage` bajo la clave `control_operativo_kata_v5`.
 - Versión del esquema actual: `6` (ver `src/storage/migrations.ts`).
 - Desde **Configuración** se puede exportar a JSON/XLSX, importar, crear backups y restaurar.
+- Si se activa **Cifrado local** en Configuración, la base queda cifrada y se solicitará una clave al iniciar.
 
 ## Sistema de semáforo
 

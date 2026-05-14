@@ -21,12 +21,17 @@ TotalControlRH es una aplicación local-first sin backend. El principal vector d
 | A-02 | Sin límite de tamaño en importación XLSX | ✅ Resuelto: límite de 10 MB y validación de extensión |
 | A-03 | Sin roles ni control de acceso | ✅ Resuelto: sistema de roles `admin | rrhh | lectura` con función `can()` |
 
+### Medio — Resuelto
+
+| ID | Hallazgo | Estado |
+|----|----------|--------|
+| M-02 | Export XLSX sin advertencia de datos sensibles | ✅ Resuelto: confirmación previa en exportación completa + opción de exportación anonimizada |
+
 ### Medio — Pendiente
 
 | ID | Hallazgo | Estado |
 |----|----------|--------|
-| M-01 | RUT, correo y teléfono almacenados en claro en localStorage | ⚠ Pendiente: requiere cifrado en cliente o migración a backend |
-| M-02 | Export XLSX sin advertencia de datos sensibles | ⚠ Pendiente: implementar modal de confirmación antes de exportar |
+| M-01 | RUT, correo y teléfono almacenados en claro en localStorage | ⚠ Pendiente: cifrado local opcional implementado, pero se recomienda backend o cifrado robusto con gestión de claves |
 | M-03 | Sin protección CSRF (no aplica sin backend hoy) | N/A hasta agregar backend |
 
 ### Bajo

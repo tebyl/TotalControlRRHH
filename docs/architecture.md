@@ -16,7 +16,7 @@ Aplicación SPA (Single Page Application) local-first. No requiere backend ni re
 │                                │                        │
 │  ┌─────────────────────────────▼────────────────────┐   │
 │  │                  src/storage/                    │   │
-│  │  localStorage.ts  │  migrations.ts  │ backups.ts │   │
+│  │  localStorage.ts  │  migrations.ts  │ backupStorage.ts │ encryption.ts │   │
 │  └──────────────────────────────────────────────────┘   │
 │                                                         │
 │  ┌──────────────────────────────────────────────────┐   │

@@ -11,7 +11,7 @@ export interface WeekInfo {
   monthLabel: string;
 }
 
-type RecordLike = Record<string, unknown>;
+type RecordLike = Record<string, any>;
 
 const pad2 = (n: number) => n.toString().padStart(2, "0");
 
