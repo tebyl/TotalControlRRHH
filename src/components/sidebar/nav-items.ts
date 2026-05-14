@@ -52,7 +52,7 @@ export const NAV_SECTIONS: NavSection[] = [
     group: "operacion",
     label: "Operación",
     items: [
-      { id: "inicio",      label: "Mi Día",           icon: Sun },
+      { id: "miDia",       label: "Mi Día",           icon: Sun },
       { id: "dashboard",   label: "Dashboard",         icon: LayoutDashboard },
       { id: "cursos",      label: "Cursos / DNC",      icon: GraduationCap },
       { id: "ocs",         label: "OCs Pendientes",    icon: FileText },

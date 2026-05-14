@@ -8,6 +8,8 @@ interface SidebarProps {
   focusMode?: boolean;
   onFocusModeChange?: (next: boolean) => void;
   onQuickCapture?: () => void;
+  onLogout?: () => void;
+  version?: string;
   user?: { initials: string; name: string; role: string };
   className?: string;
 }
@@ -20,6 +22,8 @@ export function Sidebar({
   focusMode: controlledFocusMode,
   onFocusModeChange,
   onQuickCapture,
+  onLogout,
+  version,
   user = DEFAULT_USER,
   className = "",
 }: SidebarProps) {
@@ -186,6 +190,27 @@ export function Sidebar({
           <Zap size={14} strokeWidth={2} />
           + Captura rápida
         </button>
+
+        {/* Logout + version */}
+        <div className="flex items-center justify-between pt-1">
+          {onLogout && (
+            <button
+              type="button"
+              onClick={onLogout}
+              className="text-[11px] px-1 py-0.5 rounded transition-colors"
+              style={{ color: "#5d6c87" }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "#e6edf7")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "#5d6c87")}
+            >
+              Cerrar sesión
+            </button>
+          )}
+          {version && (
+            <span className="text-[10px] ml-auto" style={{ color: "#3a4a63" }}>
+              v{version}
+            </span>
+          )}
+        </div>
       </div>
     </aside>
   );

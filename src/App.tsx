@@ -105,6 +105,7 @@ import {
 import { login as authLogin, getSession, logout as authLogout, refreshSession } from "./auth/authService";
 import { can } from "./auth/permissions";
 import { logAudit } from "./audit/auditService";
+import { Sidebar } from "./components/sidebar/Sidebar";
 
 const ChartsPanel = React.lazy(() => import("./components/dashboard/ChartsPanel"));
 
@@ -340,34 +341,18 @@ function EncryptionUnlock({
 
 type Modulo = ModuloKey;
 
-type NavGroup = { group: string; items: { key: Modulo; label: string; icon: string }[] };
-const navGroups: NavGroup[] = [
-  { group: "", items: [{ key: "inicio", label: "Inicio", icon: "🏠" }] },
-  { group: "Operación", items: [
-    { key: "midia", label: "Mi Día", icon: "☀️" },
-    { key: "dashboard", label: "Dashboard", icon: "📊" },
-    { key: "cursos", label: "Cursos / DNC", icon: "📚" },
-    { key: "ocs", label: "OCs Pendientes", icon: "🧾" },
-    { key: "procesos", label: "Procesos Pend.", icon: "⏳" },
-  ]},
-  { group: "Personas", items: [
-    { key: "practicantes", label: "Practicantes", icon: "👤" },
-    { key: "evaluaciones", label: "Evaluaciones", icon: "🧠" },
-    { key: "reclutamiento", label: "Reclutamiento", icon: "👥" },
-    { key: "contactos", label: "Contactos", icon: "📇" },
-  ]},
-  { group: "Documentos", items: [
-    { key: "diplomas", label: "Diplomas/Cert/Lic", icon: "📜" },
-  ]},
-  { group: "Finanzas", items: [
-    { key: "presupuesto", label: "Presupuesto", icon: "💰" },
-    { key: "valesGas", label: "Vales de Gas", icon: "⛽" },
-    { key: "cargaSemanal", label: "Carga Semanal", icon: "📅" },
-  ]},
-  { group: "Sistema", items: [
-    { key: "configuracion", label: "Configuración", icon: "⚙️" },
-  ]},
-];
+const SIDEBAR_TO_MODULO: Record<string, Modulo> = {
+  inicio: "inicio", miDia: "midia", dashboard: "dashboard",
+  cursos: "cursos", ocs: "ocs", procesos: "procesos",
+  practicantes: "practicantes", evaluaciones: "evaluaciones",
+  reclutamiento: "reclutamiento", contactos: "contactos",
+  diplomas: "diplomas", presupuesto: "presupuesto",
+  valesGas: "valesGas", cargaSemanal: "cargaSemanal",
+  configuracion: "configuracion",
+};
+const MODULO_TO_SIDEBAR: Record<string, string> = Object.fromEntries(
+  Object.entries(SIDEBAR_TO_MODULO).map(([k, v]) => [v, k])
+);
 
 export default function App() {
   const [authenticated, setAuthenticated] = useState(() => getSession() !== null);
@@ -387,7 +372,6 @@ export default function App() {
   const [encryptionPassphraseConfirm, setEncryptionPassphraseConfirm] = useState("");
   const [encryptionSetupError, setEncryptionSetupError] = useState("");
   const [activeModulo, setActiveModulo] = useState<Modulo>("inicio");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [focusMode, setFocusMode] = useState(() => localStorage.getItem("kata_focus_mode") === "true");
   const [search, setSearch] = useState("");
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
@@ -1878,80 +1862,15 @@ El dashboard responde:
   return (
     <div className="min-h-screen bg-slate-50 flex">
       {/* Sidebar */}
-      <aside className={`${sidebarOpen ? "w-60" : "w-[60px]"} bg-[#0F172A] text-white transition-all duration-300 flex flex-col shrink-0 border-r border-white/5`}>
-        {/* Logo / Brand */}
-        <div className={`flex items-center border-b border-white/10 ${sidebarOpen ? "px-4 py-4 gap-3" : "px-3 py-4 justify-center"}`}>
-          <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-base shrink-0 font-bold shadow-md shadow-blue-900/50">TC</div>
-          {sidebarOpen && (
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-bold text-white leading-tight">PulsoLaboral</div>
-              <div className="text-[10px] text-white/40 leading-tight">Control Operativo</div>
-            </div>
-          )}
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="text-white/30 hover:text-white/70 w-6 h-6 flex items-center justify-center rounded-md hover:bg-white/10 transition-colors shrink-0"
-            aria-label={sidebarOpen ? "Contraer sidebar" : "Expandir sidebar"}
-          >
-            {sidebarOpen ? "‹" : "›"}
-          </button>
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-2 space-y-0.5" aria-label="Navegación principal">
-          {navGroups.map((grp, gi) => (
-            <div key={gi} className={grp.group ? "mt-3" : ""}>
-              {grp.group && sidebarOpen && (
-                <div className="px-4 pt-1 pb-1.5 text-[11px] font-bold tracking-[0.12em] text-white/30 uppercase">{grp.group}</div>
-              )}
-              {!grp.group && !sidebarOpen && gi > 0 && <div className="mx-3 my-2 h-px bg-white/10" />}
-              {grp.items.map(m => {
-                const active = activeModulo === m.key;
-                return (
-                  <button
-                    key={m.key}
-                    onClick={() => setActiveModulo(m.key)}
-                    title={!sidebarOpen ? m.label : undefined}
-                    aria-current={active ? "page" : undefined}
-                    className={`w-full text-left flex items-center gap-3 text-sm transition-all relative
-                      ${sidebarOpen ? "px-4 py-2.5 mx-0" : "px-0 py-2.5 mx-0 justify-center"}
-                      ${active
-                        ? "bg-blue-600/20 text-white font-semibold"
-                        : "text-white/55 hover:bg-white/6 hover:text-white/90"
-                      }`}
-                  >
-                    {/* Active indicator */}
-                    {active && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-blue-400 rounded-r-full" />
-                    )}
-                    <span className={`text-base leading-none ${sidebarOpen ? "" : "mx-auto"}`}>{m.icon}</span>
-                    {sidebarOpen && <span className="truncate">{m.label}</span>}
-                  </button>
-                );
-              })}
-            </div>
-          ))}
-        </nav>
-
-        {/* Footer */}
-        <div className="border-t border-white/10 p-3 space-y-1">
-          {sidebarOpen && (
-            <label className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors">
-              <input type="checkbox" checked={focusMode} onChange={toggleFocusMode} className="sr-only peer" aria-label="Modo enfoque" />
-              <div className="w-8 h-4 bg-white/15 rounded-full peer-checked:bg-blue-500 transition-colors relative after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-3 after:h-3 after:bg-white after:rounded-full after:transition-transform peer-checked:after:translate-x-4 shrink-0" />
-              <span className="text-xs text-white/50">Modo enfoque</span>
-            </label>
-          )}
-          <button
-            onClick={logout}
-            className={`w-full text-left text-sm text-rose-300/70 hover:text-rose-200 hover:bg-white/5 rounded-lg transition-colors ${sidebarOpen ? "px-3 py-2" : "py-2 flex justify-center"}`}
-            title={!sidebarOpen ? "Cerrar sesión" : undefined}
-          >
-            {sidebarOpen ? "🚪 Cerrar sesión" : "🚪"}
-          </button>
-          {sidebarOpen && <div className="text-[10px] text-white/20 px-3 pt-0.5">v{data.meta.version}</div>}
-        </div>
-      </aside>
+      <Sidebar
+        activeId={MODULO_TO_SIDEBAR[activeModulo] ?? activeModulo}
+        onSelect={(id) => { const m = SIDEBAR_TO_MODULO[id]; if (m) setActiveModulo(m); }}
+        focusMode={focusMode}
+        onFocusModeChange={toggleFocusMode}
+        onQuickCapture={() => setCaptureOpen(true)}
+        onLogout={logout}
+        version={data.meta.version}
+      />
 
       {/* Main content */}
       <main className={`flex-1 overflow-y-auto ${focusMode ? "p-4 max-w-4xl mx-auto" : "p-6"}`}>
