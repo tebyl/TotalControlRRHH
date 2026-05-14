@@ -33,6 +33,8 @@ describe("authService", () => {
     const session = await login("KataS", "Tota95");
     expect(session).not.toBeNull();
     const before = getSession()?.expiresAt ?? 0;
+    // Ensure at least 1ms passes so the refreshed timestamp differs
+    await new Promise(r => setTimeout(r, 2));
     refreshSession();
     const after = getSession()?.expiresAt ?? 0;
     expect(after).toBeGreaterThan(before);

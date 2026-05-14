@@ -91,6 +91,7 @@ import { DateInput } from "./components/forms/DateInput";
 import { Field, Input, Select, Textarea, INPUT_BASE } from "./components/forms/fields";
 import {
   ConfirmDialog,
+  ErrorBoundary,
   ExpandableSection,
   KpiCard as KpiCardUI,
   KpiGroup,
@@ -2157,6 +2158,7 @@ El dashboard responde:
 
       {/* Main content */}
       <main className={`flex-1 overflow-y-auto ${focusMode ? "p-4 max-w-4xl mx-auto" : "p-6"}`}>
+      <ErrorBoundary>
         {activeModulo === "inicio" && (
           <div className="space-y-6">
             {/* Hero banner */}
@@ -2522,6 +2524,7 @@ El dashboard responde:
             if (target) removeToast(target.id);
           }} />
         </div>
+      </ErrorBoundary>
       </main>
     </div>
   );
@@ -4225,26 +4228,37 @@ function FormDiplomas({ data, editItem, closeModal, saveItem }: any) {
     if (Object.keys(errors).length > 0) { notifyValidationError(); return; }
     saveItem("diplomas", form);
   };
+  const hasDatesFilled = !!(form.fechaSolicitudOTEC || form.fechaRecepcionDoc || form.fechaEnvioParticipante || form.fechaSubidaBUK);
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <Field label="Curso asociado" required error={vErr.cursoAsociado}><Input value={form.cursoAsociado} onChange={e => set("cursoAsociado", e.target.value)} /></Field>
-      <Field label="Participante" required error={vErr.participante}><Input value={form.participante} onChange={e => set("participante", e.target.value)} /></Field>
-      <Field label="Tipo documento" error={vErr.tipoDocumento}><Select value={form.tipoDocumento} onChange={v => set("tipoDocumento", v)} options={TIPOS_DOCUMENTO} /></Field>
-      <Field label="OTEC / Proveedor"><Input value={form.otec} onChange={e => set("otec", e.target.value)} /></Field>
-      <Field label="Etapa"><Select value={form.etapa} onChange={v => set("etapa", v)} options={ESTADOS_DIPLOMA} /></Field>
-      <Field label="Fecha solicitud a OTEC"><DateInput value={form.fechaSolicitudOTEC} onChange={v => set("fechaSolicitudOTEC", v)} /></Field>
-      <Field label="Fecha recepción documento"><DateInput value={form.fechaRecepcionDoc} onChange={v => set("fechaRecepcionDoc", v)} /></Field>
-      <Field label="Fecha envío al participante"><DateInput value={form.fechaEnvioParticipante} onChange={v => set("fechaEnvioParticipante", v)} /></Field>
-      <Field label="Fecha subida a BUK"><DateInput value={form.fechaSubidaBUK} onChange={v => set("fechaSubidaBUK", v)} /></Field>
-      <Field label="Estado BUK"><Select value={form.estadoBUK} onChange={v => set("estadoBUK", v)} options={ESTADOS_BUK} /></Field>
-      <Field label="Prioridad"><Select value={form.prioridad} onChange={v => set("prioridad", v)} options={PRIORIDADES} /></Field>
-      <Field label="Responsable" error={vErr.responsableId}><SelectContact value={form.responsableId} onChange={v => set("responsableId", v)} data={data} /></Field>
-      <Field label="Próxima acción" error={vErr.proximaAccion}><Input value={form.proximaAccion} onChange={e => set("proximaAccion", e.target.value)} /></Field>
-      <Field label="Fecha próxima acción" error={vErr.fechaProximaAccion}><DateInput value={form.fechaProximaAccion} onChange={v => set("fechaProximaAccion", v)} /></Field>
-      <Field label="Bloqueado por" error={vErr.bloqueadoPor}><Select value={form.bloqueadoPor} onChange={v => set("bloqueadoPor", v)} options={BLOQUEOS} /></Field>
-      <Field label="Observaciones" error={vErr.observaciones}><Textarea value={form.observaciones} onChange={e => set("observaciones", e.target.value)} /></Field>
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Field label="Curso asociado" required error={vErr.cursoAsociado}><Input value={form.cursoAsociado} onChange={e => set("cursoAsociado", e.target.value)} /></Field>
+        <Field label="Participante" required error={vErr.participante}><Input value={form.participante} onChange={e => set("participante", e.target.value)} /></Field>
+        <Field label="Tipo documento" error={vErr.tipoDocumento}><Select value={form.tipoDocumento} onChange={v => set("tipoDocumento", v)} options={TIPOS_DOCUMENTO} /></Field>
+        <Field label="OTEC / Proveedor"><Input value={form.otec} onChange={e => set("otec", e.target.value)} /></Field>
+        <Field label="Etapa"><Select value={form.etapa} onChange={v => set("etapa", v)} options={ESTADOS_DIPLOMA} /></Field>
+        <Field label="Estado BUK"><Select value={form.estadoBUK} onChange={v => set("estadoBUK", v)} options={ESTADOS_BUK} /></Field>
+      </div>
+      <ExpandableSection title="📅 Fechas de gestión" defaultOpen={hasDatesFilled}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Field label="Fecha solicitud a OTEC"><DateInput value={form.fechaSolicitudOTEC} onChange={v => set("fechaSolicitudOTEC", v)} /></Field>
+          <Field label="Fecha recepción documento"><DateInput value={form.fechaRecepcionDoc} onChange={v => set("fechaRecepcionDoc", v)} /></Field>
+          <Field label="Fecha envío al participante"><DateInput value={form.fechaEnvioParticipante} onChange={v => set("fechaEnvioParticipante", v)} /></Field>
+          <Field label="Fecha subida a BUK"><DateInput value={form.fechaSubidaBUK} onChange={v => set("fechaSubidaBUK", v)} /></Field>
+        </div>
+      </ExpandableSection>
+      <ExpandableSection title="🎯 Seguimiento y control" defaultOpen={false}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Field label="Prioridad"><Select value={form.prioridad} onChange={v => set("prioridad", v)} options={PRIORIDADES} /></Field>
+          <Field label="Responsable" error={vErr.responsableId}><SelectContact value={form.responsableId} onChange={v => set("responsableId", v)} data={data} /></Field>
+          <Field label="Próxima acción" error={vErr.proximaAccion}><Input value={form.proximaAccion} onChange={e => set("proximaAccion", e.target.value)} /></Field>
+          <Field label="Fecha próxima acción" error={vErr.fechaProximaAccion}><DateInput value={form.fechaProximaAccion} onChange={v => set("fechaProximaAccion", v)} /></Field>
+          <Field label="Bloqueado por" error={vErr.bloqueadoPor}><Select value={form.bloqueadoPor} onChange={v => set("bloqueadoPor", v)} options={BLOQUEOS} /></Field>
+          <div className="md:col-span-2"><Field label="Observaciones" error={vErr.observaciones}><Textarea value={form.observaciones} onChange={e => set("observaciones", e.target.value)} /></Field></div>
+        </div>
+      </ExpandableSection>
       <FormMessages errors={vErr} warnings={vWarn} />
-      <div className="md:col-span-2 flex gap-3 justify-end pt-2"><button onClick={closeModal} className="px-5 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-medium hover:bg-slate-200 transition-colors">Cancelar</button><button onClick={save} className="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">Guardar</button></div>
+      <div className="flex gap-3 justify-end pt-2"><button onClick={closeModal} className="px-5 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-medium hover:bg-slate-200 transition-colors">Cancelar</button><button onClick={save} className="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">Guardar</button></div>
     </div>
   );
 }
@@ -5575,22 +5589,18 @@ function FormReclutamiento({ data, editItem, closeModal, saveItem }: any) {
         <div className="text-xs text-blue-600 font-semibold min-w-max">Etapa: {etapaActual}</div>
       </div>
 
-      <div>
-        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">1. Información principal</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="Tipo de reclutamiento"><Select value={form.reclutamiento} onChange={(v: string) => set("reclutamiento", v)} options={TIPOS_RECLUTAMIENTO} placeholder="Seleccionar..." /></Field>
-          <Field label="Planta o Centro" required error={vErr.plantaCentro}><Select value={form.plantaCentro} onChange={(v: string) => set("plantaCentro", v)} options={PLANTAS_CENTROS} placeholder="Seleccionar..." /></Field>
-          <Field label="Tipo de vacante" required error={vErr.tipoVacante}><Select value={form.tipoVacante} onChange={(v: string) => set("tipoVacante", v)} options={TIPOS_VACANTE} placeholder="Seleccionar..." /></Field>
-          <Field label="Mes ingreso" required error={vErr.mesIngreso}><Select value={form.mesIngreso} onChange={(v: string) => set("mesIngreso", v)} options={MESES} placeholder="Seleccionar..." /></Field>
-          <Field label="Fecha ingreso"><DateInput value={form.fechaIngreso} onChange={(v: string) => set("fechaIngreso", v)} /></Field>
-          <Field label="Proceso" required error={vErr.proceso}><Select value={form.proceso} onChange={(v: string) => set("proceso", v)} options={ESTADOS_PROCESO_RECLUTAMIENTO} /></Field>
-          <Field label="Reclutador (texto)"><Input value={form.reclutador} onChange={(e: React.ChangeEvent<HTMLInputElement>) => set("reclutador", e.target.value)} placeholder="Nombre del reclutador" /></Field>
-          <Field label="Responsable web"><SelectContact value={form.reclutadorId} onChange={(v: string) => set("reclutadorId", v)} data={data} /></Field>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Field label="Tipo de reclutamiento"><Select value={form.reclutamiento} onChange={(v: string) => set("reclutamiento", v)} options={TIPOS_RECLUTAMIENTO} placeholder="Seleccionar..." /></Field>
+        <Field label="Planta o Centro" required error={vErr.plantaCentro}><Select value={form.plantaCentro} onChange={(v: string) => set("plantaCentro", v)} options={PLANTAS_CENTROS} placeholder="Seleccionar..." /></Field>
+        <Field label="Tipo de vacante" required error={vErr.tipoVacante}><Select value={form.tipoVacante} onChange={(v: string) => set("tipoVacante", v)} options={TIPOS_VACANTE} placeholder="Seleccionar..." /></Field>
+        <Field label="Mes ingreso" required error={vErr.mesIngreso}><Select value={form.mesIngreso} onChange={(v: string) => set("mesIngreso", v)} options={MESES} placeholder="Seleccionar..." /></Field>
+        <Field label="Fecha ingreso"><DateInput value={form.fechaIngreso} onChange={(v: string) => set("fechaIngreso", v)} /></Field>
+        <Field label="Proceso" required error={vErr.proceso}><Select value={form.proceso} onChange={(v: string) => set("proceso", v)} options={ESTADOS_PROCESO_RECLUTAMIENTO} /></Field>
+        <Field label="Reclutador (texto)"><Input value={form.reclutador} onChange={(e: React.ChangeEvent<HTMLInputElement>) => set("reclutador", e.target.value)} placeholder="Nombre del reclutador" /></Field>
+        <Field label="Responsable web"><SelectContact value={form.reclutadorId} onChange={(v: string) => set("reclutadorId", v)} data={data} /></Field>
       </div>
 
-      <div>
-        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">2. Flujo del proceso</h3>
+      <ExpandableSection title="📋 Flujo del proceso" defaultOpen={pct > 0}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Field label="Revisado PPTO"><Select value={form.revisadoPPTO} onChange={(v: string) => set("revisadoPPTO", v)} options={OPTS_REVISADO_PPTO} placeholder="—" /></Field>
           <Field label="Proceso en BUK"><Select value={form.procesoBuk} onChange={(v: string) => set("procesoBuk", v)} options={OPTS_PROCESO_BUK} placeholder="—" /></Field>
@@ -5606,10 +5616,9 @@ function FormReclutamiento({ data, editItem, closeModal, saveItem }: any) {
           <Field label="Envío carta oferta"><Select value={form.envioCartaOferta} onChange={(v: string) => set("envioCartaOferta", v)} options={OPTS_ENVIO_CARTA} placeholder="—" /></Field>
           <Field label="Firma Carta Oferta"><Select value={form.firmaCartaOferta} onChange={(v: string) => set("firmaCartaOferta", v)} options={OPTS_SI_NO} placeholder="—" /></Field>
         </div>
-      </div>
+      </ExpandableSection>
 
-      <div>
-        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">3. Seguimiento interno</h3>
+      <ExpandableSection title="🎯 Seguimiento interno" defaultOpen={false}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Field label="Prioridad"><Select value={form.prioridad} onChange={(v: string) => set("prioridad", v)} options={PRIORIDADES} /></Field>
           <Field label="Bloqueado por" error={vErr.bloqueadoPor}><Select value={form.bloqueadoPor} onChange={(v: string) => set("bloqueadoPor", v)} options={BLOQUEOS} /></Field>
@@ -5617,7 +5626,7 @@ function FormReclutamiento({ data, editItem, closeModal, saveItem }: any) {
           <Field label="Fecha próxima acción" error={vErr.fechaProximaAccion}><DateInput value={form.fechaProximaAccion} onChange={(v: string) => set("fechaProximaAccion", v)} /></Field>
           <Field label="Observaciones" error={vErr.observaciones}><Textarea value={form.observaciones} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => set("observaciones", e.target.value)} /></Field>
         </div>
-      </div>
+      </ExpandableSection>
 
       <FormMessages errors={vErr} warnings={vWarn} />
       <div className="flex gap-3 justify-end pt-2">
