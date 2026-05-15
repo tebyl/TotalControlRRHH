@@ -61,7 +61,7 @@ export interface AppData {
 }
 
 export type DataModuleKey = Exclude<keyof AppData, "meta">;
-export type ModuloKey = "inicio" | "midia" | "dashboard" | DataModuleKey | "evaluaciones" | "configuracion";
+export type ModuloKey = "inicio" | "midia" | "dashboard" | DataModuleKey | "evaluaciones" | "configuracion" | "admin" | "guia";
 
 export interface BackupItem {
   id: string;

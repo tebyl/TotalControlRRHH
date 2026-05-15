@@ -1,10 +1,5 @@
-import React, { memo, useEffect, useState } from "react";
-import { AlertTriangle, Check, ClipboardList, Copy, Lightbulb, Lock, RefreshCw, Settings, Shuffle, Users, XCircle } from "lucide-react";
-import { getUserWorkspace, getWorkspaceMembers, type Workspace, type WorkspaceMember } from "../backend/supabaseWorkspace";
-import { SUPABASE_CONFIGURED } from "../backend/supabaseClient";
-import { WorkspaceSetup } from "../components/ui/WorkspaceSetup";
-import { UserManager } from "../components/ui/UserManager";
-import { getSession } from "../auth/authService";
+import React, { memo, useState } from "react";
+import { AlertTriangle, ClipboardList, Lightbulb, Lock, RefreshCw, Settings, Shuffle, XCircle } from "lucide-react";
 import type { ConfirmState } from "../shared/formTypes";
 import type { AppData, BackupItem } from "../domain/types";
 import type { XlsxParseResult } from "../importExport/xlsxImport";
@@ -150,42 +145,11 @@ function XlsxImportPreview({ parseResult, onConfirmReplace, onConfirmMerge, onCa
 
 function ModuloConfiguracion({
   data, exportJSON, exportJSONSummary, exportJSONAnonymized, importJSON, exportXLSX, exportXLSXAnonymized, exportLimpia,
-  restaurarEjemplos, limpiarTodo, showInstructions,
   backups, setBackups, lastJSONExport, lastXLSXExport, runBackupAndToast, setData, toastShow,
   downloadXlsxTemplate, parseXlsxFile, canExportFull, canExportSummary, canExportAnonymized,
-  encryptionEnabled, openEncryptionSetup, disableEncryption, exporting
+  exporting
 }: any) {
-  const counts: Record<string, number> = {
-    cursos: data.cursos.length,
-    ocs: data.ocs.length,
-    practicantes: data.practicantes.length,
-    presupuesto: data.presupuesto.length,
-    procesos: data.procesos.length,
-    diplomas: data.diplomas.length,
-    evaluacionesPsicolaborales: data.evaluacionesPsicolaborales.length,
-    cargaSemanal: data.cargaSemanal.length,
-    contactos: data.contactos.length
-  };
-
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
-  const [workspace, setWorkspace] = useState<Workspace | null>(null);
-  const [members, setMembers] = useState<WorkspaceMember[]>([]);
-  const [codeCopied, setCodeCopied] = useState(false);
-  const [showJoinSetup, setShowJoinSetup] = useState(false);
-
-  useEffect(() => {
-    if (!SUPABASE_CONFIGURED) return;
-    getUserWorkspace().then(r => { if (r.ok && r.data) setWorkspace(r.data); });
-    getWorkspaceMembers().then(r => { if (r.ok) setMembers(r.data); });
-  }, []);
-
-  const handleCopyCode = () => {
-    if (!workspace) return;
-    navigator.clipboard.writeText(workspace.invite_code).then(() => {
-      setCodeCopied(true);
-      setTimeout(() => setCodeCopied(false), 2000);
-    });
-  };
   const [xlsxParseResult, setXlsxParseResult] = useState<XlsxParseResult | null>(null);
   const [xlsxImporting, setXlsxImporting] = useState(false);
   const [xlsxApplying, setXlsxApplying] = useState(false);
@@ -483,145 +447,6 @@ function ModuloConfiguracion({
               </table>
             </div>
           )}
-        </div>
-      </ExpandableSection>
-
-      {/* ── Acordeón 3: Trabajo en equipo ── */}
-      {SUPABASE_CONFIGURED && (
-        <ExpandableSection title="Trabajo en equipo" defaultOpen={true}>
-          {workspace ? (
-            <div className="space-y-4">
-              <div className="flex items-start gap-4 flex-wrap">
-                {/* Info del workspace */}
-                <div className="flex-1 min-w-48 space-y-1">
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Equipo actual</p>
-                  <p className="text-base font-bold text-slate-800 flex items-center gap-2">
-                    <Users size={16} className="text-blue-600" />
-                    {workspace.name}
-                  </p>
-                </div>
-
-                {/* Código de invitación */}
-                <div className="flex-1 min-w-48 space-y-2">
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Código de invitación</p>
-                  <div className="flex items-center gap-2">
-                    <code className="bg-slate-100 border border-slate-300 rounded-lg px-4 py-2 font-mono text-lg font-bold tracking-widest text-slate-800 select-all">
-                      {workspace.invite_code}
-                    </code>
-                    <button
-                      onClick={handleCopyCode}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-300 text-xs font-medium text-slate-700 hover:bg-slate-100 transition-colors"
-                    >
-                      {codeCopied ? <><Check size={14} className="text-emerald-600" />Copiado</> : <><Copy size={14} />Copiar</>}
-                    </button>
-                  </div>
-                  <p className="text-[11px] text-slate-400">Comparte este código para que otros usuarios se unan a tu equipo.</p>
-                </div>
-              </div>
-
-              {members.length > 0 && (
-                <div className="border-t border-slate-100 pt-3 space-y-2">
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Miembros del equipo</p>
-                  <div className="flex flex-wrap gap-2">
-                    {members.map(m => (
-                      <div key={m.user_id} className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5">
-                        <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center uppercase">
-                          {m.display_name.slice(0, 1)}
-                        </div>
-                        <span className="text-sm text-slate-700 font-medium">{m.display_name}</span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase ${m.role === "owner" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"}`}>
-                          {m.role === "owner" ? "Dueño" : "Editor"}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="border-t border-slate-100 pt-3">
-                <button
-                  onClick={() => setShowJoinSetup(true)}
-                  className="text-xs text-blue-600 hover:underline"
-                >
-                  Unirme a otro equipo con un código
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="text-sm text-slate-500 py-2">Cargando información del equipo…</div>
-          )}
-
-          {showJoinSetup && (
-            <WorkspaceSetup
-              onReady={ws => { setWorkspace(ws); setShowJoinSetup(false); }}
-            />
-          )}
-        </ExpandableSection>
-      )}
-
-      {/* ── Acordeón 4: Usuarios ── */}
-      {SUPABASE_CONFIGURED && getSession()?.role === "admin" && (
-        <ExpandableSection title="Gestión de usuarios" defaultOpen={false}>
-          <div className="space-y-3">
-            <p className="text-sm text-slate-600">
-              Administra quién puede acceder a la aplicación. Los cambios aplican en todos los dispositivos de inmediato.
-            </p>
-            <UserManager currentUsername={getSession()?.username ?? ""} />
-          </div>
-        </ExpandableSection>
-      )}
-
-      {/* ── Acordeón 5: Sistema ── */}
-      <ExpandableSection title="Sistema y seguridad">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Cifrado */}
-          <div className="space-y-3">
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Cifrado local</p>
-            <p className="text-sm text-slate-600">Protege datos sensibles en este navegador con una clave local.</p>
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-slate-500">Estado:</span>
-              <span className={`text-xs font-semibold ${encryptionEnabled ? "text-emerald-600" : "text-slate-500"}`}>{encryptionEnabled ? "Activo" : "Desactivado"}</span>
-            </div>
-            {!encryptionEnabled
-              ? <button onClick={openEncryptionSetup} className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-emerald-700 transition">Activar cifrado</button>
-              : <button onClick={disableEncryption} className="bg-amber-500 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-amber-600 transition">Desactivar cifrado</button>
-            }
-            <p className="text-[11px] text-slate-400">La clave se solicita al iniciar y no se guarda en localStorage.</p>
-          </div>
-
-          {/* Registros */}
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Registros por módulo</p>
-            <div className="space-y-1">
-              {Object.entries(counts).map(([k, v]) => (
-                <div key={k} className="flex justify-between items-center text-xs py-0.5">
-                  <span className="text-slate-600 capitalize">{k.replace(/([A-Z])/g, " $1").trim()}</span>
-                  <span className={`font-bold px-1.5 py-0.5 rounded ${v > 0 ? "bg-blue-50 text-blue-700" : "text-slate-400"}`}>{v}</span>
-                </div>
-              ))}
-              <div className="flex justify-between text-xs font-bold pt-1 border-t border-slate-100 mt-1">
-                <span className="text-slate-700">Total</span>
-                <span className="text-slate-800">{Object.values(counts).reduce((a, b) => a + b, 0)}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Guía */}
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Guía de uso</p>
-            <p className="text-sm text-slate-600">Consulta las instrucciones completas, rutina semanal y buenas prácticas.</p>
-            <button onClick={showInstructions} className="bg-amber-500 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-amber-600 transition">Ver instrucciones de uso</button>
-          </div>
-
-          {/* Zona peligro */}
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Datos y zona de peligro</p>
-            <p className="text-sm text-slate-600">Restaura datos de ejemplo o elimina todo permanentemente.</p>
-            <div className="flex gap-2 flex-wrap">
-              <button onClick={restaurarEjemplos} className="bg-amber-500 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-amber-600 transition">Restaurar ejemplos</button>
-              <button onClick={limpiarTodo} className="bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-red-700 transition">Limpiar todos los datos</button>
-            </div>
-          </div>
         </div>
       </ExpandableSection>
 

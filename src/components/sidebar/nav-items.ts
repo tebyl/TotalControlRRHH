@@ -1,5 +1,6 @@
 import {
   Award,
+  BookOpen,
   CalendarRange,
   ClipboardCheck,
   ContactRound,
@@ -10,6 +11,7 @@ import {
   House,
   LayoutDashboard,
   Settings,
+  Settings2,
   Sun,
   UserRound,
   UserRoundPlus,
@@ -90,6 +92,8 @@ export const NAV_SECTIONS: NavSection[] = [
     label: "Sistema",
     items: [
       { id: "configuracion", label: "Configuración", icon: Settings },
+      { id: "admin",         label: "Administración", icon: Settings2 },
+      { id: "guia",          label: "Guía de uso",    icon: BookOpen },
     ],
   },
 ];

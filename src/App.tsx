@@ -27,6 +27,8 @@ const ModuloProcesos = lazy(() => import("./modules/ModuloProcesos"));
 const ModuloReclutamiento = lazy(() => import("./modules/ModuloReclutamiento"));
 const ModuloPresupuesto = lazy(() => import("./modules/ModuloPresupuesto"));
 const ModuloConfiguracion = lazy(() => import("./modules/ModuloConfiguracion"));
+const ModuloAdmin = lazy(() => import("./modules/ModuloAdmin"));
+const ModuloGuia = lazy(() => import("./modules/ModuloGuia"));
 const ModuloValesGas = lazy(() => import("./modules/ModuloValesGas"));
 const ModuloCargaSemanal = lazy(() => import("./modules/ModuloCargaSemanal"));
 const ModuloReporteMensual = lazy(() => import("./modules/ModuloReporteMensual"));
@@ -548,9 +550,6 @@ El dashboard responde:
             exportXLSX={exportXLSX}
             exportXLSXAnonymized={exportXLSXAnonymized}
             exportLimpia={exportLimpia}
-            restaurarEjemplos={restaurarEjemplos}
-            limpiarTodo={limpiarTodo}
-            showInstructions={() => setShowInstructions(true)}
             backups={backups}
             setBackups={setBackups}
             lastJSONExport={lastJSONExport}
@@ -563,12 +562,20 @@ El dashboard responde:
             canExportFull={canExportFull}
             canExportSummary={canExportSummary}
             canExportAnonymized={canExportAnonymized}
-            encryptionEnabled={encryptionEnabled}
-            openEncryptionSetup={openEncryptionSetup}
-            disableEncryption={handleDisableEncryption}
             exporting={exporting}
           />
         )}
+        {activeModulo === "admin" && (
+          <ModuloAdmin
+            data={data}
+            encryptionEnabled={encryptionEnabled}
+            openEncryptionSetup={openEncryptionSetup}
+            disableEncryption={handleDisableEncryption}
+            restaurarEjemplos={restaurarEjemplos}
+            limpiarTodo={limpiarTodo}
+          />
+        )}
+        {activeModulo === "guia" && <ModuloGuia />}
         </Suspense>
 
         {/* Modals */}
