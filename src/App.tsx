@@ -90,28 +90,151 @@ function Login({ onLogin }: { onLogin: () => void }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-slate-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-slate-800">Control Operativo</h1>
-          <p className="text-slate-500 text-sm mt-1">Ingreso autorizado</p>
+    <div className="min-h-screen flex" style={{ background: "linear-gradient(135deg, #fdf4f0 0%, #fce8e0 40%, #ede9fe 100%)" }}>
+      {/* Left panel — decorativo */}
+      <div className="hidden lg:flex flex-col items-center justify-center flex-1 px-12 gap-8">
+        {/* Gato SVG */}
+        <svg viewBox="0 0 200 200" className="w-56 h-56 drop-shadow-xl" aria-hidden="true">
+          {/* Cuerpo */}
+          <ellipse cx="100" cy="145" rx="52" ry="42" fill="#f4a46a" />
+          {/* Cabeza */}
+          <ellipse cx="100" cy="90" rx="46" ry="42" fill="#f4a46a" />
+          {/* Orejas */}
+          <polygon points="62,55 52,22 80,50" fill="#f4a46a" />
+          <polygon points="138,55 148,22 120,50" fill="#f4a46a" />
+          {/* Interior orejas */}
+          <polygon points="65,52 57,30 78,50" fill="#f9c8a8" />
+          <polygon points="135,52 143,30 122,50" fill="#f9c8a8" />
+          {/* Cara */}
+          <ellipse cx="84" cy="88" rx="9" ry="10" fill="white" />
+          <ellipse cx="116" cy="88" rx="9" ry="10" fill="white" />
+          <ellipse cx="85" cy="89" rx="5" ry="6" fill="#2d2d2d" />
+          <ellipse cx="115" cy="89" rx="5" ry="6" fill="#2d2d2d" />
+          {/* Brillo ojos */}
+          <circle cx="87" cy="87" r="1.5" fill="white" />
+          <circle cx="117" cy="87" r="1.5" fill="white" />
+          {/* Nariz */}
+          <ellipse cx="100" cy="100" rx="4" ry="2.5" fill="#e8748a" />
+          {/* Boca */}
+          <path d="M96,103 Q100,107 104,103" stroke="#c45a70" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+          {/* Bigotes izquierda */}
+          <line x1="60" y1="98" x2="90" y2="101" stroke="#c8a080" strokeWidth="1.2" strokeLinecap="round" />
+          <line x1="60" y1="103" x2="90" y2="103" stroke="#c8a080" strokeWidth="1.2" strokeLinecap="round" />
+          <line x1="62" y1="108" x2="90" y2="105" stroke="#c8a080" strokeWidth="1.2" strokeLinecap="round" />
+          {/* Bigotes derecha */}
+          <line x1="140" y1="98" x2="110" y2="101" stroke="#c8a080" strokeWidth="1.2" strokeLinecap="round" />
+          <line x1="140" y1="103" x2="110" y2="103" stroke="#c8a080" strokeWidth="1.2" strokeLinecap="round" />
+          <line x1="138" y1="108" x2="110" y2="105" stroke="#c8a080" strokeWidth="1.2" strokeLinecap="round" />
+          {/* Patas delanteras */}
+          <ellipse cx="74" cy="183" rx="18" ry="10" fill="#f4a46a" />
+          <ellipse cx="126" cy="183" rx="18" ry="10" fill="#f4a46a" />
+          {/* Cola */}
+          <path d="M148,160 Q180,140 172,110 Q168,96 158,105" stroke="#f4a46a" strokeWidth="14" fill="none" strokeLinecap="round" />
+          {/* Barriga */}
+          <ellipse cx="100" cy="152" rx="30" ry="22" fill="#f9c8a8" opacity="0.7" />
+          {/* Manchas decorativas */}
+          <ellipse cx="88" cy="72" rx="8" ry="6" fill="#e8904a" opacity="0.4" />
+          <ellipse cx="112" cy="70" rx="6" ry="5" fill="#e8904a" opacity="0.4" />
+        </svg>
+
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl font-bold text-slate-700">PulsoLaboral</h2>
+          <p className="text-slate-500 text-sm leading-relaxed max-w-xs">
+            Tu asistente de control operativo para RH.<br />Organizado, colaborativo y siempre al dia.
+          </p>
+          <div className="flex flex-col gap-1.5 pt-2">
+            {["Gestion de cursos, OCs y procesos", "Sincronizacion en tiempo real con tu equipo", "Respaldos automaticos y modo offline"].map(f => (
+              <div key={f} className="flex items-center gap-2 text-xs text-slate-400">
+                <div className="w-1.5 h-1.5 rounded-full bg-orange-300 shrink-0" />
+                {f}
+              </div>
+            ))}
+          </div>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">Usuario</label>
-            <input type="text" value={user} onChange={e => setUser(e.target.value)} className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Nombre de usuario" autoComplete="username" />
+      </div>
+
+      {/* Right panel — formulario */}
+      <div className="flex-1 lg:max-w-md flex items-center justify-center p-6">
+        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl shadow-orange-100 p-10 w-full border border-white">
+          {/* Gato pequeño mobile (solo < lg) */}
+          <div className="flex justify-center mb-6 lg:hidden">
+            <svg viewBox="0 0 200 200" className="w-24 h-24" aria-hidden="true">
+              <ellipse cx="100" cy="145" rx="52" ry="42" fill="#f4a46a" />
+              <ellipse cx="100" cy="90" rx="46" ry="42" fill="#f4a46a" />
+              <polygon points="62,55 52,22 80,50" fill="#f4a46a" />
+              <polygon points="138,55 148,22 120,50" fill="#f4a46a" />
+              <polygon points="65,52 57,30 78,50" fill="#f9c8a8" />
+              <polygon points="135,52 143,30 122,50" fill="#f9c8a8" />
+              <ellipse cx="84" cy="88" rx="9" ry="10" fill="white" />
+              <ellipse cx="116" cy="88" rx="9" ry="10" fill="white" />
+              <ellipse cx="85" cy="89" rx="5" ry="6" fill="#2d2d2d" />
+              <ellipse cx="115" cy="89" rx="5" ry="6" fill="#2d2d2d" />
+              <ellipse cx="100" cy="100" rx="4" ry="2.5" fill="#e8748a" />
+              <path d="M96,103 Q100,107 104,103" stroke="#c45a70" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+              <ellipse cx="74" cy="183" rx="18" ry="10" fill="#f4a46a" />
+              <ellipse cx="126" cy="183" rx="18" ry="10" fill="#f4a46a" />
+            </svg>
           </div>
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">Clave</label>
-            <div className="relative">
-              <input type={showPass ? "text" : "password"} value={pass} onChange={e => setPass(e.target.value)} className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="••••••" autoComplete="current-password" />
-              <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-sm">{showPass ? "Ocultar" : "Mostrar"}</button>
+
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold text-slate-800">Bienvenido de vuelta</h1>
+            <p className="text-slate-400 text-sm mt-1">Ingresa tus credenciales para continuar</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Usuario</label>
+              <input
+                type="text"
+                value={user}
+                onChange={e => setUser(e.target.value)}
+                className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent focus:bg-white transition-all"
+                placeholder="Tu nombre de usuario"
+                autoComplete="username"
+                autoFocus
+              />
             </div>
-          </div>
-          {error && <p className="text-red-600 text-sm">{error}</p>}
-          <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-semibold disabled:opacity-60">{loading ? "Verificando…" : "Ingresar"}</button>
-        </form>
-        <p className="text-xs text-slate-400 text-center mt-4">Acceso local básico. Para seguridad real se requiere backend.</p>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Clave</label>
+              <div className="relative">
+                <input
+                  type={showPass ? "text" : "password"}
+                  value={pass}
+                  onChange={e => setPass(e.target.value)}
+                  className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 pr-20 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent focus:bg-white transition-all"
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPass(!showPass)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 font-medium px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors"
+                >
+                  {showPass ? "Ocultar" : "Mostrar"}
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 text-sm text-red-600">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-60"
+              style={{ background: loading ? "#94a3b8" : "linear-gradient(135deg, #f97316 0%, #ea580c 100%)", boxShadow: loading ? "none" : "0 4px 15px rgba(249,115,22,0.35)" }}
+            >
+              {loading ? "Verificando..." : "Ingresar"}
+            </button>
+          </form>
+
+          <p className="text-xs text-slate-300 text-center mt-6">
+            PulsoLaboral — Control Operativo RH
+          </p>
+        </div>
       </div>
     </div>
   );
