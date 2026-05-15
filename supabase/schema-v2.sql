@@ -46,31 +46,25 @@ ALTER TABLE public.app_data           ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Ver workspaces propios" ON public.workspaces;
 CREATE POLICY "Ver workspaces propios"
   ON public.workspaces FOR SELECT
-  USING (EXISTS (
-    SELECT 1 FROM public.workspace_members wm
-    WHERE wm.workspace_id = id AND wm.user_id = auth.uid()
-  ));
+  USING (auth.uid() IS NOT NULL);
 
 -- Workspaces: crear (cualquier usuario autenticado)
 DROP POLICY IF EXISTS "Crear workspace" ON public.workspaces;
 CREATE POLICY "Crear workspace"
   ON public.workspaces FOR INSERT
-  WITH CHECK (auth.uid() = created_by);
+  WITH CHECK (auth.uid() IS NOT NULL);
 
--- Workspace members: ver los del workspace al que perteneces
+-- Workspace members: ver las propias membresías
 DROP POLICY IF EXISTS "Ver miembros del workspace" ON public.workspace_members;
 CREATE POLICY "Ver miembros del workspace"
   ON public.workspace_members FOR SELECT
-  USING (EXISTS (
-    SELECT 1 FROM public.workspace_members wm2
-    WHERE wm2.workspace_id = workspace_id AND wm2.user_id = auth.uid()
-  ));
+  USING (auth.uid() = user_id);
 
 -- Workspace members: insertar (unirse a un workspace)
 DROP POLICY IF EXISTS "Unirse a workspace" ON public.workspace_members;
 CREATE POLICY "Unirse a workspace"
   ON public.workspace_members FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
+  WITH CHECK (auth.uid() IS NOT NULL);
 
 -- app_data: leer si eres miembro
 DROP POLICY IF EXISTS "Miembros pueden leer datos" ON public.app_data;

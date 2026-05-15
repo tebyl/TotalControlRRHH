@@ -203,10 +203,8 @@ export function useAppData(storageKey = STORAGE_KEY) {
   const dataRef = useRef<AppData | null>(null);
   dataRef.current = data;
   useEffect(() => {
-    console.info("[Supabase] CONFIGURED:", SUPABASE_CONFIGURED);
     if (!SUPABASE_CONFIGURED) return;
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.info("[Auth] event:", _event, "user:", session?.user?.email ?? "null");
       if (!session?.user) {
         clearWorkspaceCache();
         setWorkspaceId(null);
@@ -214,7 +212,6 @@ export function useAppData(storageKey = STORAGE_KEY) {
         return;
       }
       getUserWorkspace().then(result => {
-        console.info("[Workspace] result:", result);
         if (!result.ok) { setNeedsWorkspaceSetup(true); return; }
         if (result.data) {
           const wsId = result.data.id;
