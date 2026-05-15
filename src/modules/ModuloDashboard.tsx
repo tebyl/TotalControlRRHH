@@ -115,7 +115,7 @@ export function ModuloDashboard({
                       <tr>
                         <td colSpan={10}>
                           <div className="flex flex-col items-center justify-center py-14 px-6 text-center">
-                            <div className="text-4xl mb-3 opacity-60">🎉</div>
+                            <CheckCircle2 size={40} className="mb-3 text-emerald-500 opacity-70" />
                             <p className="text-sm font-medium text-slate-500 mb-1">Sin ítems urgentes por ahora</p>
                             <p className="text-xs text-slate-400">Cuando haya pendientes críticos o próximos a vencer aparecerán aquí.</p>
                           </div>

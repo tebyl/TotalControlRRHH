@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Settings } from "lucide-react";
+import { AlertTriangle, ClipboardList, Lightbulb, Lock, RefreshCw, Settings, Shuffle, XCircle } from "lucide-react";
 import type { ConfirmState } from "../shared/formTypes";
 import type { AppData, BackupItem } from "../domain/types";
 import type { XlsxParseResult } from "../importExport/xlsxImport";
@@ -23,7 +23,7 @@ function XlsxImportPreview({ parseResult, onConfirmReplace, onConfirmMerge, onCa
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between z-10 rounded-t-2xl">
           <div>
-            <h2 className="text-lg font-bold text-slate-800">📋 Previsualización de importación XLSX</h2>
+            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2"><ClipboardList size={18} className="text-blue-600" />Previsualización de importación XLSX</h2>
             <p className="text-xs text-slate-500 mt-0.5">Revisa los datos antes de confirmar la importación.</p>
           </div>
           <button onClick={onCancel} className="text-slate-400 hover:text-slate-600 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors text-xl">×</button>
@@ -57,7 +57,7 @@ function XlsxImportPreview({ parseResult, onConfirmReplace, onConfirmMerge, onCa
 
           {parseResult.tieneErroresCriticos && (
             <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-start gap-2">
-              <span className="text-red-500 shrink-0">⚠️</span>
+              <AlertTriangle size={16} className="text-red-500 shrink-0" />
               <div className="text-sm text-red-700">
                 <span className="font-semibold">Hay errores críticos.</span> Solo se importarán los registros válidos. Los registros con errores serán omitidos.
               </div>
@@ -93,14 +93,14 @@ function XlsxImportPreview({ parseResult, onConfirmReplace, onConfirmMerge, onCa
             <div className="space-y-2">
               {parseResult.hojas.filter(h => h.erroresList.length > 0).map((h, i) => (
                 <div key={i} className="bg-red-50 border border-red-200 rounded-xl p-4">
-                  <div className="text-xs font-bold text-red-700 mb-2">❌ {h.nombre} — Errores ({h.erroresList.length})</div>
+                  <div className="text-xs font-bold text-red-700 mb-2 flex items-center gap-1.5"><XCircle size={14} />{h.nombre} — Errores ({h.erroresList.length})</div>
                   <ul className="space-y-0.5">{h.erroresList.slice(0, 10).map((e, j) => <li key={j} className="text-xs text-red-600">· {e}</li>)}</ul>
                   {h.erroresList.length > 10 && <p className="text-xs text-red-400 mt-1">… y {h.erroresList.length - 10} más</p>}
                 </div>
               ))}
               {parseResult.hojas.filter(h => h.advertenciasList.length > 0).map((h, i) => (
                 <div key={i} className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                  <div className="text-xs font-bold text-amber-700 mb-2">⚠️ {h.nombre} — Advertencias ({h.advertenciasList.length})</div>
+                  <div className="text-xs font-bold text-amber-700 mb-2 flex items-center gap-1.5"><AlertTriangle size={14} />{h.nombre} — Advertencias ({h.advertenciasList.length})</div>
                   <ul className="space-y-0.5">{h.advertenciasList.slice(0, 5).map((e, j) => <li key={j} className="text-xs text-amber-700">· {e}</li>)}</ul>
                 </div>
               ))}
@@ -108,7 +108,7 @@ function XlsxImportPreview({ parseResult, onConfirmReplace, onConfirmMerge, onCa
           )}
 
           <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex items-start gap-2 text-sm text-blue-700">
-            <span className="shrink-0">🔒</span>
+            <Lock size={16} className="shrink-0" />
             <span>Se creará un respaldo automático antes de importar. Las hojas no presentes en el XLSX mantendrán sus datos actuales intactos.</span>
           </div>
         </div>
@@ -124,14 +124,14 @@ function XlsxImportPreview({ parseResult, onConfirmReplace, onConfirmMerge, onCa
               disabled={loading}
               className="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-60"
             >
-              {loading ? "⏳ Procesando importación..." : "🔀 Fusionar con base actual"}
+              {loading ? "Procesando importación..." : <span className="inline-flex items-center gap-2"><Shuffle size={14} />Fusionar con base actual</span>}
             </button>
             <button
               onClick={onConfirmReplace}
               disabled={loading}
               className="px-5 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-medium hover:bg-orange-700 transition-colors shadow-sm disabled:opacity-60"
             >
-              {loading ? "⏳ Procesando importación..." : "♻️ Reemplazar base actual"}
+              {loading ? "Procesando importación..." : <span className="inline-flex items-center gap-2"><RefreshCw size={14} />Reemplazar base actual</span>}
             </button>
           </div>
           <p className="text-xs text-slate-400 mt-2 text-right">
@@ -317,7 +317,7 @@ export function ModuloConfiguracion({
       <ExpandableSection title="Importar / Exportar datos" defaultOpen={true}>
         <div className="space-y-4">
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-start gap-3">
-            <span className="text-base shrink-0">💡</span>
+            <Lightbulb size={16} className="shrink-0 text-blue-600" />
             <p className="text-sm text-blue-700">Descarga un respaldo JSON al menos 1 vez por semana y guárdalo en una carpeta segura.</p>
           </div>
 

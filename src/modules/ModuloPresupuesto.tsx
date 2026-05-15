@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Wallet } from "lucide-react";
+import { AlertTriangle, Wallet } from "lucide-react";
 import { fmtCLP } from "../shared/dataHelpers";
 import { durMesesEntre } from "../utils/appHelpers";
 import { ModuleHeader } from "../components/ui";
@@ -100,7 +100,7 @@ export function ModuloPresupuesto({ data, search, setSearch, openNew: _openNew, 
           <div className={`rounded-lg p-4 text-center border ${saldoDisponible < 0 ? "bg-red-50 border-red-300" : "bg-green-50 border-green-200"}`}>
             <div className={`text-sm ${saldoDisponible < 0 ? "text-red-700" : "text-green-700"}`}>Saldo Disponible (Asignado − Ejecutado − Comprometido)</div>
             <div className={`text-2xl font-bold ${saldoDisponible < 0 ? "text-red-600" : "text-green-600"}`}>{fmtCLP(saldoDisponible)}</div>
-            {saldoDisponible < 0 && <div className="text-xs text-red-600 font-semibold mt-1">⚠ Presupuesto excedido</div>}
+            {saldoDisponible < 0 && <div className="text-xs text-red-600 font-semibold mt-1 inline-flex items-center justify-center gap-1"><AlertTriangle size={13} />Presupuesto excedido</div>}
           </div>
         </div>
 
@@ -170,7 +170,12 @@ export function ModuloPresupuesto({ data, search, setSearch, openNew: _openNew, 
                     <td className="px-4 py-3 text-right font-medium">{fmtCLP(row.presupuesto)}</td>
                     <td className="px-4 py-3 text-right text-orange-600 font-medium">{fmtCLP(row.comprometido)}</td>
                     <td className="px-4 py-3 text-right text-red-600 font-medium">{fmtCLP(row.ejecutado)}</td>
-                    <td className={`px-4 py-3 text-right font-semibold ${row.saldo < 0 ? "text-red-600" : "text-green-600"}`}>{fmtCLP(row.saldo)}{row.saldo < 0 && " ⚠"}</td>
+                    <td className={`px-4 py-3 text-right font-semibold ${row.saldo < 0 ? "text-red-600" : "text-green-600"}`}>
+                      <span className="inline-flex items-center justify-end gap-1">
+                        {fmtCLP(row.saldo)}
+                        {row.saldo < 0 && <AlertTriangle size={13} />}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <span className={`font-bold ${usePct > 90 ? "text-red-600" : usePct > 75 ? "text-orange-500" : "text-green-600"}`}>
                         {usePct}%

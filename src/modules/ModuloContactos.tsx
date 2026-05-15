@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ContactRound } from "lucide-react";
+import { ContactRound, Info } from "lucide-react";
 import { Badge } from "../shared/badges";
 import { RELACIONES } from "../domain/options";
 import type { Contacto } from "../domain/types";
@@ -39,7 +39,7 @@ export function ModuloContactos({ data, search, setSearch, openNew, openEdit, de
         actions={<button onClick={() => openNew("contactos")} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Nuevo contacto</button>}
       />
       <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
-        <span className="text-xl shrink-0">ℹ️</span>
+        <Info size={20} className="shrink-0 text-blue-600" />
         <p className="text-sm text-blue-800">Todos los responsables de los módulos se asignan desde aquí. <strong>Crea el contacto antes de asignarlo</strong> en cualquier registro.</p>
       </div>
       <Table

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Badge, SemaforoBadge, prioridadColor, estadoColor } from "./shared/badges";
-import type { ConfirmState, ToastType, ToastItem } from "./shared/formTypes";
+import type { ToastType, ToastItem } from "./shared/formTypes";
 import { fmtCLP, resolveResponsable, getResponsableName } from "./shared/dataHelpers";
 import { calcPctRecl } from "./shared/reclutamientoHelpers";
 import { FormCursos } from "./forms/FormCursos";
@@ -29,14 +29,15 @@ import { ModuloReclutamiento } from "./modules/ModuloReclutamiento";
 import { ModuloPresupuesto } from "./modules/ModuloPresupuesto";
 import { ModuloConfiguracion } from "./modules/ModuloConfiguracion";
 import { ModuloValesGas } from "./modules/ModuloValesGas";
+import { crearDatosEjemplo, getXlsx, hydrateData, limpiarDatos, useAppData } from "./state/useAppData";
+import { useModals } from "./state/useModals";
+import { useBackups } from "./state/useBackups";
+import { AppLayout } from "./layout/AppLayout";
 import {
   ahora,
   createDataToSave,
-  duplicateRecord,
-  genId,
   hoy,
   isClosedRecord,
-  markRecordClosed,
   normalizeDateFromXlsx,
   normalizeReclutamientoCampo,
   normalizeYesNo,
@@ -46,9 +47,7 @@ import {
 } from "./utils/appHelpers";
 import type {
   AppData,
-  BackupItem,
   CargaSemanal,
-  Contacto,
   ModuloKey,
   ProcesoReclutamiento,
   ValeGas,
@@ -57,18 +56,13 @@ import type {
 import {
   MESES,
 } from "./domain/options";
-import { ensureBudgetRows } from "./domain/budget";
-import { createBackup, getLocalBackups } from "./storage/backupStorage";
-import { readStorageJSON, removeStorageKey, saveAppData, writeStorageJSON, STORAGE_KEY } from "./storage/localStorage";
+import { saveAppData, writeStorageJSON, STORAGE_KEY } from "./storage/localStorage";
 import { migrateData } from "./storage/migrations";
 import {
   cachePassphrase,
   clearCachedPassphrase,
   decryptAppData,
   encryptAppData,
-  getCachedPassphrase,
-  isEncryptedPayload,
-  type EncryptedPayload,
 } from "./storage/encryption";
 import { createJsonBlob } from "./importExport/jsonExport";
 import { buildExportSheets } from "./importExport/xlsxExport";
@@ -76,31 +70,24 @@ import { xlsxSheetToObjects, type XlsxParseResult } from "./importExport/xlsxImp
 import { DataTable as Table } from "./components/tables/DataTable";
 import { Select } from "./components/forms/fields";
 import {
-  ConfirmDialog,
-  ErrorBoundary,
   KpiCard as KpiCardUI,
   Modal,
   ModuleHeader,
   SectionCard,
   SkeletonCard,
   SkeletonTable,
-  ToastContainer,
 } from "./components/ui";
 import { login as authLogin, getSession, logout as authLogout, refreshSession } from "./auth/authService";
 import { can } from "./auth/permissions";
 import { logAudit } from "./audit/auditService";
-import { Sidebar } from "./components/sidebar/Sidebar";
 import {
   AlertTriangle,
   Award,
-  Bell,
   BookOpen,
   CalendarRange,
   ClipboardCheck,
   Clock,
   FileText,
-  Search,
-  Settings,
   ShieldOff,
   TrendingUp,
   Zap,
@@ -110,132 +97,6 @@ import {
 // CONSTANTS
 // ──────────────────────────────────────────────
 
-let xlsxModule: typeof import("xlsx") | null = null;
-const getXlsx = async () => {
-  if (!xlsxModule) {
-    xlsxModule = await import("xlsx");
-  }
-  return xlsxModule;
-};
-// SAMPLE DATA
-// ──────────────────────────────────────────────
-
-function crearDatosEjemplo(): AppData {
-  const today = hoy();
-  const d = (offset: number) => { const dt = new Date(today); dt.setDate(dt.getDate() + offset); return dt.toISOString().slice(0, 10); };
-  
-  const contactos: Contacto[] = [
-    { id: genId(), nombre: "Ana Control", rol: "Coordinadora Operativa", areaEmpresa: "Operaciones", correo: "ana.control@empresa.cl", telefono: "+56911111111", relacion: "Interno", activo: "Sí", observaciones: "Responsable principal" },
-    { id: genId(), nombre: "María Silva", rol: "Jefa Operaciones", areaEmpresa: "Operaciones", correo: "msilva@empresa.cl", telefono: "+56912345678", relacion: "Jefatura", activo: "Sí", observaciones: "Aprueba cursos" },
-    { id: genId(), nombre: "OTEC ProCaps", rol: "Coordinador", areaEmpresa: "OTEC ProCaps", correo: "contacto@procaps.cl", telefono: "+56222333444", relacion: "OTEC", activo: "Sí", observaciones: "Proveedor principal" },
-    { id: genId(), nombre: "Psic. Laura González", rol: "Psicóloga", areaEmpresa: "Evaluaciones Pro", correo: "laura@evalpro.cl", telefono: "+56922233344", relacion: "Psicólogo / Proveedor evaluación", activo: "Sí", observaciones: "Evaluaciones psicolaborales" },
-  ];
-  const anaId = contactos[0].id;
-
-  return {
-    cursos: [
-      { id: genId(), curso: "Liderazgo y Gestión de Equipos", origen: "DNC", area: "Operaciones", solicitante: "María Silva", fechaSolicitud: d(-30), fechaRequerida: d(-5), estado: "Pendiente revisar", prioridad: "P1 Crítico", nivelCritico: "Crítico", requiereOC: "Sí", numeroOC: "OC-0045", proveedor: "OTEC ProCaps", responsableId: anaId, proximaAccion: "Revisar cotización pendiente", fechaProximaAccion: d(-2), bloqueadoPor: "Falta cotización", ultimaActualizacion: d(-15), observaciones: "Curso DNC planificado Q1" },
-      { id: genId(), curso: "Manejo de Extintores", origen: "Requerimiento legal", area: "Prevención", solicitante: "Juan Pérez", fechaSolicitud: d(-7), fechaRequerida: d(5), estado: "En cotización", prioridad: "P1 Crítico", nivelCritico: "Alto", requiereOC: "Sí", numeroOC: "", proveedor: "", responsableId: anaId, proximaAccion: "Esperar cotización OTEC", fechaProximaAccion: d(2), bloqueadoPor: "Falta cotización", ultimaActualizacion: d(-3), observaciones: "Requerimiento legal urgente" },
-      { id: genId(), curso: "Excel Avanzado", origen: "Urgente no planificado", area: "Administración", solicitante: "Carla Rojas", fechaSolicitud: d(-1), fechaRequerida: d(10), estado: "En aprobación", prioridad: "P2 Alto", nivelCritico: "Medio", requiereOC: "No", numeroOC: "", proveedor: "OTEC Digital", responsableId: anaId, proximaAccion: "Confirmar participantes", fechaProximaAccion: d(7), bloqueadoPor: "Sin bloqueo", ultimaActualizacion: d(-1), observaciones: "Urgente, jefatura solicitó" },
-    ],
-    ocs: [
-      { id: genId(), numeroOC: "OC-0045", categoriaOC: "Curso / Capacitación", cursoAsociado: "Liderazgo y Gestión de Equipos", proveedor: "OTEC ProCaps", monto: 1200000, fechaSolicitud: d(-25), fechaLimite: d(-5), estadoOC: "En aprobación", prioridad: "P1 Crítico", accionPendiente: "Seguir con compras", responsableId: anaId, bloqueadoPor: "Falta aprobación", ultimaActualizacion: d(-10), observaciones: "Urgente aprobar" },
-      { id: genId(), numeroOC: "OC-0052", categoriaOC: "Curso / Capacitación", cursoAsociado: "Norma ISO 9001:2025", proveedor: "OTEC CalidadPlus", monto: 2500000, fechaSolicitud: d(-15), fechaLimite: d(10), estadoOC: "Solicitada", prioridad: "P3 Medio", accionPendiente: "Esperar emisión", responsableId: anaId, bloqueadoPor: "Sin bloqueo", ultimaActualizacion: d(-2), observaciones: "En proceso normal" },
-    ],
-    practicantes: [
-      { id: genId(), nombre: "Camila Vega", area: "Operaciones", especialidad: "Ing. Industrial", fechaInicio: d(-60), fechaTermino: d(120), costoMensual: 350000, estado: "Activo", responsableId: anaId, proximoPaso: "Evaluación de desempeño", fechaProximaAccion: d(14), bloqueadoPor: "Sin bloqueo", ultimaActualizacion: d(-1), observaciones: "Buen desempeño" },
-      { id: genId(), nombre: "Diego Fuentes", area: "Administración", especialidad: "Contabilidad", fechaInicio: "", fechaTermino: "", costoMensual: 300000, estado: "Por buscar", responsableId: anaId, proximoPaso: "Publicar aviso", fechaProximaAccion: d(3), bloqueadoPor: "Sin bloqueo", ultimaActualizacion: d(-4), observaciones: "Reemplazo por licencia" },
-    ],
-    presupuesto: [
-      { id: genId(), concepto: "Cursos", presupuestoTotal: 15000000, gastado: 7500000, responsableId: anaId, ultimaActualizacion: d(-1), observaciones: "50% utilizado" },
-      { id: genId(), concepto: "Practicantes", presupuestoTotal: 8000000, gastado: 6400000, responsableId: anaId, ultimaActualizacion: d(-1), observaciones: "80% utilizado - ATENCIÓN" },
-      { id: genId(), concepto: "Diplomas / Certificados / Licencias", presupuestoTotal: 2000000, gastado: 300000, responsableId: anaId, ultimaActualizacion: d(-5), observaciones: "Aún hay margen" },
-      { id: genId(), concepto: "Evaluaciones Psicolaborales", presupuestoTotal: 3000000, gastado: 500000, responsableId: anaId, ultimaActualizacion: d(-1), observaciones: "20% utilizado" },
-    ],
-    procesos: [
-      { id: genId(), proceso: "Subida masiva BUK Q1", tipo: "BUK", estadoActual: "Pendiente", queFalta: "Reunir todos los documentos", responsableId: anaId, fechaLimite: d(-3), riesgo: "Incumplimiento auditoría interna", prioridad: "P1 Crítico", proximaAccion: "Subir diplomas pendientes", fechaProximaAccion: d(-1), bloqueadoPor: "Falta subir a BUK", ultimaActualizacion: d(-10), observaciones: "Vencido, urgente" },
-      { id: genId(), proceso: "Reclutamiento reemplazo licencia", tipo: "Reclutamiento", estadoActual: "En proceso", queFalta: "Publicar en portales", responsableId: anaId, fechaLimite: d(7), riesgo: "Quedar sin personal en área crítica", prioridad: "P2 Alto", proximaAccion: "Contactar a RRHH", fechaProximaAccion: d(1), bloqueadoPor: "Sin bloqueo", ultimaActualizacion: d(-4), observaciones: "" },
-    ],
-    diplomas: [
-      { id: genId(), cursoAsociado: "Liderazgo y Gestión de Equipos", participante: "Equipo Operaciones", tipoDocumento: "Diploma", otec: "OTEC ProCaps", etapa: "Pedir a la OTEC", fechaSolicitudOTEC: "", fechaRecepcionDoc: "", fechaEnvioParticipante: "", fechaSubidaBUK: "", estadoBUK: "Pendiente subir", prioridad: "P1 Crítico", responsableId: anaId, proximaAccion: "Solicitar diplomas a OTEC", fechaProximaAccion: d(-1), bloqueadoPor: "Falta subir a BUK", ultimaActualizacion: d(-10), observaciones: "Curso ya ejecutado, faltan diplomas" },
-      { id: genId(), cursoAsociado: "Excel Avanzado", participante: "Carla Rojas", tipoDocumento: "Certificado", otec: "OTEC Digital", etapa: "Enviar o pedir al participante", fechaSolicitudOTEC: d(-15), fechaRecepcionDoc: d(-5), fechaEnvioParticipante: "", fechaSubidaBUK: "", estadoBUK: "Pendiente subir", prioridad: "P2 Alto", responsableId: anaId, proximaAccion: "Enviar certificado a participante", fechaProximaAccion: d(2), bloqueadoPor: "Sin bloqueo", ultimaActualizacion: d(-3), observaciones: "Certificado recibido de OTEC" },
-      { id: genId(), cursoAsociado: "Manejo de Extintores", participante: "Brigada Emergencia", tipoDocumento: "Licencia", otec: "OTEC SafetyFirst", etapa: "Subir a BUK", fechaSolicitudOTEC: d(-20), fechaRecepcionDoc: d(-10), fechaEnvioParticipante: d(-7), fechaSubidaBUK: "", estadoBUK: "Pendiente subir", prioridad: "P1 Crítico", responsableId: anaId, proximaAccion: "Subir licencias a BUK hoy", fechaProximaAccion: d(-2), bloqueadoPor: "Falta subir a BUK", ultimaActualizacion: d(-8), observaciones: "Documentos listos, falta sólo subir" },
-    ],
-    cargaSemanal: [
-      { id: genId(), semana: "Semana 15", cursosPlanificados: 3, cursosUrgentesNuevos: 5, cursosNoPlanificados: 2, ocsNuevas: 3, diplomasPendientes: 4, procesosBloqueados: 2, comentario: "Semana muy cargada, más urgentes que planificados" },
-      { id: genId(), semana: "Semana 14", cursosPlanificados: 2, cursosUrgentesNuevos: 3, cursosNoPlanificados: 1, ocsNuevas: 2, diplomasPendientes: 3, procesosBloqueados: 1, comentario: "Tendencia: urgentes superan planificación" },
-    ],
-    contactos,
-    evaluacionesPsicolaborales: [
-      { id: genId(), mes: "Enero", ano: 2026, cargo: "Administrativo RRHH", area: "RRHH", candidato: "Sofía Martínez", rut: "12.345.678-9", tipoEvaluacion: "Psicolaboral", proveedor: "Psic. Laura González", fechaSolicitud: d(-20), fechaEvaluacion: d(5), fechaEntregaInforme: d(10), estado: "Agendada", resultado: "Pendiente", prioridad: "P2 Alto", responsableId: anaId, costo: 150000, requiereOC: "No", numeroOC: "", proximaAccion: "Confirmar fecha evaluación", fechaProximaAccion: d(3), bloqueadoPor: "Sin bloqueo", ultimaActualizacion: d(-2), observaciones: "Evaluación programada" },
-      { id: genId(), mes: "Enero", ano: 2026, cargo: "Supervisor de Operaciones", area: "Operaciones", candidato: "Roberto Díaz", rut: "15.678.901-2", tipoEvaluacion: "Evaluación mixta", proveedor: "Psic. Laura González", fechaSolicitud: d(-15), fechaEvaluacion: d(-3), fechaEntregaInforme: d(0), estado: "Realizada", resultado: "Pendiente", prioridad: "P1 Crítico", responsableId: anaId, costo: 200000, requiereOC: "No", numeroOC: "", proximaAccion: "Solicitar informe al psicólogo", fechaProximaAccion: d(-1), bloqueadoPor: "Falta informe", ultimaActualizacion: d(-5), observaciones: "Evaluación realizada, informe pendiente" },
-      { id: genId(), mes: "Diciembre", ano: 2025, cargo: "Analista de Compras", area: "Compras", candidato: "Patricia López", rut: "18.234.567-8", tipoEvaluacion: "Psicolaboral", proveedor: "Psic. Laura González", fechaSolicitud: d(-45), fechaEvaluacion: d(-30), fechaEntregaInforme: d(-25), estado: "Cerrada", resultado: "Recomendado", prioridad: "P3 Medio", responsableId: anaId, costo: 150000, requiereOC: "No", numeroOC: "", proximaAccion: "", fechaProximaAccion: "", bloqueadoPor: "Sin bloqueo", ultimaActualizacion: d(-25), observaciones: "Evaluación aprobada" },
-      { id: genId(), mes: "Enero", ano: 2026, cargo: "Prevencionista de Riesgos", area: "Prevención", candidato: "Fernando Ruiz", rut: "11.111.222-3", tipoEvaluacion: "Psicolaboral", proveedor: "Psic. Laura González", fechaSolicitud: d(-10), fechaEvaluacion: "", fechaEntregaInforme: "", estado: "Solicitada", resultado: "Pendiente", prioridad: "P2 Alto", responsableId: anaId, costo: 150000, requiereOC: "Sí", numeroOC: "", proximaAccion: "Gestionar OC", fechaProximaAccion: d(2), bloqueadoPor: "Falta OC", ultimaActualizacion: d(-3), observaciones: "Bloqueada por falta de OC" },
-      { id: genId(), mes: "Diciembre", ano: 2025, cargo: "Operador", area: "Operaciones", candidato: "Carlos Vega", rut: "19.876.543-2", tipoEvaluacion: "Psicolaboral", proveedor: "Psic. Laura González", fechaSolicitud: d(-40), fechaEvaluacion: d(-20), fechaEntregaInforme: d(-18), estado: "En revisión", resultado: "No recomendado", prioridad: "P2 Alto", responsableId: anaId, costo: 150000, requiereOC: "No", numeroOC: "", proximaAccion: "Revisar con RRHH", fechaProximaAccion: d(5), bloqueadoPor: "Sin bloqueo", ultimaActualizacion: d(-10), observaciones: "No recomendado, revisar alternativa" },
-    ],
-    valesGas: [
-      { id: genId(), colaborador: "Juan Pérez", contactoId: "", area: "Operaciones", periodo: "Mayo 2026", fechaEntrega: d(-5), totalValesAsignados: 10, valesUsados: 3, descuentoDiario: 1, diasDescuento: 3, totalDescontado: 3, saldoVales: 7, estado: "En descuento", responsableId: anaId, fechaProximaRevision: d(7), observaciones: "Descuento iniciado", ultimaActualizacion: d(-1) },
-      { id: genId(), colaborador: "Ana Soto", contactoId: "", area: "Administración", periodo: "Mayo 2026", fechaEntrega: d(-10), totalValesAsignados: 5, valesUsados: 5, descuentoDiario: 0, diasDescuento: 0, totalDescontado: 0, saldoVales: 0, estado: "Cerrado", responsableId: anaId, fechaProximaRevision: "", observaciones: "Vales completamente usados", ultimaActualizacion: d(-2) },
-      { id: genId(), colaborador: "Luis Rojas", contactoId: "", area: "Prevención", periodo: "Mayo 2026", fechaEntrega: d(3), totalValesAsignados: 8, valesUsados: 0, descuentoDiario: 0, diasDescuento: 0, totalDescontado: 0, saldoVales: 8, estado: "Pendiente entregar", responsableId: anaId, fechaProximaRevision: d(3), observaciones: "Pendiente entregar vales", ultimaActualizacion: d(-1) },
-    ],
-    valesGasOrganizacion: [
-      { id: genId(), fechaRegistro: d(-10), periodo: "Mayo 2026", tipoMovimiento: "Ingreso de vales", cantidadVales: 100, motivo: "Compra mensual de vales", responsableId: anaId, observaciones: "Vales comprados para el mes", ultimaActualizacion: d(-10) },
-      { id: genId(), fechaRegistro: d(-3), periodo: "Mayo 2026", tipoMovimiento: "Ajuste positivo", cantidadVales: 20, motivo: "Ajuste por diferencia de inventario", responsableId: anaId, observaciones: "Ajuste corregido en revisión semanal", ultimaActualizacion: d(-3) },
-    ],
-    reclutamiento: [
-      {
-        id: genId(),
-        reclutamiento: "Interno", plantaCentro: "Planta Bio Bio", tipoVacante: "Cosecha",
-        mesIngreso: "Enero", revisadoPPTO: "Gloria", procesoBuk: "Sí", publicado: "Sí",
-        seleccionCV: "En proceso", cvSeleccionadoBuk: "Sí", entrevistaJefatura: "Agendada",
-        entrevistaGP: "Agendada", testPsicolaboral: "Solicitado", testHogan: "Solicitado",
-        seleccionado: "Sí", cartaOferta: "Solicitada", envioCartaOferta: "Realizado",
-        firmaCartaOferta: "Sí", fechaIngreso: "", reclutador: "Gloria", proceso: "Abierto",
-        reclutadorId: "", prioridad: "P2 Alto", bloqueadoPor: "Sin bloqueo",
-        proximaAccion: "Confirmar fecha ingreso", fechaProximaAccion: d(3),
-        observaciones: "Proceso avanzado", ultimaActualizacion: d(0)
-      },
-      {
-        id: genId(),
-        reclutamiento: "Externo", plantaCentro: "Planta Freire", tipoVacante: "Reemplazo",
-        mesIngreso: "Febrero", revisadoPPTO: "Hernan", procesoBuk: "No", publicado: "No",
-        seleccionCV: "Finalizado", cvSeleccionadoBuk: "No", entrevistaJefatura: "Realizada",
-        entrevistaGP: "Realizada", testPsicolaboral: "Realizado", testHogan: "Realizado",
-        seleccionado: "No", cartaOferta: "N/A", envioCartaOferta: "Pendiente",
-        firmaCartaOferta: "No", fechaIngreso: "", reclutador: "Matías", proceso: "Cerrado",
-        reclutadorId: "", prioridad: "P3 Medio", bloqueadoPor: "Sin bloqueo",
-        proximaAccion: "", fechaProximaAccion: "",
-        observaciones: "Candidato desistió", ultimaActualizacion: d(-5)
-      },
-      {
-        id: genId(),
-        reclutamiento: "Promoción interna", plantaCentro: "Planta Perquenco", tipoVacante: "Fijo",
-        mesIngreso: "Marzo", revisadoPPTO: "Pendiente", procesoBuk: "Confidencial", publicado: "",
-        seleccionCV: "", cvSeleccionadoBuk: "", entrevistaJefatura: "Pendiente",
-        entrevistaGP: "Pendiente", testPsicolaboral: "Pendiente", testHogan: "Pendiente",
-        seleccionado: "", cartaOferta: "Pendiente", envioCartaOferta: "N/A",
-        firmaCartaOferta: "Pendiente", fechaIngreso: "", reclutador: "Katalina", proceso: "Pausado",
-        reclutadorId: "", prioridad: "P2 Alto", bloqueadoPor: "Falta aprobación",
-        proximaAccion: "Esperar aprobación PPTO", fechaProximaAccion: d(7),
-        observaciones: "En espera de presupuesto", ultimaActualizacion: d(-2)
-      }
-    ],
-    meta: { version: "1.1", ultimaExportacion: "", actualizado: ahora() },
-  };
-}
-
-function hydrateData(raw: unknown): AppData {
-  const parsed = migrateData(raw, crearDatosEjemplo());
-  parsed.presupuesto = ensureBudgetRows(parsed.presupuesto);
-  return parsed;
-}
-
-function limpiarDatos() {
-  removeStorageKey(STORAGE_KEY);
-  clearCachedPassphrase();
-}
-
-// ──────────────────────────────────────────────
 // COMPONENTS
 // ──────────────────────────────────────────────
 
@@ -338,50 +199,24 @@ function EncryptionUnlock({
 
 type Modulo = ModuloKey;
 
-const SIDEBAR_TO_MODULO: Record<string, Modulo> = {
-  inicio: "inicio", miDia: "midia", dashboard: "dashboard",
-  cursos: "cursos", ocs: "ocs", procesos: "procesos",
-  practicantes: "practicantes", evaluaciones: "evaluaciones",
-  reclutamiento: "reclutamiento", contactos: "contactos",
-  diplomas: "diplomas", presupuesto: "presupuesto",
-  valesGas: "valesGas", cargaSemanal: "cargaSemanal",
-  configuracion: "configuracion",
-};
-const MODULO_TO_SIDEBAR: Record<string, string> = Object.fromEntries(
-  Object.entries(SIDEBAR_TO_MODULO).map(([k, v]) => [v, k])
-);
-
-const MODULE_BREADCRUMB: Record<string, { group: string; label: string }> = {
-  inicio:        { group: "",           label: "Inicio" },
-  midia:         { group: "Operación",  label: "Mi Día" },
-  dashboard:     { group: "Operación",  label: "Dashboard" },
-  cursos:        { group: "Operación",  label: "Cursos / DNC" },
-  ocs:           { group: "Operación",  label: "OCs Pendientes" },
-  procesos:      { group: "Operación",  label: "Procesos Pend." },
-  practicantes:  { group: "Personas",   label: "Practicantes" },
-  evaluaciones:  { group: "Personas",   label: "Evaluaciones" },
-  reclutamiento: { group: "Personas",   label: "Reclutamiento" },
-  contactos:     { group: "Personas",   label: "Contactos" },
-  diplomas:      { group: "Documentos", label: "Diplomas/Cert/Lic" },
-  presupuesto:   { group: "Finanzas",   label: "Presupuesto" },
-  valesGas:      { group: "Finanzas",   label: "Vales de Gas" },
-  cargaSemanal:  { group: "Finanzas",   label: "Carga Semanal" },
-  configuracion: { group: "Sistema",    label: "Configuración" },
-};
-
 export default function App() {
   const [authenticated, setAuthenticated] = useState(() => getSession() !== null);
-  const [data, setData] = useState<AppData>(() => {
-    const de = crearDatosEjemplo();
-    de.presupuesto = ensureBudgetRows(de.presupuesto);
-    return de;
-  });
-  const [dataReady, setDataReady] = useState(false);
-  const [encryptionEnabled, setEncryptionEnabled] = useState(false);
-  const [encryptedPayload, setEncryptedPayload] = useState<EncryptedPayload | null>(null);
-  const [unlockOpen, setUnlockOpen] = useState(false);
-  const [unlockPassphrase, setUnlockPassphrase] = useState("");
-  const [unlockError, setUnlockError] = useState("");
+  const {
+    data,
+    setData,
+    dataReady,
+    setDataReady,
+    encryptionEnabled,
+    setEncryptionEnabled,
+    encryptedPayload,
+    setEncryptedPayload,
+    unlockOpen,
+    setUnlockOpen,
+    unlockPassphrase,
+    setUnlockPassphrase,
+    unlockError,
+    setUnlockError,
+  } = useAppData();
   const [encryptionSetupOpen, setEncryptionSetupOpen] = useState(false);
   const [encryptionPassphrase, setEncryptionPassphrase] = useState("");
   const [encryptionPassphraseConfirm, setEncryptionPassphraseConfirm] = useState("");
@@ -389,19 +224,13 @@ export default function App() {
   const [activeModulo, setActiveModulo] = useState<Modulo>("inicio");
   const [focusMode, setFocusMode] = useState(() => localStorage.getItem("kata_focus_mode") === "true");
   const [search, setSearch] = useState("");
-  const [confirm, setConfirm] = useState<ConfirmState | null>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [tableLoading, setTableLoading] = useState(false);
   const [exporting, setExporting] = useState<null | "json" | "jsonAnon" | "jsonSummary" | "xlsx" | "xlsxAnon" | "template" | "cleanTemplate">(
     null
   );
-  const [modalModulo, setModalModulo] = useState<string>("");
-  const [editItem, setEditItem] = useState<any>(null);
-  const [modalOpen, setModalOpen] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
-  const [captureOpen, setCaptureOpen] = useState(false);
 
-  const [backups, setBackups] = useState<BackupItem[]>(() => getLocalBackups());
   const [lastJSONExport, setLastJSONExport] = useState<string>(() => localStorage.getItem("kata_last_json_export") || "");
   const [lastXLSXExport, setLastXLSXExport] = useState<string>(() => localStorage.getItem("kata_last_xlsx_export") || "");
 
@@ -409,51 +238,6 @@ export default function App() {
 
   // Role derived from session — cheap sessionStorage read, no memoization needed
   const currentRole = authenticated ? getSession()?.role : undefined;
-
-  // Initial data load (supports encrypted payload)
-  useEffect(() => {
-    let active = true;
-    const init = async () => {
-      const raw = readStorageJSON<unknown>(STORAGE_KEY);
-      if (!raw) {
-        const de = crearDatosEjemplo();
-        de.presupuesto = ensureBudgetRows(de.presupuesto);
-        if (!active) return;
-        setData(de);
-        setDataReady(true);
-        return;
-      }
-      if (isEncryptedPayload(raw)) {
-        if (!active) return;
-        setEncryptionEnabled(true);
-        setEncryptedPayload(raw);
-        const cached = getCachedPassphrase();
-        if (!cached) {
-          setUnlockOpen(true);
-          return;
-        }
-        try {
-          const decrypted = await decryptAppData(raw, cached);
-          if (!active) return;
-          setData(hydrateData(decrypted));
-          setDataReady(true);
-          setUnlockOpen(false);
-        } catch {
-          if (!active) return;
-          setUnlockError("Clave incorrecta o datos corruptos.");
-          setUnlockOpen(true);
-        }
-        return;
-      }
-      if (!active) return;
-      setEncryptionEnabled(false);
-      setEncryptedPayload(null);
-      setData(hydrateData(raw));
-      setDataReady(true);
-    };
-    void init();
-    return () => { active = false; };
-  }, []);
 
   // Session expiry check — every 60 s, only while authenticated
   useEffect(() => {
@@ -481,25 +265,6 @@ export default function App() {
     window.addEventListener("keydown", handler);
     return () => { window.removeEventListener("click", handler); window.removeEventListener("keydown", handler); };
   }, [authenticated]);
-
-  useEffect(() => {
-    if (!dataReady) return;
-    if (!encryptionEnabled) {
-      saveAppData(STORAGE_KEY, data);
-      return;
-    }
-    const passphrase = getCachedPassphrase();
-    if (!passphrase) return;
-    const dataToSave = createDataToSave(data);
-    void (async () => {
-      try {
-        const encrypted = await encryptAppData(dataToSave, passphrase);
-        writeStorageJSON(STORAGE_KEY, encrypted);
-      } catch (error) {
-        console.warn("[storage] No se pudo cifrar datos", error);
-      }
-    })();
-  }, [data, dataReady, encryptionEnabled]);
 
   useEffect(() => {
     if (!dataReady) return;
@@ -531,17 +296,25 @@ export default function App() {
   };
   const removeToast = (id: string) => setToasts(prev => prev.filter(t => t.id !== id));
 
-  const runBackupAndToast = (motivo: string) => {
-    const success = createBackup(data, motivo);
-    if (!success) {
-      toastShow("No se pudo crear respaldo", {
-        type: "error",
-        message: "El almacenamiento local está lleno. Libera espacio o elimina respaldos antiguos.",
-      });
-    } else {
-      setBackups(getLocalBackups());
-    }
-  };
+  const { backups, setBackups, runBackupAndToast } = useBackups({ data, setData, toastShow });
+  const {
+    modalOpen,
+    modalModulo,
+    editItem,
+    confirm,
+    setConfirm,
+    captureOpen,
+    setCaptureOpen,
+    openNew,
+    openEdit,
+    closeModal,
+    openCapture,
+    saveItem,
+    deleteItem,
+    duplicateItem,
+    markClosed,
+    saveCaptura,
+  } = useModals({ data, setData, setActiveModulo, runBackupAndToast, toastShow });
 
   const openEncryptionSetup = () => {
     setEncryptionSetupError("");
@@ -1367,244 +1140,6 @@ export default function App() {
 
   const logout = () => { logAudit("logout", { detail: "Cierre de sesión manual" }); authLogout(); setAuthenticated(false); toastShow("Sesión cerrada", { type: "info" }); };
 
-  // ── CRUD OPERATIONS ────────────────────────
-
-  const openNew = (modulo: string) => { setModalModulo(modulo); setEditItem(null); setModalOpen(true); };
-  const openEdit = (modulo: string, item: any) => { setModalModulo(modulo); setEditItem(item); setModalOpen(true); };
-  const closeModal = () => { setModalOpen(false); setEditItem(null); };
-
-  const deleteItem = (modulo: string, id: string) => {
-    // Protect contacts that are in use as responsable
-    if (modulo === "contactos") {
-      const allModules = ["cursos", "ocs", "practicantes", "presupuesto", "procesos", "diplomas", "evaluacionesPsicolaborales"];
-      const usedIn: string[] = [];
-      allModules.forEach(m => {
-        const arr = (data as any)[m] || [];
-        if (arr.some((x: any) => x.responsableId === id)) usedIn.push(m);
-      });
-      if (usedIn.length > 0) {
-        setConfirm({
-          title: "Eliminar contacto con reasignación",
-          message: `Este contacto está asignado como responsable en: ${usedIn.join(", ")}. ¿Reasignar a "Sin responsable" y eliminar?`,
-          variant: "warning",
-          confirmLabel: "Reasignar y eliminar",
-          onConfirm: () => {
-            logAudit("record:delete", { module: "contactos", recordId: id, detail: "Eliminado con reasignación de responsable" });
-            setData(d => {
-              const nd = { ...d };
-              allModules.forEach(m => {
-                (nd as any)[m] = (nd as any)[m].map((x: any) => x.responsableId === id ? { ...x, responsableId: "" } : x);
-              });
-              nd.contactos = nd.contactos.filter(c => c.id !== id);
-              return nd;
-            });
-            toastShow("Contacto eliminado", { type: "success", message: "Los registros fueron reasignados a \"Sin responsable\"." });
-            setConfirm(null);
-          }
-        });
-        return;
-      }
-    }
-    setConfirm({
-      title: "Eliminar registro",
-      message: "Esta acción no se puede deshacer.",
-      variant: "danger",
-      confirmLabel: "Eliminar",
-      onConfirm: () => {
-        logAudit("record:delete", { module: modulo, recordId: id });
-        setData(d => { const nd = { ...d }; (nd as any)[modulo] = (nd as any)[modulo].filter((x: any) => x.id !== id); return nd; });
-        toastShow("Registro eliminado", { type: "success" });
-        setConfirm(null);
-      },
-    });
-  };
-
-  const duplicateItem = (modulo: string, item: any) => {
-    logAudit("record:duplicate", { module: modulo, recordId: item.id });
-    runBackupAndToast("crear");
-    setData(d => {
-      const nd = { ...d };
-      const arr = [...(nd as any)[modulo]];
-      const newItem = duplicateRecord(modulo, item, genId());
-      arr.push(newItem);
-      (nd as any)[modulo] = arr;
-      return nd;
-    });
-    toastShow("Registro duplicado correctamente", { type: "success" });
-  };
-
-  const saveItem = (modulo: string, item: any) => {
-    const isEdit = !!editItem;
-    runBackupAndToast(isEdit ? "editar" : "crear");
-    logAudit(isEdit ? "record:edit" : "record:create", { module: modulo, recordId: item.id || editItem?.id });
-    setData(d => {
-      const nd = { ...d };
-      const arr = [...(nd as any)[modulo]];
-      if (isEdit) {
-        const idx = arr.findIndex((x: any) => x.id === editItem.id);
-        if (idx >= 0) arr[idx] = { ...item, ultimaActualizacion: hoy() };
-      } else {
-        arr.push({ ...item, id: genId(), ultimaActualizacion: hoy() });
-      }
-      (nd as any)[modulo] = arr;
-      return nd;
-    });
-    closeModal();
-    toastShow(isEdit ? "Registro actualizado" : "Registro creado", { type: "success" });
-  };
-
-  // ── CAPTURA RÁPIDA ─────────────────────────
-  const ensureSinResponsable = (): string => {
-    const existing = data.contactos.find(c => c.nombre.trim().toLowerCase() === "sin responsable");
-    if (existing) return existing.id;
-    const newId = genId();
-    const newContact: Contacto = {
-      id: newId, nombre: "Sin responsable", rol: "Auto", areaEmpresa: "",
-      correo: "", telefono: "", relacion: "Interno", activo: "Sí",
-      observaciones: "Contacto base creado automáticamente para capturas rápidas",
-    };
-    setData(d => ({ ...d, contactos: [...d.contactos, newContact] }));
-    return newId;
-  };
-
-  // Saves a minimal record across any of the 6 main modules with a single form.
-  const saveCaptura = (capture: { tipo: string; nombre: string; prioridad: string; responsableId: string; proximaAccion: string; fechaProximaAccion: string; bloqueadoPor: string; observaciones: string; }) => {
-    const today = hoy();
-    const baseId = genId();
-    const resolvedResponsableId = capture.responsableId || ensureSinResponsable();
-    const baseFields = {
-      id: baseId,
-      prioridad: capture.prioridad,
-      responsableId: resolvedResponsableId,
-      proximaAccion: capture.proximaAccion,
-      fechaProximaAccion: capture.fechaProximaAccion,
-      bloqueadoPor: capture.bloqueadoPor || "Sin bloqueo",
-      observaciones: capture.observaciones,
-      ultimaActualizacion: today,
-    };
-
-    type CapturaTarget = { modulo: Modulo; dataKey: keyof AppData };
-    let target: CapturaTarget = { modulo: "cursos", dataKey: "cursos" };
-    let newItem: any = {};
-
-    switch (capture.tipo) {
-      case "Curso":
-        target = { modulo: "cursos", dataKey: "cursos" };
-        newItem = {
-          ...baseFields, curso: capture.nombre, origen: "Urgente no planificado", area: "", solicitante: "",
-          fechaSolicitud: today, fechaRequerida: capture.fechaProximaAccion || "", estado: "Pendiente revisar",
-          nivelCritico: "Medio", requiereOC: "No", numeroOC: "", proveedor: "", montoEstimado: 0,
-        };
-        break;
-      case "OC":
-        target = { modulo: "ocs", dataKey: "ocs" };
-        newItem = {
-          ...baseFields, numeroOC: capture.nombre, categoriaOC: "", cursoAsociado: "", proveedor: "", monto: 0,
-          fechaSolicitud: today, fechaLimite: capture.fechaProximaAccion || "", estadoOC: "Pendiente crear",
-          accionPendiente: capture.proximaAccion,
-        };
-        break;
-      case "Practicante":
-        target = { modulo: "practicantes", dataKey: "practicantes" };
-        newItem = {
-          ...baseFields, nombre: capture.nombre, area: "", especialidad: "",
-          fechaInicio: "", fechaTermino: "", costoMensual: 0, estado: "Por buscar",
-          proximoPaso: capture.proximaAccion,
-        };
-        break;
-      case "Diploma / Certificado / Licencia":
-        target = { modulo: "diplomas", dataKey: "diplomas" };
-        newItem = {
-          ...baseFields, cursoAsociado: capture.nombre, participante: "", tipoDocumento: "Diploma",
-          otec: "", etapa: "Pedir a la OTEC", fechaSolicitudOTEC: "", fechaRecepcionDoc: "",
-          fechaEnvioParticipante: "", fechaSubidaBUK: "", estadoBUK: "Pendiente subir",
-        };
-        break;
-      case "Evaluación Psicolaboral":
-        target = { modulo: "evaluaciones", dataKey: "evaluacionesPsicolaborales" };
-        newItem = {
-          ...baseFields, mes: MESES[new Date().getMonth()], ano: new Date().getFullYear(),
-          cargo: capture.nombre, area: "", candidato: "", rut: "", tipoEvaluacion: "Psicolaboral",
-          proveedor: "", fechaSolicitud: today, fechaEvaluacion: "", fechaEntregaInforme: "",
-          estado: "Pendiente solicitar", resultado: "Pendiente", costo: 0, requiereOC: "No", numeroOC: "",
-        };
-        break;
-      case "Vale de Gas":
-        target = { modulo: "valesGas", dataKey: "valesGas" };
-        newItem = {
-          ...baseFields, colaborador: capture.nombre, contactoId: "", area: "", periodo: "",
-          fechaEntrega: today, totalValesAsignados: 0, valesUsados: 0, descuentoDiario: 0,
-          diasDescuento: 0, totalDescontado: 0, saldoVales: 0, estado: "Pendiente entregar",
-          fechaProximaRevision: capture.fechaProximaAccion || "",
-        };
-        break;
-      case "Proceso Pendiente":
-        target = { modulo: "procesos", dataKey: "procesos" };
-        newItem = {
-          ...baseFields, proceso: capture.nombre, tipo: "Otro", estadoActual: "Pendiente revisar",
-          queFalta: capture.proximaAccion, fechaLimite: capture.fechaProximaAccion || "", riesgo: "",
-        };
-        break;
-      case "Reclutamiento":
-        target = { modulo: "reclutamiento", dataKey: "reclutamiento" };
-        newItem = {
-          ...baseFields,
-          reclutamiento: "Por definir",
-          plantaCentro: capture.nombre || "",
-          tipoVacante: "Por definir",
-          mesIngreso: new Date().toLocaleString("es-CL", { month: "long" }).replace(/^\w/, (c: string) => c.toUpperCase()),
-          revisadoPPTO: "", procesoBuk: "", publicado: "", seleccionCV: "",
-          cvSeleccionadoBuk: "", entrevistaJefatura: "", entrevistaGP: "",
-          testPsicolaboral: "", testHogan: "", seleccionado: "", cartaOferta: "",
-          envioCartaOferta: "", firmaCartaOferta: "", fechaIngreso: "",
-          reclutador: "", proceso: "Abierto",
-          proximaAccion: capture.proximaAccion || "",
-          fechaProximaAccion: capture.fechaProximaAccion || "",
-        };
-        break;
-      default:
-        return;
-    }
-
-    setData(d => {
-      const nd = { ...d };
-      (nd as any)[target.dataKey] = [...(nd as any)[target.dataKey], newItem];
-      return nd;
-    });
-    setCaptureOpen(false);
-    toastShow("Captura guardada correctamente", {
-      type: "success",
-      action: {
-        label: "Ir al módulo",
-        onClick: () => setActiveModulo(target.modulo),
-      },
-    });
-  };
-
-  const markClosed = (modulo: string, id: string, closedState: string) => {
-    setConfirm({
-      title: "Cerrar registro",
-      message: "Se marcará como cerrado. Esta acción no elimina información.",
-      variant: "warning",
-      confirmLabel: "Cerrar",
-      onConfirm: () => {
-        logAudit("record:close", { module: modulo, recordId: id });
-        setData(d => {
-          const nd = { ...d };
-          const arr = [...(nd as any)[modulo]];
-          const idx = arr.findIndex((x: any) => x.id === id);
-          if (idx >= 0) {
-            arr[idx] = markRecordClosed(modulo, arr[idx], closedState);
-          }
-          (nd as any)[modulo] = arr;
-          return nd;
-        });
-        toastShow("Estado actualizado", { type: "success" });
-        setConfirm(null);
-      },
-    });
-  };
-
   // Permission-gated action wrappers — pass undefined when role lacks the permission
   // so DataTable hides the button rather than calling undefined()
   const permDeleteItem = can(currentRole, "record:delete") ? deleteItem : undefined;
@@ -1875,49 +1410,19 @@ El dashboard responde:
   // ── MAIN RENDER ────────────────────────────
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
-      {/* Sidebar */}
-      <Sidebar
-        activeId={MODULO_TO_SIDEBAR[activeModulo] ?? activeModulo}
-        onSelect={(id) => { const m = SIDEBAR_TO_MODULO[id]; if (m) setActiveModulo(m); }}
-        focusMode={focusMode}
-        onFocusModeChange={toggleFocusMode}
-        onQuickCapture={() => setCaptureOpen(true)}
-        onLogout={logout}
-        version={data.meta.version}
-      />
-
-      {/* Main content */}
-      <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        {/* Global top bar */}
-        <div className="h-12 bg-white border-b border-slate-200 flex items-center gap-3 px-5 shrink-0">
-          {/* Breadcrumb */}
-          <nav className="flex items-center gap-1.5 text-sm flex-1 min-w-0">
-            {MODULE_BREADCRUMB[activeModulo]?.group && (
-              <>
-                <span className="text-slate-400 truncate">{MODULE_BREADCRUMB[activeModulo].group}</span>
-                <span className="text-slate-300">/</span>
-              </>
-            )}
-            <span className="text-slate-700 font-medium truncate">{MODULE_BREADCRUMB[activeModulo]?.label ?? activeModulo}</span>
-          </nav>
-          {/* Global search (decorativo) */}
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 w-56 cursor-default select-none">
-            <Search size={12} className="text-slate-400 shrink-0" />
-            <span className="text-xs text-slate-400 flex-1">Buscar en toda la app...</span>
-            <kbd className="text-[10px] text-slate-400 bg-white border border-slate-200 rounded px-1 py-0.5 font-sans">⌘K</kbd>
-          </div>
-          <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 transition-colors" aria-label="Notificaciones">
-            <Bell size={15} />
-          </button>
-          <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 transition-colors" aria-label="Configuración">
-            <Settings size={15} />
-          </button>
-        </div>
-        {/* Page content */}
-        <div className={`flex-1 overflow-y-auto ${focusMode ? "p-4 max-w-4xl mx-auto" : "p-6"}`}>
-      <ErrorBoundary>
-        {activeModulo === "inicio" && (
+    <AppLayout
+      activeModulo={activeModulo}
+      focusMode={focusMode}
+      version={data.meta.version}
+      confirm={confirm}
+      toasts={toasts}
+      onModuloChange={setActiveModulo}
+      onFocusModeChange={toggleFocusMode}
+      onQuickCapture={openCapture}
+      onLogout={logout}
+      onConfirmCancel={() => setConfirm(null)}
+      onRemoveToast={removeToast}
+    >        {activeModulo === "inicio" && (
           <div className="space-y-6">
             {/* Saludo */}
             <div className="flex items-center justify-between gap-4">
@@ -1926,7 +1431,7 @@ El dashboard responde:
                 <p className="text-sm text-slate-500 mt-0.5">Registra todo el mismo día · Revisa cada mañana · Cierra lo que termines</p>
               </div>
               <button
-                onClick={() => setCaptureOpen(true)}
+                onClick={openCapture}
                 className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm shrink-0"
               >
                 <Zap size={14} strokeWidth={2} />
@@ -2036,7 +1541,7 @@ El dashboard responde:
           </div>
         )}
 
-        {activeModulo === "midia" && <ModuloMiDia data={data} setActiveModulo={setActiveModulo} onCapturaRapida={() => setCaptureOpen(true)} />}
+        {activeModulo === "midia" && <ModuloMiDia data={data} setActiveModulo={setActiveModulo} onCapturaRapida={openCapture} />}
         {activeModulo === "dashboard" && (
           <ModuloDashboard
             data={data}
@@ -2112,17 +1617,6 @@ El dashboard responde:
           {modalModulo === "reclutamiento" && <FormReclutamiento data={data} editItem={editItem} closeModal={closeModal} saveItem={saveItem} />}
         </Modal>
 
-        <ConfirmDialog
-          isOpen={!!confirm}
-          title={confirm?.title || "Confirmar acción"}
-          message={confirm?.message}
-          variant={confirm?.variant || "default"}
-          confirmLabel={confirm?.confirmLabel}
-          cancelLabel={confirm?.cancelLabel}
-          onConfirm={() => { const cb = confirm?.onConfirm; if (cb) cb(); }}
-          onCancel={() => setConfirm(null)}
-        />
-
         <Modal isOpen={encryptionSetupOpen} onClose={() => setEncryptionSetupOpen(false)} title="🔐 Activar cifrado local" size="sm">
           <div className="space-y-4">
             <p className="text-sm text-slate-600">La clave protege los datos sensibles en este navegador. No se puede recuperar si la olvidas.</p>
@@ -2185,16 +1679,7 @@ El dashboard responde:
         </Modal>
 
 
-        <div aria-live="polite">
-          <ToastContainer toasts={toasts.map(({ id, ...rest }) => rest)} onRemove={(index) => {
-            const target = toasts[index];
-            if (target) removeToast(target.id);
-          }} />
-        </div>
-      </ErrorBoundary>
-        </div>
-      </main>
-    </div>
+    </AppLayout>
   );
 }
 
