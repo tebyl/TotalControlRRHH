@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { ContactRound, Info } from "lucide-react";
 import { Badge } from "../shared/badges";
 import { RELACIONES } from "../domain/options";
@@ -7,7 +7,7 @@ import { Select } from "../components/forms/fields";
 import { DataTable as Table } from "../components/tables/DataTable";
 import { FilterPanel, ModuleHeader } from "../components/ui";
 
-export function ModuloContactos({ data, search, setSearch, openNew, openEdit, deleteItem, tableLoading }: any) {
+function ModuloContactos({ data, search, setSearch, openNew, openEdit, deleteItem, tableLoading }: any) {
   const [filtroRelacion, setFiltroRelacion] = useState("");
   const [filtroActivo, setFiltroActivo] = useState("");
   const filtered = data.contactos.filter((c: Contacto) => {
@@ -55,3 +55,4 @@ export function ModuloContactos({ data, search, setSearch, openNew, openEdit, de
     </div>
   );
 }
+export default memo(ModuloContactos);

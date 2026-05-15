@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { ClipboardCheck } from "lucide-react";
 import { Badge, SemaforoBadge, estadoColor, prioridadColor } from "../shared/badges";
 import { fmtCLP } from "../shared/dataHelpers";
@@ -9,7 +9,7 @@ import { Select } from "../components/forms/fields";
 import { DataTable as Table } from "../components/tables/DataTable";
 import { FilterPanel, ModuleHeader } from "../components/ui";
 
-export function ModuloEvaluaciones({ data, search, setSearch, openNew, openEdit, deleteItem, duplicateItem, markClosed: _markClosed, getResponsableName, tableLoading }: any) {
+function ModuloEvaluaciones({ data, search, setSearch, openNew, openEdit, deleteItem, duplicateItem, markClosed: _markClosed, getResponsableName, tableLoading }: any) {
   const [filtroMes, setFiltroMes] = useState("");
   const [filtroAno, setFiltroAno] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("");
@@ -80,3 +80,4 @@ export function ModuloEvaluaciones({ data, search, setSearch, openNew, openEdit,
     </div>
   );
 }
+export default memo(ModuloEvaluaciones);

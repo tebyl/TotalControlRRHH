@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { Hourglass } from "lucide-react";
 import { Badge, SemaforoBadge, prioridadColor } from "../shared/badges";
 import { PRIORIDADES, TIPOS_PROCESO } from "../domain/options";
@@ -7,7 +7,7 @@ import { Select } from "../components/forms/fields";
 import { DataTable as Table } from "../components/tables/DataTable";
 import { FilterPanel, ModuleHeader } from "../components/ui";
 
-export function ModuloProcesos({ data, search, setSearch, openNew, openEdit, deleteItem, getResponsableName, tableLoading }: any) {
+function ModuloProcesos({ data, search, setSearch, openNew, openEdit, deleteItem, getResponsableName, tableLoading }: any) {
   const [filtroTipo, setFiltroTipo] = useState("");
   const [filtroPrioridad, setFiltroPrioridad] = useState("");
   const filtered = data.procesos.filter((p: Proceso) => {
@@ -49,3 +49,4 @@ export function ModuloProcesos({ data, search, setSearch, openNew, openEdit, del
     </div>
   );
 }
+export default memo(ModuloProcesos);

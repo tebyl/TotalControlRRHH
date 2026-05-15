@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { memo, useState } from "react";
 import { AlertTriangle, ClipboardList, Lightbulb, Lock, RefreshCw, Settings, Shuffle, XCircle } from "lucide-react";
 import type { ConfirmState } from "../shared/formTypes";
 import type { AppData, BackupItem } from "../domain/types";
@@ -143,7 +143,7 @@ function XlsxImportPreview({ parseResult, onConfirmReplace, onConfirmMerge, onCa
   );
 }
 
-export function ModuloConfiguracion({
+function ModuloConfiguracion({
   data, exportJSON, exportJSONSummary, exportJSONAnonymized, importJSON, exportXLSX, exportXLSXAnonymized, exportLimpia,
   restaurarEjemplos, limpiarTodo, showInstructions,
   backups, setBackups, lastJSONExport, lastXLSXExport, runBackupAndToast, setData, toastShow,
@@ -541,3 +541,4 @@ export function ModuloConfiguracion({
 }
 
 // ── REPORTE MENSUAL EJECUTIVO COMPONENT ─────────────────────────
+export default memo(ModuloConfiguracion);

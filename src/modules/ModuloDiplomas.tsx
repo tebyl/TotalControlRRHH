@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { AlertTriangle, Award } from "lucide-react";
 import { Badge, SemaforoBadge, estadoColor, prioridadColor } from "../shared/badges";
 import { ESTADOS_BUK, ESTADOS_DIPLOMA, PRIORIDADES } from "../domain/options";
@@ -7,7 +7,7 @@ import { Select } from "../components/forms/fields";
 import { DataTable as Table } from "../components/tables/DataTable";
 import { FilterPanel, ModuleHeader } from "../components/ui";
 
-export function ModuloDiplomas({ data, search, setSearch, openNew, openEdit, deleteItem, markClosed, getResponsableName, tableLoading }: any) {
+function ModuloDiplomas({ data, search, setSearch, openNew, openEdit, deleteItem, markClosed, getResponsableName, tableLoading }: any) {
   const [filtroEtapa, setFiltroEtapa] = useState("");
   const [filtroBUK, setFiltroBUK] = useState("");
   const [filtroPrioridad, setFiltroPrioridad] = useState("");
@@ -64,3 +64,4 @@ export function ModuloDiplomas({ data, search, setSearch, openNew, openEdit, del
     </div>
   );
 }
+export default memo(ModuloDiplomas);

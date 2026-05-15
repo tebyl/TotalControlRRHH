@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { UserRoundPlus } from "lucide-react";
 import { Badge, SemaforoBadge, prioridadColor } from "../shared/badges";
 import { calcReclutamientoAvance } from "../shared/reclutamientoHelpers";
@@ -14,7 +14,7 @@ import { Select } from "../components/forms/fields";
 import { DataTable as Table } from "../components/tables/DataTable";
 import { FilterPanel, KpiCard as KpiCardUI, ModuleHeader } from "../components/ui";
 
-export function ModuloReclutamiento({ data, search, setSearch, openNew, openEdit, deleteItem, duplicateItem, markClosed, tableLoading }: any) {
+function ModuloReclutamiento({ data, search, setSearch, openNew, openEdit, deleteItem, duplicateItem, markClosed, tableLoading }: any) {
   const [filtroEstado, setFiltroEstado] = useState("");
   const [filtroPlanta, setFiltroPlanta] = useState("");
   const [filtroTipo, setFiltroTipo] = useState("");
@@ -121,3 +121,4 @@ export function ModuloReclutamiento({ data, search, setSearch, openNew, openEdit
     </div>
   );
 }
+export default memo(ModuloReclutamiento);

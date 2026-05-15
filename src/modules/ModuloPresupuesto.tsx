@@ -1,9 +1,9 @@
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { AlertTriangle, Wallet } from "lucide-react";
 import { fmtCLP } from "../shared/dataHelpers";
 import { durMesesEntre } from "../utils/appHelpers";
 import { ModuleHeader } from "../components/ui";
-export function ModuloPresupuesto({ data, search, setSearch, openNew: _openNew, openEdit, deleteItem: _deleteItem }: any) {
+function ModuloPresupuesto({ data, search, setSearch, openNew: _openNew, openEdit, deleteItem: _deleteItem }: any) {
 
   // Calculate dynamic breakdowns
   const budgetBreakdown = useMemo(() => {
@@ -300,3 +300,4 @@ export function ModuloPresupuesto({ data, search, setSearch, openNew: _openNew, 
     </div>
   );
 }
+export default memo(ModuloPresupuesto);

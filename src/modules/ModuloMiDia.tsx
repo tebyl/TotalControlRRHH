@@ -1,4 +1,4 @@
-﻿import React, { useMemo } from "react";
+﻿import React, { memo, useMemo } from "react";
 import {
   AlertCircle,
   AlertTriangle,
@@ -21,7 +21,7 @@ import type { AppData, ModuloKey, ProcesoReclutamiento } from "../domain/types";
 
 type Modulo = ModuloKey;
 
-export function ModuloMiDia({ data, setActiveModulo, onCapturaRapida }: { data: AppData; setActiveModulo: (m: Modulo) => void; onCapturaRapida: () => void }) {
+function ModuloMiDia({ data, setActiveModulo, onCapturaRapida }: { data: AppData; setActiveModulo: (m: Modulo) => void; onCapturaRapida: () => void }) {
   const hoyStr = hoy();
   const hace7Str = new Date(new Date(hoyStr).getTime() - 7 * 86400000).toISOString().slice(0, 10);
 
@@ -308,4 +308,4 @@ export function ModuloMiDia({ data, setActiveModulo, onCapturaRapida }: { data: 
     </div>
   );
 }
-
+export default memo(ModuloMiDia);

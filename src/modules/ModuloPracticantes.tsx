@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { UserRound } from "lucide-react";
 import { Badge, SemaforoBadge, estadoColor } from "../shared/badges";
 import { fmtCLP } from "../shared/dataHelpers";
@@ -9,7 +9,7 @@ import { Select } from "../components/forms/fields";
 import { DataTable as Table } from "../components/tables/DataTable";
 import { FilterPanel, ModuleHeader } from "../components/ui";
 
-export function ModuloPracticantes({ data, search, setSearch, openNew, openEdit, deleteItem, markClosed, getResponsableName, tableLoading }: any) {
+function ModuloPracticantes({ data, search, setSearch, openNew, openEdit, deleteItem, markClosed, getResponsableName, tableLoading }: any) {
   const [filtroEstado, setFiltroEstado] = useState("");
   const filtered = data.practicantes.filter((p: Practicante) => {
     if (filtroEstado && p.estado !== filtroEstado) return false;
@@ -51,3 +51,4 @@ export function ModuloPracticantes({ data, search, setSearch, openNew, openEdit,
     </div>
   );
 }
+export default memo(ModuloPracticantes);

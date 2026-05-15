@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { Fuel, Search } from "lucide-react";
 import { Badge, SemaforoBadge, estadoColor } from "../shared/badges";
 import type { ValeGas, ValeGasOrg } from "../domain/types";
@@ -8,7 +8,7 @@ import { INPUT_BASE } from "../components/forms/fields";
 import { DataTable as Table } from "../components/tables/DataTable";
 import { FilterPanel, ModuleHeader } from "../components/ui";
 
-export function ModuloValesGas({ data, search, setSearch, openNew, openEdit, deleteItem, getResponsableName, tableLoading }: any) {
+function ModuloValesGas({ data, search, setSearch, openNew, openEdit, deleteItem, getResponsableName, tableLoading }: any) {
   const [filterEstado, setFilterEstado] = useState("");
   const [filterArea, setFilterArea] = useState("");
   const [filterPeriodo, setFilterPeriodo] = useState("");
@@ -205,3 +205,4 @@ export function ModuloValesGas({ data, search, setSearch, openNew, openEdit, del
     </div>
   );
 }
+export default memo(ModuloValesGas);

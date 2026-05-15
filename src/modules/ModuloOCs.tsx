@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { FileText } from "lucide-react";
 import { Badge, SemaforoBadge, estadoColor, prioridadColor } from "../shared/badges";
 import { fmtCLP } from "../shared/dataHelpers";
@@ -9,7 +9,7 @@ import { Select } from "../components/forms/fields";
 import { DataTable as Table } from "../components/tables/DataTable";
 import { FilterPanel, ModuleHeader } from "../components/ui";
 
-export function ModuloOCs({ data, search, setSearch, openNew, openEdit, deleteItem, markClosed, getResponsableName, tableLoading }: any) {
+function ModuloOCs({ data, search, setSearch, openNew, openEdit, deleteItem, markClosed, getResponsableName, tableLoading }: any) {
   const [filtroEstado, setFiltroEstado] = useState("");
   const [filtroPrioridad, setFiltroPrioridad] = useState("");
   const [filtroCategoria, setFiltroCategoria] = useState("");
@@ -56,3 +56,4 @@ export function ModuloOCs({ data, search, setSearch, openNew, openEdit, deleteIt
     </div>
   );
 }
+export default memo(ModuloOCs);

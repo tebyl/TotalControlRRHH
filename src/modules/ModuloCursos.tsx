@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { GraduationCap } from "lucide-react";
 import { Badge, SemaforoBadge, estadoColor, prioridadColor } from "../shared/badges";
 import { FilterBar } from "../shared/filterBar";
@@ -9,7 +9,7 @@ import { Select } from "../components/forms/fields";
 import { DataTable as Table } from "../components/tables/DataTable";
 import { PageHeader } from "../components/ui";
 
-export function ModuloCursos({ data, search, setSearch, openNew, openEdit, deleteItem, markClosed, getResponsableName, tableLoading }: any) {
+function ModuloCursos({ data, search, setSearch, openNew, openEdit, deleteItem, markClosed, getResponsableName, tableLoading }: any) {
   const [filtroPrioridad, setFiltroPrioridad] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("");
   const [filtroOrigen, setFiltroOrigen] = useState("");
@@ -51,3 +51,4 @@ export function ModuloCursos({ data, search, setSearch, openNew, openEdit, delet
     </div>
   );
 }
+export default memo(ModuloCursos);
