@@ -150,6 +150,7 @@ export function useAppData(storageKey = STORAGE_KEY) {
   const [unlockOpen, setUnlockOpen] = useState(false);
   const [unlockPassphrase, setUnlockPassphrase] = useState("");
   const [unlockError, setUnlockError] = useState("");
+  const [syncStatus, setSyncStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
   useEffect(() => {
     let active = true;
@@ -205,6 +206,8 @@ export function useAppData(storageKey = STORAGE_KEY) {
   useEffect(() => {
     if (!SUPABASE_CONFIGURED) return;
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      // On token refresh just update cache — no need to re-resolve workspace
+      if (_event === "TOKEN_REFRESHED") return;
       if (!session?.user) {
         clearWorkspaceCache();
         setWorkspaceId(null);
@@ -277,7 +280,10 @@ export function useAppData(storageKey = STORAGE_KEY) {
         const serialized = JSON.stringify(data);
         if (serialized === lastRemoteSave.current) return;
         lastRemoteSave.current = serialized;
-        saveRemoteData(data).catch(() => {});
+        setSyncStatus("saving");
+        saveRemoteData(data)
+          .then(r => setSyncStatus(r.ok ? "saved" : "error"))
+          .catch(() => setSyncStatus("error"));
       }, 2000);
       return () => clearTimeout(timer);
     }
@@ -311,5 +317,6 @@ export function useAppData(storageKey = STORAGE_KEY) {
     setUnlockError,
     needsWorkspaceSetup,
     onWorkspaceReady,
+    syncStatus,
   };
 }

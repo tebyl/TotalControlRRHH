@@ -7,6 +7,13 @@ export type Workspace = {
   created_by: string;
 };
 
+export type WorkspaceMember = {
+  user_id: string;
+  display_name: string;
+  role: "owner" | "editor";
+  joined_at: string;
+};
+
 export type WorkspaceResult<T> =
   | { ok: true; data: T }
   | { ok: false; error: string };
@@ -18,12 +25,22 @@ export function clearWorkspaceCache(): void {
   cachedWorkspaceId = null;
 }
 
-async function getUserId(): Promise<string | null> {
+async function getSession() {
   const { data: { session } } = await supabase.auth.getSession();
-  return session?.user?.id ?? null;
+  return session;
 }
 
-// Get the workspace the current user belongs to (first one found)
+async function getUserId(): Promise<string | null> {
+  return (await getSession())?.user?.id ?? null;
+}
+
+function getDisplayName(session: Awaited<ReturnType<typeof getSession>>): string {
+  return session?.user?.user_metadata?.username
+    ?? session?.user?.email?.split("@")[0]
+    ?? "Usuario";
+}
+
+// Get the workspace the current user belongs to
 export async function getUserWorkspace(): Promise<WorkspaceResult<Workspace | null>> {
   if (!SUPABASE_CONFIGURED) return { ok: true, data: null };
 
@@ -37,7 +54,7 @@ export async function getUserWorkspace(): Promise<WorkspaceResult<Workspace | nu
       .eq("id", cachedWorkspaceId)
       .maybeSingle();
     if (!error && data) return { ok: true, data: data as Workspace };
-    cachedWorkspaceId = null; // stale cache
+    cachedWorkspaceId = null;
   }
 
   const { data, error } = await supabase
@@ -57,11 +74,29 @@ export async function getUserWorkspace(): Promise<WorkspaceResult<Workspace | nu
   return { ok: true, data: ws };
 }
 
+// Get all members of the current workspace
+export async function getWorkspaceMembers(): Promise<WorkspaceResult<WorkspaceMember[]>> {
+  if (!SUPABASE_CONFIGURED) return { ok: true, data: [] };
+
+  const wsId = cachedWorkspaceId;
+  if (!wsId) return { ok: true, data: [] };
+
+  const { data, error } = await supabase
+    .from("workspace_members")
+    .select("user_id, display_name, role, joined_at")
+    .eq("workspace_id", wsId)
+    .order("joined_at", { ascending: true });
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, data: (data ?? []) as WorkspaceMember[] };
+}
+
 // Create a new workspace and add the current user as owner
 export async function createWorkspace(name: string): Promise<WorkspaceResult<Workspace>> {
   if (!SUPABASE_CONFIGURED) return { ok: false, error: "Supabase no configurado" };
 
-  const userId = await getUserId();
+  const session = await getSession();
+  const userId = session?.user?.id;
   if (!userId) return { ok: false, error: "Sin sesión activa" };
 
   const { data: ws, error: wsError } = await supabase
@@ -74,7 +109,7 @@ export async function createWorkspace(name: string): Promise<WorkspaceResult<Wor
 
   const { error: memberError } = await supabase
     .from("workspace_members")
-    .insert({ workspace_id: ws.id, user_id: userId, role: "owner" });
+    .insert({ workspace_id: ws.id, user_id: userId, role: "owner", display_name: getDisplayName(session) });
 
   if (memberError) return { ok: false, error: memberError.message };
 
@@ -86,7 +121,8 @@ export async function createWorkspace(name: string): Promise<WorkspaceResult<Wor
 export async function joinWorkspace(inviteCode: string): Promise<WorkspaceResult<Workspace>> {
   if (!SUPABASE_CONFIGURED) return { ok: false, error: "Supabase no configurado" };
 
-  const userId = await getUserId();
+  const session = await getSession();
+  const userId = session?.user?.id;
   if (!userId) return { ok: false, error: "Sin sesión activa" };
 
   const { data: ws, error: findError } = await supabase
@@ -100,7 +136,10 @@ export async function joinWorkspace(inviteCode: string): Promise<WorkspaceResult
 
   const { error: memberError } = await supabase
     .from("workspace_members")
-    .upsert({ workspace_id: ws.id, user_id: userId, role: "editor" }, { onConflict: "workspace_id,user_id" });
+    .upsert(
+      { workspace_id: ws.id, user_id: userId, role: "editor", display_name: getDisplayName(session) },
+      { onConflict: "workspace_id,user_id" }
+    );
 
   if (memberError) return { ok: false, error: memberError.message };
 

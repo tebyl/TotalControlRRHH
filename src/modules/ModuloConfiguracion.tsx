@@ -1,6 +1,6 @@
 import React, { memo, useEffect, useState } from "react";
 import { AlertTriangle, Check, ClipboardList, Copy, Lightbulb, Lock, RefreshCw, Settings, Shuffle, Users, XCircle } from "lucide-react";
-import { getUserWorkspace, type Workspace } from "../backend/supabaseWorkspace";
+import { getUserWorkspace, getWorkspaceMembers, type Workspace, type WorkspaceMember } from "../backend/supabaseWorkspace";
 import { SUPABASE_CONFIGURED } from "../backend/supabaseClient";
 import { WorkspaceSetup } from "../components/ui/WorkspaceSetup";
 import type { ConfirmState } from "../shared/formTypes";
@@ -167,12 +167,14 @@ function ModuloConfiguracion({
 
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
+  const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [codeCopied, setCodeCopied] = useState(false);
   const [showJoinSetup, setShowJoinSetup] = useState(false);
 
   useEffect(() => {
     if (!SUPABASE_CONFIGURED) return;
     getUserWorkspace().then(r => { if (r.ok && r.data) setWorkspace(r.data); });
+    getWorkspaceMembers().then(r => { if (r.ok) setMembers(r.data); });
   }, []);
 
   const handleCopyCode = () => {
@@ -514,6 +516,25 @@ function ModuloConfiguracion({
                   <p className="text-[11px] text-slate-400">Comparte este código para que otros usuarios se unan a tu equipo.</p>
                 </div>
               </div>
+
+              {members.length > 0 && (
+                <div className="border-t border-slate-100 pt-3 space-y-2">
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Miembros del equipo</p>
+                  <div className="flex flex-wrap gap-2">
+                    {members.map(m => (
+                      <div key={m.user_id} className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5">
+                        <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center uppercase">
+                          {m.display_name.slice(0, 1)}
+                        </div>
+                        <span className="text-sm text-slate-700 font-medium">{m.display_name}</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase ${m.role === "owner" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"}`}>
+                          {m.role === "owner" ? "Dueño" : "Editor"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="border-t border-slate-100 pt-3">
                 <button

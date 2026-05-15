@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS public.workspace_members (
   workspace_id uuid  NOT NULL REFERENCES public.workspaces (id) ON DELETE CASCADE,
   user_id      uuid  NOT NULL REFERENCES auth.users (id) ON DELETE CASCADE,
   role         text  NOT NULL DEFAULT 'editor' CHECK (role IN ('owner', 'editor')),
+  display_name text  NOT NULL DEFAULT 'Usuario',
   joined_at    timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (workspace_id, user_id)
 );

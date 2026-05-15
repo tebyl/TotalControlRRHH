@@ -1,13 +1,15 @@
 import type { ReactNode } from "react";
-import { Bell, Search, Settings } from "lucide-react";
+import { Bell, CheckCircle2, CloudOff, Loader2, Search, Settings } from "lucide-react";
 import type { ModuloKey } from "../domain/types";
 import type { ConfirmState, ToastItem } from "../shared/formTypes";
 import { Sidebar } from "../components/sidebar/Sidebar";
 import { ConfirmDialog, ErrorBoundary, ToastContainer } from "../components/ui";
+import { SUPABASE_CONFIGURED } from "../backend/supabaseClient";
 
 type AppLayoutProps = {
   activeModulo: ModuloKey;
   focusMode: boolean;
+  syncStatus?: "idle" | "saving" | "saved" | "error";
   version: string;
   confirm: ConfirmState | null;
   toasts: ToastItem[];
@@ -86,6 +88,7 @@ export function AppLayout({
   onLogout,
   onConfirmCancel,
   onRemoveToast,
+  syncStatus = "idle",
   children,
 }: AppLayoutProps) {
   return (
@@ -116,6 +119,13 @@ export function AppLayout({
             <span className="text-xs text-slate-400 flex-1">Buscar en toda la app...</span>
             <kbd className="text-[10px] text-slate-400 bg-white border border-slate-200 rounded px-1 py-0.5 font-sans">⌘K</kbd>
           </div>
+          {SUPABASE_CONFIGURED && (
+            <div className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg transition-colors" title={syncStatus === "saving" ? "Guardando..." : syncStatus === "saved" ? "Sincronizado" : syncStatus === "error" ? "Error al sincronizar" : ""}>
+              {syncStatus === "saving" && <><Loader2 size={13} className="text-blue-500 animate-spin" /><span className="text-blue-500 hidden sm:inline">Guardando</span></>}
+              {syncStatus === "saved"  && <><CheckCircle2 size={13} className="text-emerald-500" /><span className="text-emerald-500 hidden sm:inline">Sincronizado</span></>}
+              {syncStatus === "error"  && <><CloudOff size={13} className="text-red-400" /><span className="text-red-400 hidden sm:inline">Sin sync</span></>}
+            </div>
+          )}
           <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 transition-colors" aria-label="Notificaciones">
             <Bell size={15} />
           </button>
