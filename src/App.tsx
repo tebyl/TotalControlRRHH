@@ -49,6 +49,7 @@ import { login as authLogin, getSession, logout as authLogout, refreshSession } 
 import { can } from "./auth/permissions";
 import { logAudit } from "./audit/auditService";
 import ModuloInicio from "./modules/ModuloInicio";
+import { useInstallPrompt } from "./hooks/useInstallPrompt";
 
 // ──────────────────────────────────────────────
 // CONSTANTS
@@ -286,6 +287,8 @@ export default function App() {
     limpiarTodo,
   } = useExportImport({ data, setData, setConfirm, runBackupAndToast, toastShow, currentRole });
 
+  const { canInstall, install, dismiss } = useInstallPrompt();
+
   const openEncryptionSetup = () => {
     setEncryptionSetupError("");
     setEncryptionPassphrase("");
@@ -470,6 +473,15 @@ El dashboard responde:
   // ── MAIN RENDER ────────────────────────────
 
   return (
+    <>
+    {canInstall && (
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-white border border-slate-200 shadow-lg rounded-xl px-4 py-3 text-sm text-slate-700 max-w-sm w-full mx-4">
+        <span className="text-lg shrink-0">📲</span>
+        <span className="flex-1 font-medium">Instalar Control RH en este dispositivo</span>
+        <button onClick={install} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors shrink-0">Instalar</button>
+        <button onClick={dismiss} className="text-slate-400 hover:text-slate-600 transition-colors shrink-0 text-lg leading-none">&times;</button>
+      </div>
+    )}
     <AppLayout
       activeModulo={activeModulo}
       focusMode={focusMode}
@@ -632,6 +644,7 @@ El dashboard responde:
 
 
     </AppLayout>
+    </>
   );
 }
 
