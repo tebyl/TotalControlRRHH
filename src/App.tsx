@@ -51,6 +51,7 @@ import { logAudit } from "./audit/auditService";
 import ModuloInicio from "./modules/ModuloInicio";
 import { useInstallPrompt } from "./hooks/useInstallPrompt";
 import { useNotifications } from "./hooks/useNotifications";
+import { useBroadcastSync } from "./hooks/useBroadcastSync";
 
 // ──────────────────────────────────────────────
 // CONSTANTS
@@ -290,6 +291,7 @@ export default function App() {
 
   const { canInstall, install, dismiss } = useInstallPrompt();
   useNotifications(data, authenticated);
+  useBroadcastSync(data, setData, authenticated);
 
   const openEncryptionSetup = () => {
     setEncryptionSetupError("");
