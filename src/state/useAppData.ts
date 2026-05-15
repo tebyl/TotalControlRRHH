@@ -256,20 +256,23 @@ export function useAppData(storageKey = STORAGE_KEY) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey]);
 
+  // Track last data sent to Supabase — declared here so realtime can read it too
+  const lastRemoteSave = useRef<string>("");
+
   // Subscribe to real-time changes from collaborators in the same workspace
   const setDataRef = useRef(setData);
   setDataRef.current = setData;
   useEffect(() => {
     if (!dataReady || !workspaceId) return;
     return subscribeToRemoteChanges(workspaceId, newData => {
+      // Skip updates we generated ourselves to break the save→realtime→save loop
+      const serialized = JSON.stringify(newData);
+      if (serialized === lastRemoteSave.current) return;
       const hydrated = hydrateData(newData);
       setDataRef.current(hydrated);
       saveAppData(storageKey, hydrated);
     });
   }, [dataReady, workspaceId, storageKey]);
-
-  // Track last data sent to Supabase to avoid redundant saves
-  const lastRemoteSave = useRef<string>("");
 
   useEffect(() => {
     if (!dataReady) return;
@@ -282,7 +285,10 @@ export function useAppData(storageKey = STORAGE_KEY) {
         lastRemoteSave.current = serialized;
         setSyncStatus("saving");
         saveRemoteData(data)
-          .then(r => setSyncStatus(r.ok ? "saved" : "error"))
+          .then(r => {
+            setSyncStatus(r.ok ? "saved" : "error");
+            if (r.ok) setTimeout(() => setSyncStatus("idle"), 3000);
+          })
           .catch(() => setSyncStatus("error"));
       }, 2000);
       return () => clearTimeout(timer);
