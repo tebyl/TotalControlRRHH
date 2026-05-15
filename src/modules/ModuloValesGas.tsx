@@ -97,7 +97,7 @@ function ModuloValesGas({ data, search, setSearch, openNew, openEdit, deleteItem
           <div className={`border rounded-xl p-3 text-center ${saldoDisponibleOrg < 0 ? "bg-red-50 border-red-200" : "bg-slate-50 border-slate-200"}`}>
             <div className={`text-2xl font-bold ${saldoDisponibleOrg < 0 ? "text-red-600" : "text-emerald-600"}`}>{saldoDisponibleOrg}</div>
             <div className="text-xs text-slate-500 mt-0.5">Saldo disponible org.</div>
-            {saldoDisponibleOrg < 0 && <div className="text-xs text-red-600 mt-1 font-semibold">âš  MÃ¡s asignados que stock registrado</div>}
+            {saldoDisponibleOrg < 0 && <div className="text-xs text-red-600 mt-1 font-semibold">⚠ Más asignados que stock registrado</div>}
           </div>
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
             <div className="text-2xl font-bold text-indigo-700">{valesAsignadosColabs}</div>

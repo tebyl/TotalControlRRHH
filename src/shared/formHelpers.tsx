@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { hoy } from "../utils/appHelpers";
 import type { AppData } from "../domain/types";
 import { INPUT_BASE } from "../components/forms/fields";
