@@ -50,6 +50,7 @@ import { can } from "./auth/permissions";
 import { logAudit } from "./audit/auditService";
 import ModuloInicio from "./modules/ModuloInicio";
 import { useInstallPrompt } from "./hooks/useInstallPrompt";
+import { useNotifications } from "./hooks/useNotifications";
 
 // ──────────────────────────────────────────────
 // CONSTANTS
@@ -288,6 +289,7 @@ export default function App() {
   } = useExportImport({ data, setData, setConfirm, runBackupAndToast, toastShow, currentRole });
 
   const { canInstall, install, dismiss } = useInstallPrompt();
+  useNotifications(data, authenticated);
 
   const openEncryptionSetup = () => {
     setEncryptionSetupError("");
