@@ -1,5 +1,8 @@
-import React, { memo, useState } from "react";
-import { AlertTriangle, ClipboardList, Lightbulb, Lock, RefreshCw, Settings, Shuffle, XCircle } from "lucide-react";
+import React, { memo, useEffect, useState } from "react";
+import { AlertTriangle, Check, ClipboardList, Copy, Lightbulb, Lock, RefreshCw, Settings, Shuffle, Users, XCircle } from "lucide-react";
+import { getUserWorkspace, type Workspace } from "../backend/supabaseWorkspace";
+import { SUPABASE_CONFIGURED } from "../backend/supabaseClient";
+import { WorkspaceSetup } from "../components/ui/WorkspaceSetup";
 import type { ConfirmState } from "../shared/formTypes";
 import type { AppData, BackupItem } from "../domain/types";
 import type { XlsxParseResult } from "../importExport/xlsxImport";
@@ -163,6 +166,22 @@ function ModuloConfiguracion({
   };
 
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [workspace, setWorkspace] = useState<Workspace | null>(null);
+  const [codeCopied, setCodeCopied] = useState(false);
+  const [showJoinSetup, setShowJoinSetup] = useState(false);
+
+  useEffect(() => {
+    if (!SUPABASE_CONFIGURED) return;
+    getUserWorkspace().then(r => { if (r.ok && r.data) setWorkspace(r.data); });
+  }, []);
+
+  const handleCopyCode = () => {
+    if (!workspace) return;
+    navigator.clipboard.writeText(workspace.invite_code).then(() => {
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 2000);
+    });
+  };
   const [xlsxParseResult, setXlsxParseResult] = useState<XlsxParseResult | null>(null);
   const [xlsxImporting, setXlsxImporting] = useState(false);
   const [xlsxApplying, setXlsxApplying] = useState(false);
@@ -463,7 +482,61 @@ function ModuloConfiguracion({
         </div>
       </ExpandableSection>
 
-      {/* ── Acordeón 3: Sistema ── */}
+      {/* ── Acordeón 3: Trabajo en equipo ── */}
+      {SUPABASE_CONFIGURED && (
+        <ExpandableSection title="Trabajo en equipo" defaultOpen={true}>
+          {workspace ? (
+            <div className="space-y-4">
+              <div className="flex items-start gap-4 flex-wrap">
+                {/* Info del workspace */}
+                <div className="flex-1 min-w-48 space-y-1">
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Equipo actual</p>
+                  <p className="text-base font-bold text-slate-800 flex items-center gap-2">
+                    <Users size={16} className="text-blue-600" />
+                    {workspace.name}
+                  </p>
+                </div>
+
+                {/* Código de invitación */}
+                <div className="flex-1 min-w-48 space-y-2">
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Código de invitación</p>
+                  <div className="flex items-center gap-2">
+                    <code className="bg-slate-100 border border-slate-300 rounded-lg px-4 py-2 font-mono text-lg font-bold tracking-widest text-slate-800 select-all">
+                      {workspace.invite_code}
+                    </code>
+                    <button
+                      onClick={handleCopyCode}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-300 text-xs font-medium text-slate-700 hover:bg-slate-100 transition-colors"
+                    >
+                      {codeCopied ? <><Check size={14} className="text-emerald-600" />Copiado</> : <><Copy size={14} />Copiar</>}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-400">Comparte este código para que otros usuarios se unan a tu equipo.</p>
+                </div>
+              </div>
+
+              <div className="border-t border-slate-100 pt-3">
+                <button
+                  onClick={() => setShowJoinSetup(true)}
+                  className="text-xs text-blue-600 hover:underline"
+                >
+                  Unirme a otro equipo con un código
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-sm text-slate-500 py-2">Cargando información del equipo…</div>
+          )}
+
+          {showJoinSetup && (
+            <WorkspaceSetup
+              onReady={ws => { setWorkspace(ws); setShowJoinSetup(false); }}
+            />
+          )}
+        </ExpandableSection>
+      )}
+
+      {/* ── Acordeón 4: Sistema ── */}
       <ExpandableSection title="Sistema y seguridad">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Cifrado */}
