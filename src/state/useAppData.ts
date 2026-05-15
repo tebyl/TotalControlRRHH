@@ -300,12 +300,14 @@ export function useAppData(storageKey = STORAGE_KEY) {
     if (!dataReady) return;
     if (!encryptionEnabled) {
       saveAppData(storageKey, data);
-      // Debounce remote save: wait 2s of inactivity, skip if came from realtime or content unchanged
+      // If this data came from Supabase (realtime or initial load), skip the remote echo-back.
+      // Clear the flag immediately so subsequent user changes are NOT blocked.
+      if (skipNextRemoteSave.current) {
+        skipNextRemoteSave.current = false;
+        return;
+      }
+      // Debounce remote save: wait 2s of inactivity, skip if content unchanged
       const timer = setTimeout(() => {
-        if (skipNextRemoteSave.current) {
-          skipNextRemoteSave.current = false;
-          return;
-        }
         const serialized = JSON.stringify(data);
         if (serialized === lastRemoteSave.current) return;
         lastRemoteSave.current = serialized;
