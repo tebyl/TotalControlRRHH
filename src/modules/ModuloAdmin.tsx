@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from "react";
-import { Check, Copy, Settings2, Shield, Users } from "lucide-react";
+import { Check, Copy, Download, Settings2, Shield, Trash2, Users } from "lucide-react";
 import { getUserWorkspace, getWorkspaceMembers, type Workspace, type WorkspaceMember } from "../backend/supabaseWorkspace";
 import { SUPABASE_CONFIGURED } from "../backend/supabaseClient";
 import { WorkspaceSetup } from "../components/ui/WorkspaceSetup";
@@ -8,6 +8,8 @@ import { getSession } from "../auth/authService";
 import type { AppData } from "../domain/types";
 import { ConfirmDialog, ExpandableSection, ModuleHeader } from "../components/ui";
 import type { ConfirmState } from "../shared/formTypes";
+import { getAuditLog, clearAuditLog } from "../audit/auditService";
+import type { AuditEntry } from "../audit/auditTypes";
 
 function ModuloAdmin({
   data,
@@ -29,11 +31,17 @@ function ModuloAdmin({
   const [codeCopied, setCodeCopied] = useState(false);
   const [showJoinSetup, setShowJoinSetup] = useState(false);
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
+  const [auditFilter, setAuditFilter] = useState<string>("all");
 
   useEffect(() => {
     if (!SUPABASE_CONFIGURED) return;
     getUserWorkspace().then(r => { if (r.ok && r.data) setWorkspace(r.data); });
     getWorkspaceMembers().then(r => { if (r.ok) setMembers(r.data); });
+  }, []);
+
+  useEffect(() => {
+    setAuditLog(getAuditLog().reverse());
   }, []);
 
   const handleCopyCode = () => {
@@ -218,6 +226,97 @@ function ModuloAdmin({
           )}
         </div>
       </ExpandableSection>
+
+      {/* Logs de auditoría */}
+      {isAdmin && (
+        <ExpandableSection title="Logs de auditoría" defaultOpen={false}>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              <select
+                value={auditFilter}
+                onChange={e => setAuditFilter(e.target.value)}
+                className="text-xs border border-slate-200 rounded-lg px-3 py-1.5 text-slate-600 bg-white"
+              >
+                <option value="all">Todas las acciones</option>
+                <option value="login">Sesiones</option>
+                <option value="record">Registros</option>
+                <option value="data">Datos</option>
+                <option value="backup">Respaldos</option>
+              </select>
+              <span className="text-xs text-slate-400 flex-1">{auditLog.length} entradas guardadas</span>
+              <button
+                onClick={() => {
+                  const csv = ["timestamp,usuario,accion,modulo,detalle",
+                    ...auditLog.map(e => `"${e.timestamp}","${e.username}","${e.action}","${e.module ?? ""}","${e.detail ?? ""}"`),
+                  ].join("\n");
+                  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+                  const a = document.createElement("a");
+                  a.href = URL.createObjectURL(blob);
+                  a.download = `audit_log_${new Date().toISOString().slice(0,10)}.csv`;
+                  a.click();
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-medium hover:bg-slate-200 transition"
+              >
+                <Download size={12} />Exportar CSV
+              </button>
+              <button
+                onClick={() => setConfirm({
+                  title: "Limpiar logs de auditoría",
+                  message: "¿Eliminar todos los registros de auditoría? Esta acción no se puede deshacer.",
+                  variant: "danger",
+                  confirmLabel: "Limpiar",
+                  onConfirm: () => { clearAuditLog(); setAuditLog([]); setConfirm(null); },
+                })}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-600 text-xs font-medium hover:bg-red-100 transition border border-red-100"
+              >
+                <Trash2 size={12} />Limpiar
+              </button>
+            </div>
+
+            {auditLog.length === 0 ? (
+              <p className="text-sm text-slate-400 py-4 text-center">Sin registros de auditoría aún.</p>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-slate-200 max-h-80 overflow-y-auto">
+                <table className="w-full text-xs text-left">
+                  <thead className="sticky top-0 bg-slate-50">
+                    <tr className="text-slate-500 font-medium">
+                      <th className="px-3 py-2 whitespace-nowrap">Fecha y hora</th>
+                      <th className="px-3 py-2">Usuario</th>
+                      <th className="px-3 py-2">Acción</th>
+                      <th className="px-3 py-2">Módulo</th>
+                      <th className="px-3 py-2">Detalle</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {auditLog
+                      .filter(e => auditFilter === "all" || e.action.startsWith(auditFilter))
+                      .slice(0, 200)
+                      .map(e => (
+                        <tr key={e.id} className="border-t border-slate-100 hover:bg-slate-50">
+                          <td className="px-3 py-1.5 whitespace-nowrap text-slate-500">
+                            {new Date(e.timestamp).toLocaleString("es-CL")}
+                          </td>
+                          <td className="px-3 py-1.5 font-medium text-slate-700">{e.username}</td>
+                          <td className="px-3 py-1.5">
+                            <span className={`px-2 py-0.5 rounded font-semibold uppercase tracking-wide ${
+                              e.action.startsWith("login")    ? "bg-blue-50 text-blue-700" :
+                              e.action.startsWith("record")  ? "bg-indigo-50 text-indigo-700" :
+                              e.action.startsWith("data")    ? "bg-amber-50 text-amber-700" :
+                              e.action.startsWith("backup")  ? "bg-emerald-50 text-emerald-700" :
+                              "bg-slate-100 text-slate-600"
+                            }`}>{e.action}</span>
+                          </td>
+                          <td className="px-3 py-1.5 text-slate-500 capitalize">{e.module ?? "—"}</td>
+                          <td className="px-3 py-1.5 text-slate-500 max-w-xs truncate">{e.detail ?? "—"}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </ExpandableSection>
+      )}
 
       <ConfirmDialog
         isOpen={!!confirm}

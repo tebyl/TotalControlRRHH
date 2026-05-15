@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Bell, CheckCircle2, CloudOff, Loader2, Search, Settings } from "lucide-react";
+import { Bell, CheckCircle2, CloudOff, Loader2, Search, Settings, WifiOff } from "lucide-react";
 import type { ModuloKey } from "../domain/types";
 import type { ConfirmState, ToastItem } from "../shared/formTypes";
 import { Sidebar } from "../components/sidebar/Sidebar";
@@ -9,7 +9,8 @@ import { SUPABASE_CONFIGURED } from "../backend/supabaseClient";
 type AppLayoutProps = {
   activeModulo: ModuloKey;
   focusMode: boolean;
-  syncStatus?: "idle" | "saving" | "saved" | "error";
+  syncStatus?: "idle" | "saving" | "saved" | "error" | "offline";
+  isOnline?: boolean;
   version: string;
   confirm: ConfirmState | null;
   toasts: ToastItem[];
@@ -38,6 +39,8 @@ const SIDEBAR_TO_MODULO: Record<string, ModuloKey> = {
   cargaSemanal: "cargaSemanal",
   contactos: "contactos",
   configuracion: "configuracion",
+  admin: "admin",
+  guia: "guia",
 };
 
 const MODULO_TO_SIDEBAR: Partial<Record<ModuloKey, string>> = {
@@ -56,6 +59,8 @@ const MODULO_TO_SIDEBAR: Partial<Record<ModuloKey, string>> = {
   cargaSemanal: "cargaSemanal",
   contactos: "contactos",
   configuracion: "configuracion",
+  admin: "admin",
+  guia: "guia",
 };
 
 const MODULE_BREADCRUMB: Record<string, { group: string; label: string }> = {
@@ -74,6 +79,8 @@ const MODULE_BREADCRUMB: Record<string, { group: string; label: string }> = {
   valesGas: { group: "Finanzas", label: "Vales de Gas" },
   cargaSemanal: { group: "Finanzas", label: "Carga Semanal" },
   configuracion: { group: "Sistema", label: "Configuración" },
+  admin: { group: "Sistema", label: "Administración" },
+  guia: { group: "Sistema", label: "Guía de uso" },
 };
 
 export function AppLayout({
@@ -89,6 +96,7 @@ export function AppLayout({
   onConfirmCancel,
   onRemoveToast,
   syncStatus = "idle",
+  isOnline = true,
   children,
 }: AppLayoutProps) {
   return (
@@ -104,6 +112,12 @@ export function AppLayout({
       />
 
       <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        {!isOnline && (
+          <div className="bg-amber-500 text-white text-xs font-medium px-4 py-1.5 flex items-center gap-2 shrink-0">
+            <WifiOff size={13} className="shrink-0" />
+            Sin conexión — los cambios se guardan localmente y se sincronizarán al reconectar.
+          </div>
+        )}
         <div className="h-12 bg-white border-b border-slate-200 flex items-center gap-3 px-5 shrink-0">
           <nav className="flex items-center gap-1.5 text-sm flex-1 min-w-0">
             {MODULE_BREADCRUMB[activeModulo]?.group && (
@@ -120,10 +134,11 @@ export function AppLayout({
             <kbd className="text-[10px] text-slate-400 bg-white border border-slate-200 rounded px-1 py-0.5 font-sans">⌘K</kbd>
           </div>
           {SUPABASE_CONFIGURED && (
-            <div className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg transition-colors" title={syncStatus === "saving" ? "Guardando..." : syncStatus === "saved" ? "Sincronizado" : syncStatus === "error" ? "Error al sincronizar" : ""}>
-              {syncStatus === "saving" && <><Loader2 size={13} className="text-blue-500 animate-spin" /><span className="text-blue-500 hidden sm:inline">Guardando</span></>}
-              {syncStatus === "saved"  && <><CheckCircle2 size={13} className="text-emerald-500" /><span className="text-emerald-500 hidden sm:inline">Sincronizado</span></>}
-              {syncStatus === "error"  && <><CloudOff size={13} className="text-red-400" /><span className="text-red-400 hidden sm:inline">Sin sync</span></>}
+            <div className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg transition-colors">
+              {syncStatus === "saving"  && <><Loader2 size={13} className="text-blue-500 animate-spin" /><span className="text-blue-500 hidden sm:inline">Guardando</span></>}
+              {syncStatus === "saved"   && <><CheckCircle2 size={13} className="text-emerald-500" /><span className="text-emerald-500 hidden sm:inline">Sincronizado</span></>}
+              {syncStatus === "error"   && <><CloudOff size={13} className="text-red-400" /><span className="text-red-400 hidden sm:inline">Sin sync</span></>}
+              {syncStatus === "offline" && <><WifiOff size={13} className="text-amber-500" /><span className="text-amber-500 hidden sm:inline">Pendiente sync</span></>}
             </div>
           )}
           <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 transition-colors" aria-label="Notificaciones">

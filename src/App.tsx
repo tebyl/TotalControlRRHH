@@ -183,6 +183,7 @@ export default function App() {
     needsWorkspaceSetup,
     onWorkspaceReady,
     syncStatus,
+    isOnline,
   } = useAppData(storageKey);
   const [encryptionSetupOpen, setEncryptionSetupOpen] = useState(false);
   const [encryptionPassphrase, setEncryptionPassphrase] = useState("");
@@ -507,6 +508,7 @@ El dashboard responde:
       onConfirmCancel={() => setConfirm(null)}
       onRemoveToast={removeToast}
       syncStatus={syncStatus}
+      isOnline={isOnline}
     >
         <Suspense fallback={<div className="p-8 text-slate-400 text-sm">Cargando módulo…</div>}>
         {activeModulo === "inicio" && (

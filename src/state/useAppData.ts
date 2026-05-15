@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useOnlineStatus } from "../hooks/useOnlineStatus";
 import type { AppData, Contacto } from "../domain/types";
 import { ensureBudgetRows } from "../domain/budget";
 import { ahora, createDataToSave, genId, hoy } from "../utils/appHelpers";
@@ -150,7 +151,10 @@ export function useAppData(storageKey = STORAGE_KEY) {
   const [unlockOpen, setUnlockOpen] = useState(false);
   const [unlockPassphrase, setUnlockPassphrase] = useState("");
   const [unlockError, setUnlockError] = useState("");
-  const [syncStatus, setSyncStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [syncStatus, setSyncStatus] = useState<"idle" | "saving" | "saved" | "error" | "offline">("idle");
+  const isOnline = useOnlineStatus();
+  // Holds data that needs to be flushed to Supabase once connection is restored
+  const pendingFlush = useRef<AppData | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -278,6 +282,20 @@ export function useAppData(storageKey = STORAGE_KEY) {
   // Track last serialized data sent to Supabase for dedup
   const lastRemoteSave = useRef<string>("");
 
+  // When coming back online, flush any pending save immediately
+  useEffect(() => {
+    if (!isOnline || !pendingFlush.current || !SUPABASE_CONFIGURED) return;
+    const toFlush = pendingFlush.current;
+    pendingFlush.current = null;
+    setSyncStatus("saving");
+    saveRemoteData(toFlush)
+      .then(r => {
+        setSyncStatus(r.ok ? "saved" : "error");
+        if (r.ok) setTimeout(() => setSyncStatus("idle"), 3000);
+      })
+      .catch(() => setSyncStatus("error"));
+  }, [isOnline]);
+
   useEffect(() => {
     if (!dataReady) return;
     if (!encryptionEnabled) {
@@ -291,6 +309,12 @@ export function useAppData(storageKey = STORAGE_KEY) {
         const serialized = JSON.stringify(data);
         if (serialized === lastRemoteSave.current) return;
         lastRemoteSave.current = serialized;
+        if (!isOnline) {
+          // Queue for when connection is restored
+          pendingFlush.current = data;
+          setSyncStatus("offline");
+          return;
+        }
         setSyncStatus("saving");
         saveRemoteData(data)
           .then(r => {
@@ -332,5 +356,6 @@ export function useAppData(storageKey = STORAGE_KEY) {
     needsWorkspaceSetup,
     onWorkspaceReady,
     syncStatus,
+    isOnline,
   };
 }
