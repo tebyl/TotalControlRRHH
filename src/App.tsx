@@ -63,78 +63,87 @@ import { useBroadcastSync } from "./hooks/useBroadcastSync";
 // COMPONENTS
 // ──────────────────────────────────────────────
 
-function CatIllustration({ size = 220 }: { size?: number }) {
+function CatIllustration({ size = 192 }: { size?: number }) {
   return (
-    <svg viewBox="0 0 240 280" width={size} height={size} aria-hidden="true" style={{ filter: "drop-shadow(0 8px 24px rgba(240,136,62,0.22))" }}>
+    <svg
+      viewBox="0 0 240 280"
+      width={size}
+      height={size}
+      aria-hidden="true"
+      style={{ filter: "drop-shadow(0 18px 28px rgba(249,115,22,0.18))" }}
+    >
       {/* Sombra suelo */}
-      <ellipse cx="120" cy="270" rx="58" ry="7" fill="#E8823A" opacity="0.13" />
+      <ellipse cx="120" cy="272" rx="54" ry="6" fill="#C8641A" opacity="0.10" />
 
-      {/* Cola — dibujada primero para quedar detrás del cuerpo */}
-      <path d="M 165,235 Q 208,210 204,168 Q 202,144 184,132"
-            stroke="#F0883E" strokeWidth="18" fill="none" strokeLinecap="round" />
-      {/* Punta cola más clara */}
-      <path d="M 200,155 Q 202,144 184,132"
-            stroke="#F5AA6E" strokeWidth="14" fill="none" strokeLinecap="round" />
+      {/* Cola — detrás del cuerpo */}
+      <path
+        d="M 162,234 C 200,218 208,178 198,152 C 192,136 182,130 178,128"
+        stroke="#F0883E" strokeWidth="17" fill="none" strokeLinecap="round" strokeLinejoin="round"
+      />
+      {/* Degradado punta cola */}
+      <path
+        d="M 194,158 C 192,144 184,132 178,128"
+        stroke="#F7B07A" strokeWidth="13" fill="none" strokeLinecap="round"
+      />
 
       {/* Cuerpo */}
-      <ellipse cx="120" cy="196" rx="57" ry="60" fill="#F0883E" />
+      <ellipse cx="120" cy="194" rx="56" ry="62" fill="#F0883E" />
 
       {/* Vientre claro */}
-      <ellipse cx="120" cy="204" rx="30" ry="42" fill="#FDE8C8" />
+      <ellipse cx="120" cy="205" rx="28" ry="44" fill="#FDE8C8" />
 
-      {/* Patas delanteras */}
-      <ellipse cx="94" cy="248" rx="25" ry="12" fill="#F0883E" />
-      <ellipse cx="146" cy="248" rx="25" ry="12" fill="#F0883E" />
-      {/* Divisiones de dedos */}
-      <line x1="88"  y1="246" x2="88"  y2="256" stroke="#D97830" strokeWidth="1.2" strokeLinecap="round" opacity="0.35" />
-      <line x1="94"  y1="246" x2="94"  y2="257" stroke="#D97830" strokeWidth="1.2" strokeLinecap="round" opacity="0.35" />
-      <line x1="100" y1="246" x2="100" y2="256" stroke="#D97830" strokeWidth="1.2" strokeLinecap="round" opacity="0.35" />
-      <line x1="140" y1="246" x2="140" y2="256" stroke="#D97830" strokeWidth="1.2" strokeLinecap="round" opacity="0.35" />
-      <line x1="146" y1="246" x2="146" y2="257" stroke="#D97830" strokeWidth="1.2" strokeLinecap="round" opacity="0.35" />
-      <line x1="152" y1="246" x2="152" y2="256" stroke="#D97830" strokeWidth="1.2" strokeLinecap="round" opacity="0.35" />
+      {/* Patas delanteras — forma más definida */}
+      <rect x="71" y="238" width="46" height="22" rx="11" ry="11" fill="#F0883E" />
+      <rect x="123" y="238" width="46" height="22" rx="11" ry="11" fill="#F0883E" />
+      {/* Separación de dedos */}
+      <line x1="88"  y1="243" x2="88"  y2="257" stroke="#D07428" strokeWidth="1.1" strokeLinecap="round" opacity="0.30" />
+      <line x1="94"  y1="241" x2="94"  y2="258" stroke="#D07428" strokeWidth="1.1" strokeLinecap="round" opacity="0.30" />
+      <line x1="100" y1="243" x2="100" y2="257" stroke="#D07428" strokeWidth="1.1" strokeLinecap="round" opacity="0.30" />
+      <line x1="140" y1="243" x2="140" y2="257" stroke="#D07428" strokeWidth="1.1" strokeLinecap="round" opacity="0.30" />
+      <line x1="146" y1="241" x2="146" y2="258" stroke="#D07428" strokeWidth="1.1" strokeLinecap="round" opacity="0.30" />
+      <line x1="152" y1="243" x2="152" y2="257" stroke="#D07428" strokeWidth="1.1" strokeLinecap="round" opacity="0.30" />
 
       {/* Cabeza */}
-      <ellipse cx="120" cy="90" rx="52" ry="48" fill="#F0883E" />
+      <ellipse cx="120" cy="88" rx="52" ry="48" fill="#F0883E" />
 
-      {/* Orejas — triángulos marcados */}
-      <polygon points="70,58 56,14 102,50" fill="#F0883E" />
-      <polygon points="170,58 184,14 138,50" fill="#F0883E" />
-      {/* Interior orejas */}
-      <polygon points="74,55 63,24 98,49" fill="#FFBF9E" />
-      <polygon points="166,55 177,24 142,49" fill="#FFBF9E" />
+      {/* Orejas — triángulos con eje vertical bien marcado */}
+      <polygon points="68,56 58,12 100,50" fill="#F0883E" />
+      <polygon points="172,56 182,12 140,50" fill="#F0883E" />
+      <polygon points="73,53 65,22 97,49" fill="#FFBAA0" />
+      <polygon points="167,53 175,22 143,49" fill="#FFBAA0" />
 
-      {/* Rayas tabby en frente — sutiles */}
-      <path d="M 106,52 Q 120,47 134,52" stroke="#D97830" strokeWidth="2.8" fill="none" strokeLinecap="round" opacity="0.45" />
-      <path d="M 108,62 Q 120,57 132,62" stroke="#D97830" strokeWidth="2.2" fill="none" strokeLinecap="round" opacity="0.38" />
-      <path d="M 111,71 Q 120,67 129,71" stroke="#D97830" strokeWidth="1.6" fill="none" strokeLinecap="round" opacity="0.3" />
+      {/* Rayas tabby frente — 3 líneas curvas decrecientes */}
+      <path d="M 107,50 Q 120,45 133,50" stroke="#D07428" strokeWidth="2.6" fill="none" strokeLinecap="round" opacity="0.42" />
+      <path d="M 109,60 Q 120,55 131,60" stroke="#D07428" strokeWidth="2.0" fill="none" strokeLinecap="round" opacity="0.34" />
+      <path d="M 112,70 Q 120,66 128,70" stroke="#D07428" strokeWidth="1.4" fill="none" strokeLinecap="round" opacity="0.26" />
 
-      {/* Ojos — iris ámbar + pupila vertical felina */}
-      {/* Ojo izquierdo */}
-      <ellipse cx="96" cy="87" rx="15" ry="14" fill="white" />
-      <ellipse cx="96" cy="88" rx="11" ry="11" fill="#C8821E" />
-      <ellipse cx="96" cy="88" rx="5"  ry="9"  fill="#1A1A1A" />
-      <circle  cx="101" cy="83" r="3" fill="white" opacity="0.9" />
-      {/* Ojo derecho */}
-      <ellipse cx="144" cy="87" rx="15" ry="14" fill="white" />
-      <ellipse cx="144" cy="88" rx="11" ry="11" fill="#C8821E" />
-      <ellipse cx="144" cy="88" rx="5"  ry="9"  fill="#1A1A1A" />
-      <circle  cx="149" cy="83" r="3" fill="white" opacity="0.9" />
+      {/* Ojos — iris ámbar + pupila vertical */}
+      <ellipse cx="95"  cy="86" rx="15" ry="14" fill="white" />
+      <ellipse cx="95"  cy="87" rx="10.5" ry="10.5" fill="#BF7A18" />
+      <ellipse cx="95"  cy="87" rx="4.5" ry="8.5" fill="#181818" />
+      <circle  cx="100" cy="82" r="2.8" fill="white" opacity="0.92" />
 
-      {/* Nariz — triángulo pequeño */}
-      <polygon points="116,107 124,107 120,113" fill="#E05C78" />
+      <ellipse cx="145" cy="86" rx="15" ry="14" fill="white" />
+      <ellipse cx="145" cy="87" rx="10.5" ry="10.5" fill="#BF7A18" />
+      <ellipse cx="145" cy="87" rx="4.5" ry="8.5" fill="#181818" />
+      <circle  cx="150" cy="82" r="2.8" fill="white" opacity="0.92" />
 
-      {/* Boca — dos curvas suaves desde la nariz */}
-      <path d="M 116,111 Q 111,117 107,115" stroke="#C04468" strokeWidth="1.4" fill="none" strokeLinecap="round" />
-      <path d="M 124,111 Q 129,117 133,115" stroke="#C04468" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+      {/* Nariz — triángulo pequeño, punta abajo */}
+      <polygon points="116,105 124,105 120,111" fill="#E0547A" />
 
-      {/* Bigotes izquierda — finos, largos */}
-      <line x1="112" y1="104" x2="58"  y2="97"  stroke="#D4956A" strokeWidth="1.1" strokeLinecap="round" opacity="0.65" />
-      <line x1="112" y1="109" x2="56"  y2="109" stroke="#D4956A" strokeWidth="1.1" strokeLinecap="round" opacity="0.65" />
-      <line x1="112" y1="114" x2="60"  y2="122" stroke="#D4956A" strokeWidth="1.1" strokeLinecap="round" opacity="0.65" />
-      {/* Bigotes derecha */}
-      <line x1="128" y1="104" x2="182" y2="97"  stroke="#D4956A" strokeWidth="1.1" strokeLinecap="round" opacity="0.65" />
-      <line x1="128" y1="109" x2="184" y2="109" stroke="#D4956A" strokeWidth="1.1" strokeLinecap="round" opacity="0.65" />
-      <line x1="128" y1="114" x2="180" y2="122" stroke="#D4956A" strokeWidth="1.1" strokeLinecap="round" opacity="0.65" />
+      {/* Boca — philtrum + curvas laterales */}
+      <line x1="120" y1="111" x2="120" y2="114" stroke="#C04068" strokeWidth="1.2" strokeLinecap="round" />
+      <path d="M 120,114 Q 114,119 110,117" stroke="#C04068" strokeWidth="1.3" fill="none" strokeLinecap="round" />
+      <path d="M 120,114 Q 126,119 130,117" stroke="#C04068" strokeWidth="1.3" fill="none" strokeLinecap="round" />
+
+      {/* Bigotes — 3 por lado, finos, desde el morro */}
+      <line x1="113" y1="103" x2="56"  y2="95"  stroke="#C8895A" strokeWidth="1.0" strokeLinecap="round" opacity="0.60" />
+      <line x1="113" y1="108" x2="54"  y2="108" stroke="#C8895A" strokeWidth="1.0" strokeLinecap="round" opacity="0.60" />
+      <line x1="113" y1="113" x2="58"  y2="121" stroke="#C8895A" strokeWidth="1.0" strokeLinecap="round" opacity="0.60" />
+
+      <line x1="127" y1="103" x2="184" y2="95"  stroke="#C8895A" strokeWidth="1.0" strokeLinecap="round" opacity="0.60" />
+      <line x1="127" y1="108" x2="186" y2="108" stroke="#C8895A" strokeWidth="1.0" strokeLinecap="round" opacity="0.60" />
+      <line x1="127" y1="113" x2="182" y2="121" stroke="#C8895A" strokeWidth="1.0" strokeLinecap="round" opacity="0.60" />
     </svg>
   );
 }
@@ -166,95 +175,103 @@ function Login({ onLogin }: { onLogin: () => void }) {
   };
 
   return (
-    <div className="min-h-screen flex" style={{ background: "linear-gradient(135deg, #fdf4f0 0%, #fce8e0 40%, #ede9fe 100%)" }}>
-      {/* Left panel — decorativo */}
-      <div className="hidden lg:flex flex-col items-center justify-center flex-1 px-12 gap-8">
-        {/* Gato SVG */}
-        <CatIllustration size={220} />
+    <div className="min-h-screen flex items-center justify-center px-4 py-8"
+         style={{ background: "linear-gradient(135deg, #fdf4f0 0%, #fce8e0 40%, #ede9fe 100%)" }}>
+      {/* Contenedor central acotado */}
+      <div className="w-full flex" style={{ maxWidth: "1120px" }}>
 
-        <div className="text-center space-y-2">
-          <h2 className="text-2xl font-bold text-slate-700">PulsoLaboral</h2>
-          <p className="text-slate-500 text-sm leading-relaxed max-w-xs">
-            Tu asistente de control operativo para RH.<br />Organizado, colaborativo y siempre al dia.
-          </p>
-          <div className="flex flex-col gap-1.5 pt-2">
-            {["Gestion de cursos, OCs y procesos", "Sincronizacion en tiempo real con tu equipo", "Respaldos automaticos y modo offline"].map(f => (
-              <div key={f} className="flex items-center gap-2 text-xs text-slate-400">
-                <div className="w-1.5 h-1.5 rounded-full bg-orange-300 shrink-0" />
-                {f}
-              </div>
-            ))}
+        {/* Left panel — decorativo */}
+        <div className="hidden lg:flex flex-col items-center justify-center flex-1 px-8 gap-6">
+          <CatIllustration size={192} />
+          <div className="text-center space-y-2">
+            <h2 className="text-2xl font-bold text-slate-700">PulsoLaboral</h2>
+            <p className="text-slate-500 text-sm leading-relaxed max-w-xs">
+              Tu asistente de control operativo para RRHH.<br />Organizado, colaborativo y siempre al día.
+            </p>
+            <div className="flex flex-col gap-1.5 pt-2">
+              {[
+                "Gestión de cursos, OCs y procesos",
+                "Sincronización en tiempo real con tu equipo",
+                "Respaldos automáticos y modo offline",
+              ].map(f => (
+                <div key={f} className="flex items-center gap-2 text-xs text-slate-400">
+                  <div className="w-1.5 h-1.5 rounded-full bg-orange-300 shrink-0" />
+                  {f}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Right panel — formulario */}
-      <div className="flex-1 lg:max-w-md flex items-center justify-center p-6">
-        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl shadow-orange-100 p-10 w-full border border-white">
-          {/* Gato pequeño mobile (solo < lg) */}
-          <div className="flex justify-center mb-6 lg:hidden">
-            <CatIllustration size={96} />
-          </div>
-
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold text-slate-800">Bienvenido de vuelta</h1>
-            <p className="text-slate-400 text-sm mt-1">Ingresa tus credenciales para continuar</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Usuario</label>
-              <input
-                type="text"
-                value={user}
-                onChange={e => setUser(e.target.value)}
-                className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent focus:bg-white transition-all"
-                placeholder="Tu nombre de usuario"
-                autoComplete="username"
-                autoFocus
-              />
+        {/* Right panel — formulario */}
+        <div className="flex-1 lg:max-w-sm xl:max-w-md flex items-center justify-center">
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl shadow-orange-100 p-9 w-full border border-white/60">
+            {/* Gato mobile (solo < lg) */}
+            <div className="flex justify-center mb-5 lg:hidden">
+              <CatIllustration size={88} />
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Clave</label>
-              <div className="relative">
+
+            <div className="mb-7">
+              <h1 className="text-2xl font-bold text-slate-800">Bienvenido de vuelta</h1>
+              <p className="text-slate-400 text-sm mt-1">Ingresa tus credenciales para continuar</p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Usuario</label>
                 <input
-                  type={showPass ? "text" : "password"}
-                  value={pass}
-                  onChange={e => setPass(e.target.value)}
-                  className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 pr-20 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent focus:bg-white transition-all"
-                  placeholder="••••••••"
-                  autoComplete="current-password"
+                  type="text"
+                  value={user}
+                  onChange={e => setUser(e.target.value)}
+                  className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent focus:bg-white transition-all"
+                  placeholder="Tu nombre de usuario"
+                  autoComplete="username"
+                  autoFocus
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPass(!showPass)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 font-medium px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors"
-                >
-                  {showPass ? "Ocultar" : "Mostrar"}
-                </button>
               </div>
-            </div>
-
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 text-sm text-red-600">
-                {error}
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Clave</label>
+                <div className="relative">
+                  <input
+                    type={showPass ? "text" : "password"}
+                    value={pass}
+                    onChange={e => setPass(e.target.value)}
+                    className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 pr-20 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent focus:bg-white transition-all"
+                    placeholder="••••••••"
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPass(!showPass)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 font-medium px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors"
+                  >
+                    {showPass ? "Ocultar" : "Mostrar"}
+                  </button>
+                </div>
               </div>
-            )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-60"
-              style={{ background: loading ? "#94a3b8" : "linear-gradient(135deg, #f97316 0%, #ea580c 100%)", boxShadow: loading ? "none" : "0 4px 15px rgba(249,115,22,0.35)" }}
-            >
-              {loading ? "Verificando..." : "Ingresar"}
-            </button>
-          </form>
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 text-sm text-red-600">
+                  {error}
+                </div>
+              )}
 
-          <p className="text-xs text-slate-300 text-center mt-6">
-            PulsoLaboral — Control Operativo RH
-          </p>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-60"
+                style={{ background: loading ? "#94a3b8" : "linear-gradient(135deg, #f97316 0%, #ea580c 100%)", boxShadow: loading ? "none" : "0 4px 15px rgba(249,115,22,0.35)" }}
+              >
+                {loading ? "Verificando..." : "Ingresar"}
+              </button>
+            </form>
+
+            <p className="text-xs text-slate-300 text-center mt-6">
+              PulsoLaboral — Gestión simple para RRHH
+            </p>
+          </div>
         </div>
+
       </div>
     </div>
   );
