@@ -3,6 +3,8 @@ import { AlertTriangle, Check, ClipboardList, Copy, Lightbulb, Lock, RefreshCw, 
 import { getUserWorkspace, getWorkspaceMembers, type Workspace, type WorkspaceMember } from "../backend/supabaseWorkspace";
 import { SUPABASE_CONFIGURED } from "../backend/supabaseClient";
 import { WorkspaceSetup } from "../components/ui/WorkspaceSetup";
+import { UserManager } from "../components/ui/UserManager";
+import { getSession } from "../auth/authService";
 import type { ConfirmState } from "../shared/formTypes";
 import type { AppData, BackupItem } from "../domain/types";
 import type { XlsxParseResult } from "../importExport/xlsxImport";
@@ -557,7 +559,19 @@ function ModuloConfiguracion({
         </ExpandableSection>
       )}
 
-      {/* ── Acordeón 4: Sistema ── */}
+      {/* ── Acordeón 4: Usuarios ── */}
+      {SUPABASE_CONFIGURED && getSession()?.role === "admin" && (
+        <ExpandableSection title="Gestión de usuarios" defaultOpen={false}>
+          <div className="space-y-3">
+            <p className="text-sm text-slate-600">
+              Administra quién puede acceder a la aplicación. Los cambios aplican en todos los dispositivos de inmediato.
+            </p>
+            <UserManager currentUsername={getSession()?.username ?? ""} />
+          </div>
+        </ExpandableSection>
+      )}
+
+      {/* ── Acordeón 5: Sistema ── */}
       <ExpandableSection title="Sistema y seguridad">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Cifrado */}

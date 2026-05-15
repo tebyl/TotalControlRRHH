@@ -1,6 +1,7 @@
 import type { Session } from "./authTypes";
 import { SESSION_DURATION_MS, SESSION_KEY } from "./authTypes";
 import { supabaseSignIn, supabaseSignOut } from "../backend/supabaseAuth";
+import { findRemoteUser } from "../backend/supabaseUsers";
 
 async function sha256hex(text: string): Promise<string> {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
@@ -8,15 +9,31 @@ async function sha256hex(text: string): Promise<string> {
 }
 
 export async function login(username: string, password: string): Promise<Session | null> {
+  const hash = await sha256hex(password);
+
+  // 1. Try Supabase user registry first (works on any device without code changes)
+  const remoteUser = await findRemoteUser(username.trim()).catch(() => null);
+  if (remoteUser && remoteUser.password_hash === hash) {
+    supabaseSignIn(username.trim(), hash).catch(() => {});
+    const now = Date.now();
+    const session: Session = {
+      username: remoteUser.username,
+      role: remoteUser.role,
+      displayName: remoteUser.display_name,
+      loginAt: now,
+      expiresAt: now + SESSION_DURATION_MS,
+    };
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    return session;
+  }
+
+  // 2. Fall back to hardcoded users (offline / bootstrap admin)
   const { getUserRegistry } = await import("./authUsers");
   const users = getUserRegistry();
-  const hash = await sha256hex(password);
-  const user = users.find(u => u.username === username && u.passwordHash === hash);
+  const user = users.find(u => u.username === username.trim() && u.passwordHash === hash);
   if (!user) return null;
 
-  // Fire-and-forget: establish Supabase session in background.
-  // Local session is always the source of truth for offline support.
-  supabaseSignIn(username, hash).catch(() => {});
+  supabaseSignIn(username.trim(), hash).catch(() => {});
 
   const now = Date.now();
   const session: Session = {
