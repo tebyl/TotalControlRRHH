@@ -125,13 +125,17 @@ export function hydrateData(raw: unknown): AppData {
   return parsed;
 }
 
-export function limpiarDatos() {
-  removeStorageKey(STORAGE_KEY);
+export function limpiarDatos(storageKey = STORAGE_KEY) {
+  removeStorageKey(storageKey);
   clearCachedPassphrase();
 }
 
+export function storageKeyForUser(username: string): string {
+  return `control_operativo_v5_${username.toLowerCase()}`;
+}
+
 // ──────────────────────────────────────────────
-export function useAppData() {
+export function useAppData(storageKey = STORAGE_KEY) {
   const [data, setData] = useState<AppData>(() => {
     const de = crearDatosEjemplo();
     de.presupuesto = ensureBudgetRows(de.presupuesto);
@@ -147,7 +151,7 @@ export function useAppData() {
   useEffect(() => {
     let active = true;
     const init = async () => {
-      const raw = readStorageJSON<unknown>(STORAGE_KEY);
+      const raw = readStorageJSON<unknown>(storageKey);
       if (!raw) {
         const de = crearDatosEjemplo();
         de.presupuesto = ensureBudgetRows(de.presupuesto);
@@ -186,12 +190,12 @@ export function useAppData() {
     };
     void init();
     return () => { active = false; };
-  }, []);
+  }, [storageKey]);
 
   useEffect(() => {
     if (!dataReady) return;
     if (!encryptionEnabled) {
-      saveAppData(STORAGE_KEY, data);
+      saveAppData(storageKey, data);
       return;
     }
     const passphrase = getCachedPassphrase();
@@ -200,7 +204,7 @@ export function useAppData() {
     void (async () => {
       try {
         const encrypted = await encryptAppData(dataToSave, passphrase);
-        writeStorageJSON(STORAGE_KEY, encrypted);
+        writeStorageJSON(storageKey, encrypted);
       } catch (error) {
         console.warn("[storage] No se pudo cifrar datos", error);
       }

@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo, useCallback, useState } from "react";
 import type { AppData, ProcesoReclutamiento, ValeGas, ValeGasOrg } from "../domain/types";
 import { MESES } from "../domain/options";
 import { fmtCLP } from "../shared/dataHelpers";
@@ -202,6 +202,8 @@ function ModuloReporteMensual({ data, toastShow }: Props) {
     toastShow("Reporte mensual XLSX descargado", { type: "success" });
   };
 
+  const printReport = useCallback(() => { window.print(); }, []);
+
   const exportReportJSON = () => {
     const jsonReport = {
       periodo: `${selectedMonth} ${selectedYear}`,
@@ -263,13 +265,13 @@ ${diffPlanificadoReal > 0
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-[#D9E2EC] p-6 shadow-sm space-y-6">
+    <div className="print-target bg-white rounded-2xl border border-[#D9E2EC] p-6 shadow-sm space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4 border-b border-slate-100 pb-4">
         <div>
           <h2 className="text-lg font-semibold text-slate-800">Reporte Mensual Ejecutivo</h2>
           <p className="text-xs text-slate-500">Resumen y análisis de la actividad operativa mensual para reportes a jefatura.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap print:hidden">
           <Select value={selectedMonth} onChange={setSelectedMonth} options={MESES} />
           <select
             value={selectedYear}
@@ -280,6 +282,13 @@ ${diffPlanificadoReal > 0
               <option key={y} value={y}>{y}</option>
             ))}
           </select>
+          <button
+            onClick={printReport}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 transition-colors"
+            title="Imprimir o guardar como PDF"
+          >
+            🖨️ Imprimir / PDF
+          </button>
         </div>
       </div>
 
@@ -478,7 +487,7 @@ ${diffPlanificadoReal > 0
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3 justify-end border-t border-slate-100 pt-4">
+      <div className="flex flex-wrap gap-3 justify-end border-t border-slate-100 pt-4 print:hidden">
         <button onClick={copyExecutiveSummary} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors">
           Copiar Resumen Ejecutivo
         </button>

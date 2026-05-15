@@ -30,14 +30,14 @@ const ModuloConfiguracion = lazy(() => import("./modules/ModuloConfiguracion"));
 const ModuloValesGas = lazy(() => import("./modules/ModuloValesGas"));
 const ModuloCargaSemanal = lazy(() => import("./modules/ModuloCargaSemanal"));
 const ModuloReporteMensual = lazy(() => import("./modules/ModuloReporteMensual"));
-import { hydrateData, useAppData } from "./state/useAppData";
+import { hydrateData, storageKeyForUser, useAppData } from "./state/useAppData";
 import { useModals } from "./state/useModals";
 import { useBackups } from "./state/useBackups";
 import { useExportImport } from "./importExport/useExportImport";
 import { AppLayout } from "./layout/AppLayout";
 import { createDataToSave } from "./utils/appHelpers";
 import type { ModuloKey } from "./domain/types";
-import { saveAppData, writeStorageJSON, STORAGE_KEY } from "./storage/localStorage";
+import { saveAppData, writeStorageJSON } from "./storage/localStorage";
 import {
   cachePassphrase,
   clearCachedPassphrase,
@@ -161,6 +161,7 @@ type Modulo = ModuloKey;
 
 export default function App() {
   const [authenticated, setAuthenticated] = useState(() => getSession() !== null);
+  const storageKey = storageKeyForUser(getSession()?.username ?? "default");
   const {
     data,
     setData,
@@ -176,7 +177,7 @@ export default function App() {
     setUnlockPassphrase,
     unlockError,
     setUnlockError,
-  } = useAppData();
+  } = useAppData(storageKey);
   const [encryptionSetupOpen, setEncryptionSetupOpen] = useState(false);
   const [encryptionPassphrase, setEncryptionPassphrase] = useState("");
   const [encryptionPassphraseConfirm, setEncryptionPassphraseConfirm] = useState("");
@@ -307,7 +308,7 @@ export default function App() {
     try {
       cachePassphrase(passphrase);
       const encrypted = await encryptAppData(createDataToSave(data), passphrase);
-      writeStorageJSON(STORAGE_KEY, encrypted);
+      writeStorageJSON(storageKey, encrypted);
       setEncryptionEnabled(true);
       setEncryptedPayload(encrypted);
       setEncryptionSetupOpen(false);
@@ -330,7 +331,7 @@ export default function App() {
         setUnlockOpen(false);
         setUnlockError("");
         setUnlockPassphrase("");
-        saveAppData(STORAGE_KEY, data);
+        saveAppData(storageKey, data);
         toastShow("Cifrado local desactivado", { type: "info" });
         setConfirm(null);
       },

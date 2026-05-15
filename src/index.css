@@ -197,3 +197,35 @@ a:hover {
 .form-field:focus-within {
   @apply ring-2 ring-blue-300;
 }
+
+/* ── Print / PDF ── */
+@media print {
+  /* Hide everything except the report content */
+  body > * { display: none !important; }
+  #root > * { display: none !important; }
+  #root .print-target { display: block !important; }
+
+  /* When printing: show only the report card */
+  .print-target {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: white;
+    padding: 2rem;
+    overflow: auto;
+    font-size: 11pt;
+    color: #1e293b;
+  }
+
+  /* Hide interactive controls inside the report */
+  .print-target .print\:hidden { display: none !important; }
+
+  /* Page setup */
+  @page {
+    size: A4 portrait;
+    margin: 1.5cm 2cm;
+  }
+
+  /* Avoid breaking cards across pages */
+  .print-target > * { break-inside: avoid; }
+}
