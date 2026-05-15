@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Trash2, UserPlus } from "lucide-react";
 import type { UserRole } from "../../auth/authTypes";
 import {
@@ -31,14 +31,16 @@ export function UserManager({ currentUsername }: { currentUsername: string }) {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
 
-  const load = () => {
+  const load = useCallback(() => {
     setLoading(true);
     listRemoteUsers()
       .then(r => { if (r.ok) setUsers(r.data); else setError(r.error); })
       .finally(() => setLoading(false));
-  };
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    queueMicrotask(load);
+  }, [load]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();

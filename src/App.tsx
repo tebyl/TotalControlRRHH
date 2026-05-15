@@ -358,44 +358,7 @@ export default function App() {
 
   const toggleFocusMode = () => { const v = !focusMode; setFocusMode(v); localStorage.setItem("kata_focus_mode", String(v)); };
 
-  // Role derived from session — cheap sessionStorage read, no memoization needed
-  const currentRole = authenticated ? getSession()?.role : undefined;
-
-  // Session expiry check — every 60 s, only while authenticated
-  useEffect(() => {
-    if (!authenticated) return;
-    const interval = setInterval(() => {
-      if (getSession() === null) {
-        logAudit("logout", { detail: "Sesión expirada automáticamente" });
-        authLogout();
-        setAuthenticated(false);
-        toastShow("Sesión expirada", { type: "warning", message: "Por seguridad, inicia sesión nuevamente." });
-      }
-    }, 60_000);
-    return () => clearInterval(interval);
-  }, [authenticated]);
-
-  // Refresh session on user interaction (throttled to once per minute)
-  useEffect(() => {
-    if (!authenticated) return;
-    let lastRefresh = 0;
-    const handler = () => {
-      const now = Date.now();
-      if (now - lastRefresh > 60_000) { refreshSession(); lastRefresh = now; }
-    };
-    window.addEventListener("click", handler);
-    window.addEventListener("keydown", handler);
-    return () => { window.removeEventListener("click", handler); window.removeEventListener("keydown", handler); };
-  }, [authenticated]);
-
-  useEffect(() => {
-    if (!dataReady) return;
-    setTableLoading(true);
-    const timer = setTimeout(() => setTableLoading(false), 200);
-    return () => clearTimeout(timer);
-  }, [activeModulo, search, dataReady]);
-
-  const toastShow = (
+  const toastShow = useCallback((
     title: string,
     options?: {
       type?: ToastType;
@@ -415,7 +378,48 @@ export default function App() {
         setToasts(prev => prev.filter(t => t.id !== id));
       }, duration);
     }
-  };
+  }, []);
+
+  // Role derived from session — cheap sessionStorage read, no memoization needed
+  const currentRole = authenticated ? getSession()?.role : undefined;
+
+  // Session expiry check — every 60 s, only while authenticated
+  useEffect(() => {
+    if (!authenticated) return;
+    const interval = setInterval(() => {
+      if (getSession() === null) {
+        logAudit("logout", { detail: "Sesión expirada automáticamente" });
+        authLogout();
+        setAuthenticated(false);
+        toastShow("Sesión expirada", { type: "warning", message: "Por seguridad, inicia sesión nuevamente." });
+      }
+    }, 60_000);
+    return () => clearInterval(interval);
+  }, [authenticated, toastShow]);
+
+  // Refresh session on user interaction (throttled to once per minute)
+  useEffect(() => {
+    if (!authenticated) return;
+    let lastRefresh = 0;
+    const handler = () => {
+      const now = Date.now();
+      if (now - lastRefresh > 60_000) { refreshSession(); lastRefresh = now; }
+    };
+    window.addEventListener("click", handler);
+    window.addEventListener("keydown", handler);
+    return () => { window.removeEventListener("click", handler); window.removeEventListener("keydown", handler); };
+  }, [authenticated]);
+
+  useEffect(() => {
+    if (!dataReady) return;
+    const showTimer = setTimeout(() => setTableLoading(true), 0);
+    const hideTimer = setTimeout(() => setTableLoading(false), 200);
+    return () => {
+      clearTimeout(showTimer);
+      clearTimeout(hideTimer);
+    };
+  }, [activeModulo, search, dataReady]);
+
   const removeToast = (id: string) => setToasts(prev => prev.filter(t => t.id !== id));
 
   const { backups, setBackups, runBackupAndToast } = useBackups({ data, setData, toastShow });
@@ -523,16 +527,16 @@ export default function App() {
   };
 
   // ── PERMISSIONS & LOGOUT ────────────────────
-  const logout = useCallback(() => { logAudit("logout", { detail: "Cierre de sesión manual" }); authLogout(); setAuthenticated(false); toastShow("Sesión cerrada", { type: "info" }); }, []);
+  const logout = useCallback(() => { logAudit("logout", { detail: "Cierre de sesión manual" }); authLogout(); setAuthenticated(false); toastShow("Sesión cerrada", { type: "info" }); }, [toastShow]);
   const permDeleteItem = can(currentRole, "record:delete") ? deleteItem : undefined;
   const permDuplicateItem = can(currentRole, "record:duplicate") ? duplicateItem : undefined;
   const permMarkClosed = can(currentRole, "record:close") ? markClosed : undefined;
 
   // Stable callbacks — prevent unnecessary re-renders of memoized child modules
-  const stableOpenNew = useCallback(openNew, []);
-  const stableOpenEdit = useCallback(openEdit, []);
+  const stableOpenNew = useCallback((...args: Parameters<typeof openNew>) => openNew(...args), [openNew]);
+  const stableOpenEdit = useCallback((...args: Parameters<typeof openEdit>) => openEdit(...args), [openEdit]);
   const stableSetSearch = useCallback((v: string) => setSearch(v), []);
-  const stableOpenCapture = useCallback(openCapture, []);
+  const stableOpenCapture = useCallback((...args: Parameters<typeof openCapture>) => openCapture(...args), [openCapture]);
 
     // ── MODULES RENDER ────────────────────────
 

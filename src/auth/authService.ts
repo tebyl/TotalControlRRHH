@@ -1,7 +1,7 @@
 import type { Session } from "./authTypes";
 import { SESSION_DURATION_MS, SESSION_KEY } from "./authTypes";
 import { supabaseSignIn, supabaseSignOut } from "../backend/supabaseAuth";
-import { findRemoteUser } from "../backend/supabaseUsers";
+import { verifyRemoteUser } from "../backend/supabaseUsers";
 
 async function sha256hex(text: string): Promise<string> {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
@@ -12,8 +12,8 @@ export async function login(username: string, password: string): Promise<Session
   const hash = await sha256hex(password);
 
   // 1. Try Supabase user registry first (works on any device without code changes)
-  const remoteUser = await findRemoteUser(username.trim()).catch(() => null);
-  if (remoteUser && remoteUser.password_hash === hash) {
+  const remoteUser = await verifyRemoteUser(username.trim(), hash).catch(() => null);
+  if (remoteUser) {
     supabaseSignIn(username.trim(), hash).catch(() => {});
     const now = Date.now();
     const session: Session = {

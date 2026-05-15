@@ -1,158 +1,218 @@
 # TotalControlRH
 
-Sistema de control operativo de RRHH — aplicación **local-first** construida con React + TypeScript + Tailwind CSS. Sin backend, sin base de datos remota: los datos viven en `localStorage` y se exportan a JSON/XLSX.
+Sistema operativo de RRHH construido con React, TypeScript y Tailwind CSS. La app mantiene un enfoque local-first y puede funcionar sin red, pero ya incorpora un modo colaborativo opcional con Supabase para autenticacion, workspaces, usuarios remotos, sincronizacion y Realtime. Esta preparada para despliegue en Vercel como SPA/PWA.
 
-## Stack tecnológico
+## Estado actual
 
-| Capa | Tecnología |
-|------|-----------|
+| Area | Estado |
+|------|--------|
+| App base | React 19 + Vite 7 + TypeScript 5.9 |
+| Persistencia local | `localStorage`, backups y cifrado AES-GCM opcional |
+| Backend opcional | Supabase Auth, Postgres/RLS, workspaces, usuarios y Realtime |
+| Deploy | Vercel o cualquier hosting estatico con HTTPS |
+| PWA | Manifest, Service Worker e instalacion en escritorio/movil |
+| CI | GitHub Actions con type-check, lint, test y build |
+| Tests | 166 tests pasando en Vitest |
+
+## Stack tecnologico
+
+| Capa | Tecnologia |
+|------|------------|
 | Framework | React 19 + TypeScript 5.9 |
 | Build | Vite 7 + vite-plugin-singlefile |
 | Estilos | Tailwind CSS 4 |
-| Gráficos | Chart.js + react-chartjs-2 |
-| Exportación | xlsx (SheetJS) |
-| Persistencia | localStorage (cifrado AES-GCM opcional) |
-| Tests | Vitest 4 — 95 tests, 6 suites |
-| PWA | Service Worker + Web App Manifest |
+| Iconos | lucide-react |
+| Graficos | Chart.js + react-chartjs-2 |
+| Exportacion | xlsx (SheetJS), JSON |
+| Backend | Supabase JS v2 |
+| Tests | Vitest 4 + Testing Library |
+| Deploy | Vercel |
 
-## Módulos
+## Modulos funcionales
 
-| Módulo | Descripción |
+| Modulo | Descripcion |
 |--------|-------------|
-| **Inicio** | Pantalla de bienvenida con accesos rápidos y métricas |
-| **Mi Día** | Vista diaria: urgentes, vencidos, bloqueados, a actualizar |
-| **Dashboard** | KPIs y gráficos de estado general + reporte mensual |
-| **Cursos / DNC** | Gestión de cursos de capacitación |
-| **OCs Pendientes** | Órdenes de compra y su estado |
-| **Practicantes** | Seguimiento de practicantes |
-| **Evaluaciones** | Evaluaciones psicolaborales |
-| **Diplomas / Cert / Lic** | Diplomas, certificados y licencias |
-| **Procesos Pend.** | Flujos y procesos internos |
-| **Presupuesto** | Control presupuestario |
-| **Carga Semanal** | Reporte de carga operativa semanal |
-| **Contactos** | Directorio de stakeholders |
-| **Reclutamiento** | Procesos de selección |
-| **Vales de Gas** | Control de vales de combustible |
-| **Configuración** | Importar/exportar datos, backups, cifrado |
+| Inicio | Accesos rapidos y metricas generales |
+| Mi Dia | Urgentes, vencidos, bloqueados y registros por actualizar |
+| Dashboard | KPIs, graficos y reporte mensual |
+| Cursos / DNC | Gestion de cursos de capacitacion |
+| OCs Pendientes | Ordenes de compra y seguimiento |
+| Practicantes | Seguimiento de practicantes |
+| Evaluaciones | Evaluaciones psicolaborales |
+| Diplomas / Cert / Lic | Documentos, certificados y licencias |
+| Procesos Pend. | Flujos y procesos internos |
+| Presupuesto | Control presupuestario |
+| Carga Semanal | Reporte de carga operativa |
+| Contactos | Directorio de stakeholders |
+| Reclutamiento | Procesos de seleccion |
+| Vales de Gas | Control de vales de combustible |
+| Administracion | Usuarios, equipo, cifrado, auditoria y datos |
 
-## Instalación y uso
+## Instalacion local
 
 ### Requisitos
 
-- Node.js 18+
-- npm 9+
+- Node.js 24, segun `.nvmrc`
+- npm
+- Proyecto Supabase solo si se usara sincronizacion remota
 
 ### Comandos
 
 ```bash
-npm install        # instalar dependencias
-npm run dev        # servidor de desarrollo (http://localhost:5173)
-npm run build      # build de producción (dist/index.html — archivo único)
-npm run preview    # previsualizar build local (necesario para probar PWA)
-npm test           # ejecutar tests (vitest)
-npm run lint       # análisis estático (eslint)
+npm install
+npm run dev
+npm run build
+npm run preview
+npm test
+npm run lint
 ```
 
-### Despliegue
+El servidor de desarrollo queda normalmente en `http://localhost:5173`.
 
-El build genera un **único archivo HTML** autónomo (`dist/index.html`). Se puede distribuir sin servidor ni CDN. Para habilitar PWA e instalación, sirve el archivo con HTTPS (p.ej. Netlify, Vercel, o `npm run preview` en local).
+## Variables de entorno
 
-## PWA — instalación
+Copia `.env.example` a `.env` para desarrollo local:
 
-La app puede instalarse como aplicación de escritorio/móvil desde Chrome, Edge o Safari iOS:
-
-- Aparece automáticamente un banner **"📲 Instalar Control RH"** cuando el navegador lo permite.
-- En móvil: menú del navegador → "Agregar a pantalla de inicio".
-- El Service Worker cachea la app para uso **offline**.
-
-## Credenciales por defecto
-
-| Usuario | Contraseña | Rol   |
-|---------|-----------|-------|
-| KataS   | Tota95    | admin |
-
-Las contraseñas se verifican con SHA-256. Para cambiar credenciales o agregar usuarios, edita `src/auth/authUsers.ts` con el hash correspondiente:
-
-```js
-// Calcula el hash en la consola del navegador:
-[...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('TuNuevaContraseña')))].map(b=>b.toString(16).padStart(2,'0')).join('')
+```bash
+VITE_SUPABASE_URL=https://xxxxxxxxxxxxxxxxxxxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJ...
 ```
 
-La sesión expira automáticamente después de **8 horas** de inactividad.
+En Vercel agrega las mismas variables en:
 
-## Seguridad y cifrado
+`Project Settings -> Environment Variables`
 
-- Cifrado **AES-GCM 256-bit** opcional sobre el JSON en localStorage.
-- Contraseñas hasheadas con SHA-256; sin texto plano en ningún punto.
-- Auditoría de acciones (login, exportaciones, borrado) en `localStorage`.
-- Ver [docs/security.md](docs/security.md) para análisis completo de riesgos y controles.
+Para un build puramente local/offline puedes omitirlas. En ese caso la app sigue funcionando con `localStorage`, pero no habilita usuarios remotos, workspaces ni sincronizacion.
+
+## Supabase
+
+El codigo actual espera el modelo colaborativo por workspace:
+
+- `app_users`: registro funcional de usuarios de la app.
+- `workspaces`: equipos de trabajo con codigo de invitacion.
+- `workspace_members`: membresias y rol dentro del workspace.
+- `app_data`: un JSONB con el estado completo por workspace.
+
+### Setup recomendado para proyecto nuevo
+
+1. Crear proyecto en Supabase.
+2. En Authentication -> Providers -> Email, desactivar confirmacion de email si sera una app interna.
+3. Ejecutar en SQL Editor:
+   - `supabase/schema-v2.sql`
+   - `supabase/schema-v3-users.sql`
+4. Activar Realtime para `public.app_data` si Supabase no lo deja activo automaticamente.
+5. Crear el primer usuario admin desde la UI o insertar el usuario bootstrap indicado en `schema-v3-users.sql`.
+6. Configurar `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en local y Vercel.
+
+`supabase/schema.sql` queda como esquema inicial/legacy por usuario. Para la version colaborativa actual, la referencia practica es `schema-v2.sql` + `schema-v3-users.sql`.
+
+El flujo actual usa RPCs seguras para operaciones sensibles:
+
+- `join_workspace_by_invite`: permite unirse por codigo sin abrir lectura global de workspaces.
+- `verify_app_user`: valida usuario y hash dentro de Supabase sin exponer `password_hash` en lecturas anonimas.
+
+## Vercel
+
+Configuracion sugerida:
+
+| Campo | Valor |
+|-------|-------|
+| Framework Preset | Vite |
+| Build Command | `npm run build` |
+| Output Directory | `dist` |
+| Install Command | `npm ci` |
+| Node.js | 24 si esta disponible, o alinear con `.nvmrc` |
+
+Despues del deploy:
+
+1. Verificar login local y remoto.
+2. Crear o unirse a un workspace.
+3. Confirmar que un cambio en un navegador se refleja en otro.
+4. Instalar la PWA desde HTTPS.
 
 ## Arquitectura
 
-```
+```text
 src/
-├── App.tsx                   # Orquestador principal (~650 líneas)
-├── modules/                  # 16 módulos lazy-loaded + memo
-├── forms/                    # 13 formularios de captura
-├── state/                    # useAppData, useModals, useBackups
-├── importExport/             # useExportImport (JSON + XLSX)
-├── hooks/                    # useInstallPrompt (PWA)
-├── storage/                  # localStorage + cifrado AES-GCM
-├── auth/                     # login, sesión, roles, permisos
-├── audit/                    # registro de acciones
-├── layout/                   # AppLayout, sidebar, nav
-├── components/               # ui/, tables/, forms/ compartidos
-├── shared/                   # badges, helpers, formTypes
-├── domain/                   # types.ts, options.ts
-└── utils/                    # appHelpers, migrations
+  App.tsx                  Orquestador principal
+  backend/                 Cliente Supabase, auth, usuarios, workspace y sync
+  state/                   useAppData, backups y modales
+  storage/                 localStorage, migraciones y cifrado
+  auth/                    sesion local, roles y permisos
+  audit/                   log de acciones
+  modules/                 modulos de negocio
+  forms/                   formularios de captura
+  components/              UI, tablas, sidebar y formularios compartidos
+  importExport/            JSON/XLSX import-export
+  domain/                  tipos, opciones, fechas, presupuesto y estado
+  hooks/                   hooks reutilizables
+  shared/                  helpers y tipos compartidos
 ```
 
-Ver [docs/architecture.md](docs/architecture.md) para el diagrama completo y decisiones de diseño.
+La sincronizacion remota vive en `src/state/useAppData.ts`: primero hidrata desde localStorage, luego resuelve sesion/workspace en Supabase y sincroniza cambios con debounce. Si no hay Supabase configurado, se queda en modo local.
 
-## Modelo de datos
+## Seguridad
 
-- Ver [docs/data-model.md](docs/data-model.md) para la descripción de tipos y esquema.
-- Versión del esquema actual: `6` (`src/storage/migrations.ts`).
+Controles actuales:
 
-## Importación / Exportación
+- Sesion local con expiracion de 8 horas.
+- Roles `admin`, `rrhh` y `lectura`.
+- Hash SHA-256 para credenciales funcionales de la app.
+- Cifrado local AES-GCM opcional.
+- Auditoria local de login, logout, CRUD, import, export y backups.
+- RLS en tablas Supabase.
 
-- Exportación a **JSON** (completo, resumen, o anonimizado según rol).
-- Exportación a **XLSX** multi-hoja (completo o anonimizado).
-- Importación desde XLSX con validación fila a fila y reporte de errores/advertencias.
-- Ver [docs/import-export.md](docs/import-export.md) para el flujo completo.
+Hallazgos a resolver antes de produccion sensible:
 
-## Gestión de datos
+- El login remoto ya no lee `password_hash`, pero aun usa SHA-256 funcional de app. Para produccion sensible conviene migrar credenciales a Supabase Auth real, Edge Functions con rate limit o un proveedor corporativo.
+- La gestion de usuarios remotos sigue disponible para cualquier sesion autenticada a nivel RLS; la UI la limita a admin, pero la regla ideal deberia validar rol admin en backend.
+- El cifrado local no protege datos ya sincronizados en Supabase, porque `app_data.data` se guarda como JSONB legible para quien tenga permisos de base.
 
-- Auto-guardado en `localStorage` bajo la clave `control_operativo_kata_v5`.
-- Backups automáticos antes de operaciones destructivas.
-- Desde **Configuración**: exportar JSON/XLSX, importar, crear backups, restaurar ejemplos, cifrar.
-- Si se activa **Cifrado local**, la base queda cifrada y se solicita clave al iniciar.
+## Auditoria rapida del 2026-05-15
 
-## Sistema de semáforo
+| Check | Resultado |
+|-------|-----------|
+| `npm test` | OK, 12 archivos y 166 tests pasando |
+| `npm run build` | OK, genera `dist/index.html` single-file |
+| `npm run lint` | OK |
 
-| Color | Estado |
-|-------|--------|
-| 🔴 Rojo | Vencido o crítico |
-| 🟡 Amarillo | Próximo a vencer (≤ 3 días) |
-| 🟢 Verde | En plazo |
-| ⚫ Gris | Sin fecha / cerrado |
+Acciones completadas en prioridad alta:
 
-## Estado del proyecto — etapas completadas
+- Corregidas reglas React Hooks/Compiler sin cambiar el flujo funcional.
+- Endurecido Supabase: RLS de workspace por membresia y union por codigo via RPC.
+- Login remoto ajustado para no leer `password_hash` desde el cliente.
+- `schema-v2.sql` deja de hacer `DROP TABLE app_data` y se detiene si detecta tabla legacy por usuario.
 
-| Fase | Descripción | Estado |
-|------|-------------|--------|
-| 1–6 | Extracción de shared/, forms/, modules/ desde App.tsx | ✅ |
-| 7 | Hooks personalizados: useExportImport, useModals, useBackups, useAppData | ✅ |
-| 8 | Performance: React.lazy + Suspense, memo, useCallback en todos los módulos | ✅ |
-| 9 | PWA: manifest, service worker, iconos, install prompt | ✅ |
+## Proximas etapas sugeridas
 
-## Próximas etapas sugeridas
+| Fase | Objetivo | Prioridad |
+|------|----------|-----------|
+| 1 | Validar deploy Vercel end-to-end con variables, PWA y Realtime | Alta |
+| 2 | Aplicar scripts SQL en Supabase real y probar create/join workspace con dos usuarios | Alta |
+| 3 | Restringir gestion de usuarios a admin tambien desde backend/RLS | Alta |
+| 4 | Agregar tests de sincronizacion: create/join workspace, load/save remoto, conflicto simple | Media |
+| 5 | Mejorar estrategia offline: cola de cambios, ultimo escritor y aviso de conflicto | Media |
+| 6 | Actualizar `docs/architecture.md` y `docs/security.md`, hoy aun describen solo local-first | Media |
+| 7 | Evaluar cifrado remoto o minimizacion de datos sensibles antes de almacenar en JSONB | Media |
+| 8 | Agregar smoke tests e2e para login, CRUD principal y exportacion | Baja |
+| 9 | Monitoreo ligero en Vercel: errores cliente, web vitals y trazas de sync | Baja |
 
-| Fase | Descripción | Prioridad |
-|------|-------------|-----------|
-| 10 | **Cobertura de tests**: tests de integración por módulo (FormCursos, FormOCs, etc.) | Alta |
-| 11 | **Notificaciones nativas**: Web Notifications API para alertas de semáforo al abrir la app | Media |
-| 12 | **Sincronización entre pestañas**: `BroadcastChannel` para mantener datos coherentes | Media |
-| 13 | **Exportación a PDF**: reporte mensual y fichas individuales via `@react-pdf/renderer` | Baja |
-| 14 | **Multi-usuario local**: soporte para más de un perfil en el mismo navegador | Baja |
-| 15 | **CI/CD**: GitHub Actions para lint + test en cada push | Baja |
+## Credenciales bootstrap
+
+Existe un usuario local de respaldo para operar offline o iniciar el sistema:
+
+| Usuario | Rol |
+|---------|-----|
+| KataS | admin |
+
+Antes de usar en produccion, cambia o elimina el bootstrap en `src/auth/authUsers.ts` y crea usuarios remotos desde Administracion.
+
+## Gestion de datos
+
+- Auto-guardado local por usuario.
+- Backups antes de operaciones destructivas.
+- Exportacion JSON completa/resumen/anonimizada segun rol.
+- Exportacion XLSX multi-hoja.
+- Importacion XLSX con validacion y reporte.
+- Cifrado local opcional con clave no persistida.
+- Sincronizacion Supabase por workspace cuando esta configurado.

@@ -209,7 +209,10 @@ export function useAppData(storageKey = STORAGE_KEY) {
 
   // When Supabase session becomes available: resolve workspace, then sync data
   const dataRef = useRef<AppData | null>(null);
-  dataRef.current = data;
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
+
   useEffect(() => {
     if (!SUPABASE_CONFIGURED) return;
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -245,7 +248,6 @@ export function useAppData(storageKey = STORAGE_KEY) {
       }).catch(() => {});
     });
     return () => subscription.unsubscribe();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey]);
 
   // Called from WorkspaceSetup after user creates or joins a workspace
@@ -263,18 +265,15 @@ export function useAppData(storageKey = STORAGE_KEY) {
         saveRemoteData(dataRef.current).catch(() => {});
       }
     }).catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey]);
 
   // Subscribe to real-time changes from collaborators in the same workspace
-  const setDataRef = useRef(setData);
-  setDataRef.current = setData;
   useEffect(() => {
     if (!dataReady || !workspaceId) return;
     return subscribeToRemoteChanges(workspaceId, newData => {
       const hydrated = hydrateData(newData);
       skipNextRemoteSave.current = true;
-      setDataRef.current(hydrated);
+      setData(hydrated);
       saveAppData(storageKey, hydrated);
     });
   }, [dataReady, workspaceId, storageKey]);
@@ -338,7 +337,7 @@ export function useAppData(storageKey = STORAGE_KEY) {
         console.warn("[storage] No se pudo cifrar datos", error);
       }
     })();
-  }, [data, dataReady, encryptionEnabled]);
+  }, [data, dataReady, encryptionEnabled, isOnline, storageKey]);
 
   return {
     data,

@@ -18,7 +18,6 @@ export type WorkspaceResult<T> =
   | { ok: true; data: T }
   | { ok: false; error: string };
 
-// In-memory cache — reset on sign-out
 let cachedWorkspaceId: string | null = null;
 
 export function clearWorkspaceCache(): void {
@@ -40,7 +39,6 @@ function getDisplayName(session: Awaited<ReturnType<typeof getSession>>): string
     ?? "Usuario";
 }
 
-// Get the workspace the current user belongs to
 export async function getUserWorkspace(): Promise<WorkspaceResult<Workspace | null>> {
   if (!SUPABASE_CONFIGURED) return { ok: true, data: null };
 
@@ -74,7 +72,6 @@ export async function getUserWorkspace(): Promise<WorkspaceResult<Workspace | nu
   return { ok: true, data: ws };
 }
 
-// Get all members of the current workspace
 export async function getWorkspaceMembers(): Promise<WorkspaceResult<WorkspaceMember[]>> {
   if (!SUPABASE_CONFIGURED) return { ok: true, data: [] };
 
@@ -91,13 +88,12 @@ export async function getWorkspaceMembers(): Promise<WorkspaceResult<WorkspaceMe
   return { ok: true, data: (data ?? []) as WorkspaceMember[] };
 }
 
-// Create a new workspace and add the current user as owner
 export async function createWorkspace(name: string): Promise<WorkspaceResult<Workspace>> {
   if (!SUPABASE_CONFIGURED) return { ok: false, error: "Supabase no configurado" };
 
   const session = await getSession();
   const userId = session?.user?.id;
-  if (!userId) return { ok: false, error: "Sin sesión activa" };
+  if (!userId) return { ok: false, error: "Sin sesion activa" };
 
   const { data: ws, error: wsError } = await supabase
     .from("workspaces")
@@ -117,34 +113,24 @@ export async function createWorkspace(name: string): Promise<WorkspaceResult<Wor
   return { ok: true, data: ws as Workspace };
 }
 
-// Join an existing workspace by invite code
 export async function joinWorkspace(inviteCode: string): Promise<WorkspaceResult<Workspace>> {
   if (!SUPABASE_CONFIGURED) return { ok: false, error: "Supabase no configurado" };
 
   const session = await getSession();
   const userId = session?.user?.id;
-  if (!userId) return { ok: false, error: "Sin sesión activa" };
+  if (!userId) return { ok: false, error: "Sin sesion activa" };
 
-  const { data: ws, error: findError } = await supabase
-    .from("workspaces")
-    .select("id, name, invite_code, created_by")
-    .eq("invite_code", inviteCode.trim().toUpperCase())
-    .maybeSingle();
+  const { data: ws, error } = await supabase.rpc("join_workspace_by_invite", {
+    p_invite_code: inviteCode.trim().toUpperCase(),
+    p_display_name: getDisplayName(session),
+  });
 
-  if (findError) return { ok: false, error: findError.message };
-  if (!ws) return { ok: false, error: "Código de invitación no encontrado" };
+  if (error) return { ok: false, error: error.message };
+  const workspace = Array.isArray(ws) ? ws[0] : ws;
+  if (!workspace) return { ok: false, error: "Codigo de invitacion no encontrado" };
 
-  const { error: memberError } = await supabase
-    .from("workspace_members")
-    .upsert(
-      { workspace_id: ws.id, user_id: userId, role: "editor", display_name: getDisplayName(session) },
-      { onConflict: "workspace_id,user_id" }
-    );
-
-  if (memberError) return { ok: false, error: memberError.message };
-
-  cachedWorkspaceId = (ws as Workspace).id;
-  return { ok: true, data: ws as Workspace };
+  cachedWorkspaceId = (workspace as Workspace).id;
+  return { ok: true, data: workspace as Workspace };
 }
 
 export function getCachedWorkspaceId(): string | null {

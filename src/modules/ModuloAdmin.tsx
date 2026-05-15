@@ -31,17 +31,13 @@ function ModuloAdmin({
   const [codeCopied, setCodeCopied] = useState(false);
   const [showJoinSetup, setShowJoinSetup] = useState(false);
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
-  const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
+  const [auditLog, setAuditLog] = useState<AuditEntry[]>(() => getAuditLog().reverse());
   const [auditFilter, setAuditFilter] = useState<string>("all");
 
   useEffect(() => {
     if (!SUPABASE_CONFIGURED) return;
     getUserWorkspace().then(r => { if (r.ok && r.data) setWorkspace(r.data); });
     getWorkspaceMembers().then(r => { if (r.ok) setMembers(r.data); });
-  }, []);
-
-  useEffect(() => {
-    setAuditLog(getAuditLog().reverse());
   }, []);
 
   const handleCopyCode = () => {
