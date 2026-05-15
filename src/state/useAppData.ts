@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AppData, Contacto } from "../domain/types";
 import { ensureBudgetRows } from "../domain/budget";
 import { ahora, createDataToSave, genId, hoy } from "../utils/appHelpers";
 import { readStorageJSON, removeStorageKey, saveAppData, writeStorageJSON, STORAGE_KEY } from "../storage/localStorage";
 import { migrateData } from "../storage/migrations";
 import { clearCachedPassphrase, decryptAppData, encryptAppData, getCachedPassphrase, isEncryptedPayload, type EncryptedPayload } from "../storage/encryption";
+import { loadRemoteData, saveRemoteData, subscribeToRemoteChanges } from "../backend/supabaseSync";
 let xlsxModule: typeof import("xlsx") | null = null;
 export const getXlsx = async () => {
   if (!xlsxModule) {
@@ -192,10 +193,38 @@ export function useAppData(storageKey = STORAGE_KEY) {
     return () => { active = false; };
   }, [storageKey]);
 
+  // After local data is ready, try to pull fresher data from Supabase
+  useEffect(() => {
+    if (!dataReady) return;
+    loadRemoteData().then(result => {
+      if (result.ok && result.data) {
+        const remote = hydrateData(result.data);
+        setData(remote);
+        saveAppData(storageKey, remote);
+      }
+    }).catch(() => {});
+  // Only run once after dataReady — intentionally no reactive deps on data
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataReady]);
+
+  // Subscribe to real-time changes from other devices
+  const setDataRef = useRef(setData);
+  setDataRef.current = setData;
+  useEffect(() => {
+    if (!dataReady) return;
+    return subscribeToRemoteChanges(newData => {
+      const hydrated = hydrateData(newData);
+      setDataRef.current(hydrated);
+      saveAppData(storageKey, hydrated);
+    });
+  }, [dataReady, storageKey]);
+
   useEffect(() => {
     if (!dataReady) return;
     if (!encryptionEnabled) {
       saveAppData(storageKey, data);
+      // Mirror to Supabase (non-blocking, best-effort)
+      saveRemoteData(data).catch(() => {});
       return;
     }
     const passphrase = getCachedPassphrase();

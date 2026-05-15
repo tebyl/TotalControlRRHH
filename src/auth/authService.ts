@@ -1,5 +1,6 @@
 import type { Session } from "./authTypes";
 import { SESSION_DURATION_MS, SESSION_KEY } from "./authTypes";
+import { supabaseSignIn, supabaseSignOut } from "../backend/supabaseAuth";
 
 async function sha256hex(text: string): Promise<string> {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
@@ -7,12 +8,15 @@ async function sha256hex(text: string): Promise<string> {
 }
 
 export async function login(username: string, password: string): Promise<Session | null> {
-  // Dynamic import to avoid bundling user list at module level
   const { getUserRegistry } = await import("./authUsers");
   const users = getUserRegistry();
   const hash = await sha256hex(password);
   const user = users.find(u => u.username === username && u.passwordHash === hash);
   if (!user) return null;
+
+  // Fire-and-forget: establish Supabase session in background.
+  // Local session is always the source of truth for offline support.
+  supabaseSignIn(username, hash).catch(() => {});
 
   const now = Date.now();
   const session: Session = {
@@ -43,6 +47,7 @@ export function getSession(): Session | null {
 
 export function logout(): void {
   sessionStorage.removeItem(SESSION_KEY);
+  supabaseSignOut().catch(() => {});
 }
 
 export function refreshSession(): void {
