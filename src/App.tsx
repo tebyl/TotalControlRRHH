@@ -63,6 +63,82 @@ import { useBroadcastSync } from "./hooks/useBroadcastSync";
 // COMPONENTS
 // ──────────────────────────────────────────────
 
+function CatIllustration({ size = 220 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 240 280" width={size} height={size} aria-hidden="true" style={{ filter: "drop-shadow(0 8px 24px rgba(240,136,62,0.22))" }}>
+      {/* Sombra suelo */}
+      <ellipse cx="120" cy="270" rx="58" ry="7" fill="#E8823A" opacity="0.13" />
+
+      {/* Cola — dibujada primero para quedar detrás del cuerpo */}
+      <path d="M 165,235 Q 208,210 204,168 Q 202,144 184,132"
+            stroke="#F0883E" strokeWidth="18" fill="none" strokeLinecap="round" />
+      {/* Punta cola más clara */}
+      <path d="M 200,155 Q 202,144 184,132"
+            stroke="#F5AA6E" strokeWidth="14" fill="none" strokeLinecap="round" />
+
+      {/* Cuerpo */}
+      <ellipse cx="120" cy="196" rx="57" ry="60" fill="#F0883E" />
+
+      {/* Vientre claro */}
+      <ellipse cx="120" cy="204" rx="30" ry="42" fill="#FDE8C8" />
+
+      {/* Patas delanteras */}
+      <ellipse cx="94" cy="248" rx="25" ry="12" fill="#F0883E" />
+      <ellipse cx="146" cy="248" rx="25" ry="12" fill="#F0883E" />
+      {/* Divisiones de dedos */}
+      <line x1="88"  y1="246" x2="88"  y2="256" stroke="#D97830" strokeWidth="1.2" strokeLinecap="round" opacity="0.35" />
+      <line x1="94"  y1="246" x2="94"  y2="257" stroke="#D97830" strokeWidth="1.2" strokeLinecap="round" opacity="0.35" />
+      <line x1="100" y1="246" x2="100" y2="256" stroke="#D97830" strokeWidth="1.2" strokeLinecap="round" opacity="0.35" />
+      <line x1="140" y1="246" x2="140" y2="256" stroke="#D97830" strokeWidth="1.2" strokeLinecap="round" opacity="0.35" />
+      <line x1="146" y1="246" x2="146" y2="257" stroke="#D97830" strokeWidth="1.2" strokeLinecap="round" opacity="0.35" />
+      <line x1="152" y1="246" x2="152" y2="256" stroke="#D97830" strokeWidth="1.2" strokeLinecap="round" opacity="0.35" />
+
+      {/* Cabeza */}
+      <ellipse cx="120" cy="90" rx="52" ry="48" fill="#F0883E" />
+
+      {/* Orejas — triángulos marcados */}
+      <polygon points="70,58 56,14 102,50" fill="#F0883E" />
+      <polygon points="170,58 184,14 138,50" fill="#F0883E" />
+      {/* Interior orejas */}
+      <polygon points="74,55 63,24 98,49" fill="#FFBF9E" />
+      <polygon points="166,55 177,24 142,49" fill="#FFBF9E" />
+
+      {/* Rayas tabby en frente — sutiles */}
+      <path d="M 106,52 Q 120,47 134,52" stroke="#D97830" strokeWidth="2.8" fill="none" strokeLinecap="round" opacity="0.45" />
+      <path d="M 108,62 Q 120,57 132,62" stroke="#D97830" strokeWidth="2.2" fill="none" strokeLinecap="round" opacity="0.38" />
+      <path d="M 111,71 Q 120,67 129,71" stroke="#D97830" strokeWidth="1.6" fill="none" strokeLinecap="round" opacity="0.3" />
+
+      {/* Ojos — iris ámbar + pupila vertical felina */}
+      {/* Ojo izquierdo */}
+      <ellipse cx="96" cy="87" rx="15" ry="14" fill="white" />
+      <ellipse cx="96" cy="88" rx="11" ry="11" fill="#C8821E" />
+      <ellipse cx="96" cy="88" rx="5"  ry="9"  fill="#1A1A1A" />
+      <circle  cx="101" cy="83" r="3" fill="white" opacity="0.9" />
+      {/* Ojo derecho */}
+      <ellipse cx="144" cy="87" rx="15" ry="14" fill="white" />
+      <ellipse cx="144" cy="88" rx="11" ry="11" fill="#C8821E" />
+      <ellipse cx="144" cy="88" rx="5"  ry="9"  fill="#1A1A1A" />
+      <circle  cx="149" cy="83" r="3" fill="white" opacity="0.9" />
+
+      {/* Nariz — triángulo pequeño */}
+      <polygon points="116,107 124,107 120,113" fill="#E05C78" />
+
+      {/* Boca — dos curvas suaves desde la nariz */}
+      <path d="M 116,111 Q 111,117 107,115" stroke="#C04468" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+      <path d="M 124,111 Q 129,117 133,115" stroke="#C04468" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+
+      {/* Bigotes izquierda — finos, largos */}
+      <line x1="112" y1="104" x2="58"  y2="97"  stroke="#D4956A" strokeWidth="1.1" strokeLinecap="round" opacity="0.65" />
+      <line x1="112" y1="109" x2="56"  y2="109" stroke="#D4956A" strokeWidth="1.1" strokeLinecap="round" opacity="0.65" />
+      <line x1="112" y1="114" x2="60"  y2="122" stroke="#D4956A" strokeWidth="1.1" strokeLinecap="round" opacity="0.65" />
+      {/* Bigotes derecha */}
+      <line x1="128" y1="104" x2="182" y2="97"  stroke="#D4956A" strokeWidth="1.1" strokeLinecap="round" opacity="0.65" />
+      <line x1="128" y1="109" x2="184" y2="109" stroke="#D4956A" strokeWidth="1.1" strokeLinecap="round" opacity="0.65" />
+      <line x1="128" y1="114" x2="180" y2="122" stroke="#D4956A" strokeWidth="1.1" strokeLinecap="round" opacity="0.65" />
+    </svg>
+  );
+}
+
 // ──────────────────────────────────────────────
 // LOGIN
 // ──────────────────────────────────────────────
@@ -94,48 +170,7 @@ function Login({ onLogin }: { onLogin: () => void }) {
       {/* Left panel — decorativo */}
       <div className="hidden lg:flex flex-col items-center justify-center flex-1 px-12 gap-8">
         {/* Gato SVG */}
-        <svg viewBox="0 0 200 200" className="w-56 h-56 drop-shadow-xl" aria-hidden="true">
-          {/* Cuerpo */}
-          <ellipse cx="100" cy="145" rx="52" ry="42" fill="#f4a46a" />
-          {/* Cabeza */}
-          <ellipse cx="100" cy="90" rx="46" ry="42" fill="#f4a46a" />
-          {/* Orejas */}
-          <polygon points="62,55 52,22 80,50" fill="#f4a46a" />
-          <polygon points="138,55 148,22 120,50" fill="#f4a46a" />
-          {/* Interior orejas */}
-          <polygon points="65,52 57,30 78,50" fill="#f9c8a8" />
-          <polygon points="135,52 143,30 122,50" fill="#f9c8a8" />
-          {/* Cara */}
-          <ellipse cx="84" cy="88" rx="9" ry="10" fill="white" />
-          <ellipse cx="116" cy="88" rx="9" ry="10" fill="white" />
-          <ellipse cx="85" cy="89" rx="5" ry="6" fill="#2d2d2d" />
-          <ellipse cx="115" cy="89" rx="5" ry="6" fill="#2d2d2d" />
-          {/* Brillo ojos */}
-          <circle cx="87" cy="87" r="1.5" fill="white" />
-          <circle cx="117" cy="87" r="1.5" fill="white" />
-          {/* Nariz */}
-          <ellipse cx="100" cy="100" rx="4" ry="2.5" fill="#e8748a" />
-          {/* Boca */}
-          <path d="M96,103 Q100,107 104,103" stroke="#c45a70" strokeWidth="1.2" fill="none" strokeLinecap="round" />
-          {/* Bigotes izquierda */}
-          <line x1="60" y1="98" x2="90" y2="101" stroke="#c8a080" strokeWidth="1.2" strokeLinecap="round" />
-          <line x1="60" y1="103" x2="90" y2="103" stroke="#c8a080" strokeWidth="1.2" strokeLinecap="round" />
-          <line x1="62" y1="108" x2="90" y2="105" stroke="#c8a080" strokeWidth="1.2" strokeLinecap="round" />
-          {/* Bigotes derecha */}
-          <line x1="140" y1="98" x2="110" y2="101" stroke="#c8a080" strokeWidth="1.2" strokeLinecap="round" />
-          <line x1="140" y1="103" x2="110" y2="103" stroke="#c8a080" strokeWidth="1.2" strokeLinecap="round" />
-          <line x1="138" y1="108" x2="110" y2="105" stroke="#c8a080" strokeWidth="1.2" strokeLinecap="round" />
-          {/* Patas delanteras */}
-          <ellipse cx="74" cy="183" rx="18" ry="10" fill="#f4a46a" />
-          <ellipse cx="126" cy="183" rx="18" ry="10" fill="#f4a46a" />
-          {/* Cola */}
-          <path d="M148,160 Q180,140 172,110 Q168,96 158,105" stroke="#f4a46a" strokeWidth="14" fill="none" strokeLinecap="round" />
-          {/* Barriga */}
-          <ellipse cx="100" cy="152" rx="30" ry="22" fill="#f9c8a8" opacity="0.7" />
-          {/* Manchas decorativas */}
-          <ellipse cx="88" cy="72" rx="8" ry="6" fill="#e8904a" opacity="0.4" />
-          <ellipse cx="112" cy="70" rx="6" ry="5" fill="#e8904a" opacity="0.4" />
-        </svg>
+        <CatIllustration size={220} />
 
         <div className="text-center space-y-2">
           <h2 className="text-2xl font-bold text-slate-700">PulsoLaboral</h2>
@@ -158,22 +193,7 @@ function Login({ onLogin }: { onLogin: () => void }) {
         <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl shadow-orange-100 p-10 w-full border border-white">
           {/* Gato pequeño mobile (solo < lg) */}
           <div className="flex justify-center mb-6 lg:hidden">
-            <svg viewBox="0 0 200 200" className="w-24 h-24" aria-hidden="true">
-              <ellipse cx="100" cy="145" rx="52" ry="42" fill="#f4a46a" />
-              <ellipse cx="100" cy="90" rx="46" ry="42" fill="#f4a46a" />
-              <polygon points="62,55 52,22 80,50" fill="#f4a46a" />
-              <polygon points="138,55 148,22 120,50" fill="#f4a46a" />
-              <polygon points="65,52 57,30 78,50" fill="#f9c8a8" />
-              <polygon points="135,52 143,30 122,50" fill="#f9c8a8" />
-              <ellipse cx="84" cy="88" rx="9" ry="10" fill="white" />
-              <ellipse cx="116" cy="88" rx="9" ry="10" fill="white" />
-              <ellipse cx="85" cy="89" rx="5" ry="6" fill="#2d2d2d" />
-              <ellipse cx="115" cy="89" rx="5" ry="6" fill="#2d2d2d" />
-              <ellipse cx="100" cy="100" rx="4" ry="2.5" fill="#e8748a" />
-              <path d="M96,103 Q100,107 104,103" stroke="#c45a70" strokeWidth="1.2" fill="none" strokeLinecap="round" />
-              <ellipse cx="74" cy="183" rx="18" ry="10" fill="#f4a46a" />
-              <ellipse cx="126" cy="183" rx="18" ry="10" fill="#f4a46a" />
-            </svg>
+            <CatIllustration size={96} />
           </div>
 
           <div className="mb-8">
