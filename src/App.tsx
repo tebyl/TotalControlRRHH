@@ -45,6 +45,7 @@ import {
   encryptAppData,
 } from "./storage/encryption";
 import { Modal, SkeletonCard, SkeletonTable } from "./components/ui";
+import { WorkspaceSetup } from "./components/ui/WorkspaceSetup";
 import { login as authLogin, getSession, logout as authLogout, refreshSession } from "./auth/authService";
 import { can } from "./auth/permissions";
 import { logAudit } from "./audit/auditService";
@@ -177,6 +178,8 @@ export default function App() {
     setUnlockPassphrase,
     unlockError,
     setUnlockError,
+    needsWorkspaceSetup,
+    onWorkspaceReady,
   } = useAppData(storageKey);
   const [encryptionSetupOpen, setEncryptionSetupOpen] = useState(false);
   const [encryptionPassphrase, setEncryptionPassphrase] = useState("");
@@ -370,6 +373,7 @@ export default function App() {
     // ── MODULES RENDER ────────────────────────
 
   if (!authenticated) return <Login onLogin={() => setAuthenticated(true)} />;
+  if (needsWorkspaceSetup) return <WorkspaceSetup onReady={onWorkspaceReady} />;
   if (unlockOpen) {
     return (
       <EncryptionUnlock

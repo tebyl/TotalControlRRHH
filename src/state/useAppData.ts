@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { AppData, Contacto } from "../domain/types";
 import { ensureBudgetRows } from "../domain/budget";
 import { ahora, createDataToSave, genId, hoy } from "../utils/appHelpers";
@@ -7,6 +7,7 @@ import { migrateData } from "../storage/migrations";
 import { clearCachedPassphrase, decryptAppData, encryptAppData, getCachedPassphrase, isEncryptedPayload, type EncryptedPayload } from "../storage/encryption";
 import { loadRemoteData, saveRemoteData, subscribeToRemoteChanges } from "../backend/supabaseSync";
 import { supabase, SUPABASE_CONFIGURED } from "../backend/supabaseClient";
+import { getUserWorkspace, setCachedWorkspaceId, clearWorkspaceCache, type Workspace } from "../backend/supabaseWorkspace";
 let xlsxModule: typeof import("xlsx") | null = null;
 export const getXlsx = async () => {
   if (!xlsxModule) {
@@ -194,20 +195,40 @@ export function useAppData(storageKey = STORAGE_KEY) {
     return () => { active = false; };
   }, [storageKey]);
 
-  // When Supabase session becomes available: pull remote data and push local data
+  // Workspace state: null = not resolved yet, "" = needs setup, id = ready
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const [needsWorkspaceSetup, setNeedsWorkspaceSetup] = useState(false);
+
+  // When Supabase session becomes available: resolve workspace, then sync data
   const dataRef = useRef<AppData | null>(null);
   dataRef.current = data;
   useEffect(() => {
     if (!SUPABASE_CONFIGURED) return;
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session?.user) return;
-      loadRemoteData().then(result => {
-        if (result.ok && result.data) {
-          const remote = hydrateData(result.data);
-          setData(remote);
-          saveAppData(storageKey, remote);
-        } else if (dataRef.current) {
-          saveRemoteData(dataRef.current).catch(() => {});
+      if (!session?.user) {
+        clearWorkspaceCache();
+        setWorkspaceId(null);
+        setNeedsWorkspaceSetup(false);
+        return;
+      }
+      getUserWorkspace().then(result => {
+        if (!result.ok) return;
+        if (result.data) {
+          const wsId = result.data.id;
+          setCachedWorkspaceId(wsId);
+          setWorkspaceId(wsId);
+          setNeedsWorkspaceSetup(false);
+          loadRemoteData().then(r => {
+            if (r.ok && r.data) {
+              const remote = hydrateData(r.data);
+              setData(remote);
+              saveAppData(storageKey, remote);
+            } else if (dataRef.current) {
+              saveRemoteData(dataRef.current).catch(() => {});
+            }
+          }).catch(() => {});
+        } else {
+          setNeedsWorkspaceSetup(true);
         }
       }).catch(() => {});
     });
@@ -215,25 +236,44 @@ export function useAppData(storageKey = STORAGE_KEY) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey]);
 
-  // Subscribe to real-time changes from other devices
+  // Called from WorkspaceSetup after user creates or joins a workspace
+  const onWorkspaceReady = useCallback((ws: Workspace) => {
+    setCachedWorkspaceId(ws.id);
+    setWorkspaceId(ws.id);
+    setNeedsWorkspaceSetup(false);
+    loadRemoteData().then(r => {
+      if (r.ok && r.data) {
+        const remote = hydrateData(r.data);
+        setData(remote);
+        saveAppData(storageKey, remote);
+      } else if (dataRef.current) {
+        saveRemoteData(dataRef.current).catch(() => {});
+      }
+    }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageKey]);
+
+  // Subscribe to real-time changes from collaborators in the same workspace
   const setDataRef = useRef(setData);
   setDataRef.current = setData;
   useEffect(() => {
-    if (!dataReady) return;
-    return subscribeToRemoteChanges(newData => {
+    if (!dataReady || !workspaceId) return;
+    return subscribeToRemoteChanges(workspaceId, newData => {
       const hydrated = hydrateData(newData);
       setDataRef.current(hydrated);
       saveAppData(storageKey, hydrated);
     });
-  }, [dataReady, storageKey]);
+  }, [dataReady, workspaceId, storageKey]);
 
   useEffect(() => {
     if (!dataReady) return;
     if (!encryptionEnabled) {
       saveAppData(storageKey, data);
-      // Mirror to Supabase (non-blocking, best-effort)
-      saveRemoteData(data).catch(() => {});
-      return;
+      // Debounce remote sync: only push to Supabase after 2s of no changes
+      const timer = setTimeout(() => {
+        saveRemoteData(data).catch(() => {});
+      }, 2000);
+      return () => clearTimeout(timer);
     }
     const passphrase = getCachedPassphrase();
     if (!passphrase) return;
@@ -263,5 +303,7 @@ export function useAppData(storageKey = STORAGE_KEY) {
     setUnlockPassphrase,
     unlockError,
     setUnlockError,
+    needsWorkspaceSetup,
+    onWorkspaceReady,
   };
 }
