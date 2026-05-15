@@ -6,6 +6,7 @@ import { readStorageJSON, removeStorageKey, saveAppData, writeStorageJSON, STORA
 import { migrateData } from "../storage/migrations";
 import { clearCachedPassphrase, decryptAppData, encryptAppData, getCachedPassphrase, isEncryptedPayload, type EncryptedPayload } from "../storage/encryption";
 import { loadRemoteData, saveRemoteData, subscribeToRemoteChanges } from "../backend/supabaseSync";
+import { supabase, SUPABASE_CONFIGURED } from "../backend/supabaseClient";
 let xlsxModule: typeof import("xlsx") | null = null;
 export const getXlsx = async () => {
   if (!xlsxModule) {
@@ -193,19 +194,26 @@ export function useAppData(storageKey = STORAGE_KEY) {
     return () => { active = false; };
   }, [storageKey]);
 
-  // After local data is ready, try to pull fresher data from Supabase
+  // When Supabase session becomes available: pull remote data and push local data
+  const dataRef = useRef<AppData | null>(null);
+  dataRef.current = data;
   useEffect(() => {
-    if (!dataReady) return;
-    loadRemoteData().then(result => {
-      if (result.ok && result.data) {
-        const remote = hydrateData(result.data);
-        setData(remote);
-        saveAppData(storageKey, remote);
-      }
-    }).catch(() => {});
-  // Only run once after dataReady — intentionally no reactive deps on data
+    if (!SUPABASE_CONFIGURED) return;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session?.user) return;
+      loadRemoteData().then(result => {
+        if (result.ok && result.data) {
+          const remote = hydrateData(result.data);
+          setData(remote);
+          saveAppData(storageKey, remote);
+        } else if (dataRef.current) {
+          saveRemoteData(dataRef.current).catch(() => {});
+        }
+      }).catch(() => {});
+    });
+    return () => subscription.unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dataReady]);
+  }, [storageKey]);
 
   // Subscribe to real-time changes from other devices
   const setDataRef = useRef(setData);

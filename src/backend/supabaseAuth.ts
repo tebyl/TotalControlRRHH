@@ -27,10 +27,13 @@ export async function supabaseSignIn(
     password: passwordHash,
   });
 
-  if (!error && data.user) return { ok: true, userId: data.user.id };
+  if (!error && data.user) {
+    return { ok: true, userId: data.user.id };
+  }
 
-  // First time: create the user in Supabase (auto sign-up)
-  if (error?.message?.includes("Invalid login credentials")) {
+  // Attempt sign-up on any sign-in failure (covers 422 invalid email format,
+  // 400 invalid_credentials, and "user not found" variants)
+  {
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
       password: passwordHash,
@@ -41,8 +44,6 @@ export async function supabaseSignIn(
     }
     return { ok: false, error: signUpError?.message ?? "Error al crear usuario" };
   }
-
-  return { ok: false, error: error?.message ?? "Error desconocido" };
 }
 
 export async function supabaseSignOut(): Promise<void> {
