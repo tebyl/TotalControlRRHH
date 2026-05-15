@@ -265,12 +265,18 @@ export function useAppData(storageKey = STORAGE_KEY) {
     });
   }, [dataReady, workspaceId, storageKey]);
 
+  // Track last data sent to Supabase to avoid redundant saves
+  const lastRemoteSave = useRef<string>("");
+
   useEffect(() => {
     if (!dataReady) return;
     if (!encryptionEnabled) {
       saveAppData(storageKey, data);
-      // Debounce remote sync: only push to Supabase after 2s of no changes
+      // Debounce + dedup: only push to Supabase after 2s of no changes AND data actually changed
       const timer = setTimeout(() => {
+        const serialized = JSON.stringify(data);
+        if (serialized === lastRemoteSave.current) return;
+        lastRemoteSave.current = serialized;
         saveRemoteData(data).catch(() => {});
       }, 2000);
       return () => clearTimeout(timer);
