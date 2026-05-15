@@ -17,7 +17,7 @@ import { FormCapturaRapida } from "./forms/FormCapturaRapida";
 import { FormValesGas } from "./forms/FormValesGas";
 import { FormValeGasOrg } from "./forms/FormValeGasOrg";
 import { FormReclutamiento } from "./forms/FormReclutamiento";
-import { cn } from "./utils/cn";
+import { ModuloMiDia } from "./modules/ModuloMiDia";
 import {
   ahora,
   createDataToSave,
@@ -92,10 +92,12 @@ import { Select, INPUT_BASE } from "./components/forms/fields";
 import {
   ConfirmDialog,
   ErrorBoundary,
+  ExpandableSection,
+  FilterPanel,
   KpiCard as KpiCardUI,
-  KpiGroup,
   LoadingSpinner,
   Modal,
+  ModuleHeader,
   PageHeader,
   SectionCard,
   SkeletonCard,
@@ -106,6 +108,32 @@ import { login as authLogin, getSession, logout as authLogout, refreshSession } 
 import { can } from "./auth/permissions";
 import { logAudit } from "./audit/auditService";
 import { Sidebar } from "./components/sidebar/Sidebar";
+import {
+  AlertTriangle,
+  Award,
+  Bell,
+  BookOpen,
+  CalendarRange,
+  CheckCircle2,
+  ClipboardCheck,
+  Clock,
+  ContactRound,
+  FileText,
+  Fuel,
+  GraduationCap,
+  Hourglass,
+  LayoutDashboard,
+  Package,
+  Search,
+  Settings,
+  ShieldOff,
+  TrendingUp,
+  UserRound,
+  UserRoundPlus,
+  Users,
+  Wallet,
+  Zap,
+} from "lucide-react";
 
 const ChartsPanel = React.lazy(() => import("./components/dashboard/ChartsPanel"));
 
@@ -353,6 +381,24 @@ const SIDEBAR_TO_MODULO: Record<string, Modulo> = {
 const MODULO_TO_SIDEBAR: Record<string, string> = Object.fromEntries(
   Object.entries(SIDEBAR_TO_MODULO).map(([k, v]) => [v, k])
 );
+
+const MODULE_BREADCRUMB: Record<string, { group: string; label: string }> = {
+  inicio:        { group: "",           label: "Inicio" },
+  midia:         { group: "Operación",  label: "Mi Día" },
+  dashboard:     { group: "Operación",  label: "Dashboard" },
+  cursos:        { group: "Operación",  label: "Cursos / DNC" },
+  ocs:           { group: "Operación",  label: "OCs Pendientes" },
+  procesos:      { group: "Operación",  label: "Procesos Pend." },
+  practicantes:  { group: "Personas",   label: "Practicantes" },
+  evaluaciones:  { group: "Personas",   label: "Evaluaciones" },
+  reclutamiento: { group: "Personas",   label: "Reclutamiento" },
+  contactos:     { group: "Personas",   label: "Contactos" },
+  diplomas:      { group: "Documentos", label: "Diplomas/Cert/Lic" },
+  presupuesto:   { group: "Finanzas",   label: "Presupuesto" },
+  valesGas:      { group: "Finanzas",   label: "Vales de Gas" },
+  cargaSemanal:  { group: "Finanzas",   label: "Carga Semanal" },
+  configuracion: { group: "Sistema",    label: "Configuración" },
+};
 
 export default function App() {
   const [authenticated, setAuthenticated] = useState(() => getSession() !== null);
@@ -1873,137 +1919,197 @@ El dashboard responde:
       />
 
       {/* Main content */}
-      <main className={`flex-1 overflow-y-auto ${focusMode ? "p-4 max-w-4xl mx-auto" : "p-6"}`}>
+      <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        {/* Global top bar */}
+        <div className="h-12 bg-white border-b border-slate-200 flex items-center gap-3 px-5 shrink-0">
+          {/* Breadcrumb */}
+          <nav className="flex items-center gap-1.5 text-sm flex-1 min-w-0">
+            {MODULE_BREADCRUMB[activeModulo]?.group && (
+              <>
+                <span className="text-slate-400 truncate">{MODULE_BREADCRUMB[activeModulo].group}</span>
+                <span className="text-slate-300">/</span>
+              </>
+            )}
+            <span className="text-slate-700 font-medium truncate">{MODULE_BREADCRUMB[activeModulo]?.label ?? activeModulo}</span>
+          </nav>
+          {/* Global search (decorativo) */}
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 w-56 cursor-default select-none">
+            <Search size={12} className="text-slate-400 shrink-0" />
+            <span className="text-xs text-slate-400 flex-1">Buscar en toda la app...</span>
+            <kbd className="text-[10px] text-slate-400 bg-white border border-slate-200 rounded px-1 py-0.5 font-sans">⌘K</kbd>
+          </div>
+          <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 transition-colors" aria-label="Notificaciones">
+            <Bell size={15} />
+          </button>
+          <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 transition-colors" aria-label="Configuración">
+            <Settings size={15} />
+          </button>
+        </div>
+        {/* Page content */}
+        <div className={`flex-1 overflow-y-auto ${focusMode ? "p-4 max-w-4xl mx-auto" : "p-6"}`}>
       <ErrorBoundary>
         {activeModulo === "inicio" && (
           <div className="space-y-6">
-            {/* Hero banner */}
-            <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-blue-900 text-white rounded-2xl p-7 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/10 rounded-full -translate-y-12 translate-x-12" />
-              <div className="absolute bottom-0 left-1/3 w-32 h-32 bg-blue-400/5 rounded-full translate-y-8" />
-              <div className="relative">
-                <div className="text-xs font-semibold tracking-widest text-blue-300 uppercase mb-2">PulsoLaboral</div>
-                <h1 className="text-2xl font-bold mb-2 leading-tight">Control Operativo RH</h1>
-                <p className="text-blue-200 text-sm">Registra todo el mismo día · Revisa cada mañana · Cierra lo que termines</p>
-              </div>
-            </div>
-
-            {/* Alerta regla de oro */}
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-              <span className="text-xl shrink-0 mt-0.5">⚠️</span>
+            {/* Saludo */}
+            <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-sm font-semibold text-amber-900">Regla de oro</p>
-                <p className="text-sm text-amber-800 mt-0.5">"Si no está registrado aquí, no existe para seguimiento."</p>
+                <h1 className="text-2xl font-bold text-slate-800 leading-tight">PulsoLaboral</h1>
+                <p className="text-sm text-slate-500 mt-0.5">Registra todo el mismo día · Revisa cada mañana · Cierra lo que termines</p>
               </div>
+              <button
+                onClick={() => setCaptureOpen(true)}
+                className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm shrink-0"
+              >
+                <Zap size={14} strokeWidth={2} />
+                Captura rápida
+              </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <SectionCard title="📋 Rutina semanal sugerida">
-                <ul className="text-sm text-slate-600 space-y-2.5">
-                  {[
-                    { day: "Lunes", task: "Revisar cursos, OCs y presupuesto" },
-                    { day: "Miércoles", task: "Revisar diplomas, BUK y evaluaciones psicolaborales" },
-                    { day: "Viernes", task: "Cerrar pendientes, actualizar estados y preparar semana siguiente" },
-                  ].map(({ day, task }) => (
-                    <li key={day} className="flex gap-2">
-                      <span className="inline-block w-20 shrink-0 text-xs font-bold text-blue-600 bg-blue-50 rounded px-1.5 py-0.5 h-fit mt-0.5">{day}</span>
-                      <span>{task}</span>
-                    </li>
-                  ))}
-                </ul>
-              </SectionCard>
+            {/* 3 KPIs héroe — los datos críticos al abrir el día */}
+            <div className="grid grid-cols-3 gap-4">
+              <KpiCardUI
+                size="hero"
+                label="Vencidos sin cerrar"
+                value={dashboardData.semaforoCounts.vencido}
+                icon={<AlertTriangle size={22} strokeWidth={2} />}
+                variant={dashboardData.semaforoCounts.vencido > 0 ? "danger" : "default"}
+                onClick={() => setActiveModulo("dashboard")}
+              />
+              <KpiCardUI
+                size="hero"
+                label="P1 Críticos activos"
+                value={dashboardData.cursosP1}
+                icon={<Zap size={22} strokeWidth={2} />}
+                variant={dashboardData.cursosP1 > 0 ? "danger" : "default"}
+                onClick={() => setActiveModulo("cursos")}
+              />
+              <KpiCardUI
+                size="hero"
+                label="Procesos bloqueados"
+                value={dashboardData.procesosBloqueados}
+                icon={<ShieldOff size={22} strokeWidth={2} />}
+                variant={dashboardData.procesosBloqueados > 0 ? "warning" : "default"}
+                onClick={() => setActiveModulo("procesos")}
+              />
+            </div>
 
-              <SectionCard title="🔑 Lógica del sistema">
-                <ul className="text-sm text-slate-600 space-y-1.5">
-                  {["Registrar todo el mismo día", "Actualizar estado, prioridad y bloqueo", "Usar P1/P2/P3/P4 correctamente", "Cerrar procesos finalizados", "Exportar respaldo semanal (JSON/XLSX)"].map(t => (
-                    <li key={t} className="flex items-start gap-2"><span className="text-emerald-500 mt-0.5 shrink-0">✓</span>{t}</li>
-                  ))}
-                </ul>
+            {/* Lo más urgente — bandeja priorizada compacta */}
+            {dashboardData.bandeja.length > 0 && (
+              <SectionCard
+                title={<span className="flex items-center gap-2"><AlertTriangle size={14} className="text-amber-500" />Lo más urgente</span>}
+                subtitle={`${Math.min(dashboardData.bandeja.length, 8)} ítems priorizados de todos los módulos activos`}
+                noPadding
+              >
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left" aria-label="Bandeja urgente">
+                    <thead>
+                      <tr className="bg-[#f7f8fb] border-b border-slate-100">
+                        {["Tipo","Nombre","Prioridad","Estado","Fecha","Módulo"].map(h => (
+                          <th key={h} scope="col" className="px-4 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {dashboardData.bandeja.slice(0, 8).map((item, i) => (
+                        <tr
+                          key={`inicio_${item.modulo}_${i}`}
+                          className="hover:bg-[#f7f8fb] transition-colors cursor-pointer"
+                          onClick={() => setActiveModulo(item.modulo as Modulo)}
+                        >
+                          <td className="px-4 py-2.5"><Badge label={item.tipo} colorClass="bg-slate-100 text-slate-600 border border-slate-200" /></td>
+                          <td className="px-4 py-2.5 font-medium text-slate-800 max-w-[220px]"><div className="truncate">{item.nombre}</div></td>
+                          <td className="px-4 py-2.5"><Badge label={item.prioridad} colorClass={prioridadColor[item.prioridad] || ""} /></td>
+                          <td className="px-4 py-2.5"><Badge label={item.estado} colorClass={estadoColor[item.estado] || ""} /></td>
+                          <td className="px-4 py-2.5">{item.fechaProximaAccion ? <SemaforoBadge fecha={item.fechaProximaAccion} /> : <span className="text-slate-300 text-xs">—</span>}</td>
+                          <td className="px-4 py-2.5 text-xs text-blue-600">{item.modulo}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {dashboardData.bandeja.length > 8 && (
+                  <div className="px-4 py-3 border-t border-slate-100">
+                    <button onClick={() => setActiveModulo("dashboard")} className="text-xs text-blue-600 hover:underline">
+                      Ver {dashboardData.bandeja.length - 8} más en Dashboard
+                    </button>
+                  </div>
+                )}
               </SectionCard>
+            )}
 
-              <SectionCard title="⚡ Accesos rápidos">
-                <div className="grid grid-cols-2 gap-2">
-                  <button onClick={() => { setActiveModulo("cursos"); openNew("cursos"); }} className="text-xs bg-blue-600 text-white rounded-xl px-3 py-2.5 hover:bg-blue-700 transition font-medium">+ Nuevo curso</button>
-                  <button onClick={() => { setActiveModulo("ocs"); openNew("ocs"); }} className="text-xs bg-blue-600 text-white rounded-xl px-3 py-2.5 hover:bg-blue-700 transition font-medium">+ Nueva OC</button>
-                  <button onClick={() => { setActiveModulo("practicantes"); openNew("practicantes"); }} className="text-xs bg-blue-600 text-white rounded-xl px-3 py-2.5 hover:bg-blue-700 transition font-medium">+ Practicante</button>
-                  <button onClick={() => { setActiveModulo("diplomas"); openNew("diplomas"); }} className="text-xs bg-blue-600 text-white rounded-xl px-3 py-2.5 hover:bg-blue-700 transition font-medium">+ Diploma</button>
-                  <button onClick={() => { setActiveModulo("evaluaciones"); openNew("evaluaciones"); }} className="text-xs bg-violet-600 text-white rounded-xl px-3 py-2.5 hover:bg-violet-700 transition font-medium">+ Evaluación</button>
-                  {canExportFull && (
-                    <>
-                      <button onClick={exportJSON} className="text-xs bg-emerald-600 text-white rounded-xl px-3 py-2.5 hover:bg-emerald-700 transition font-medium">📥 Exportar JSON</button>
-                      <button onClick={exportXLSX} className="text-xs bg-emerald-600 text-white rounded-xl px-3 py-2.5 hover:bg-emerald-700 transition col-span-2 font-medium">📥 Exportar XLSX</button>
-                    </>
-                  )}
-                  {!canExportFull && canExportAnonymized && (
-                    <>
-                      <button onClick={exportJSONAnonymized} className="text-xs bg-emerald-600 text-white rounded-xl px-3 py-2.5 hover:bg-emerald-700 transition font-medium">📥 Exportar JSON anon.</button>
-                      <button onClick={exportXLSXAnonymized} className="text-xs bg-emerald-600 text-white rounded-xl px-3 py-2.5 hover:bg-emerald-700 transition col-span-2 font-medium">📥 Exportar XLSX anon.</button>
-                    </>
+            {/* Accesos rápidos + stats secundarios */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <SectionCard title="Accesos rápidos">
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={() => { setActiveModulo("cursos"); openNew("cursos"); }} className="text-xs bg-blue-600 text-white rounded-lg px-3 py-2 hover:bg-blue-700 transition font-medium">+ Nuevo curso</button>
+                  <button onClick={() => { setActiveModulo("ocs"); openNew("ocs"); }} className="text-xs bg-blue-600 text-white rounded-lg px-3 py-2 hover:bg-blue-700 transition font-medium">+ Nueva OC</button>
+                  <button onClick={() => { setActiveModulo("practicantes"); openNew("practicantes"); }} className="text-xs bg-slate-100 text-slate-700 rounded-lg px-3 py-2 hover:bg-slate-200 transition font-medium">+ Practicante</button>
+                  <button onClick={() => { setActiveModulo("diplomas"); openNew("diplomas"); }} className="text-xs bg-slate-100 text-slate-700 rounded-lg px-3 py-2 hover:bg-slate-200 transition font-medium">+ Diploma</button>
+                  {(canExportFull || canExportAnonymized) && (
+                    <button onClick={canExportFull ? exportXLSX : exportXLSXAnonymized} className="text-xs bg-slate-100 text-slate-700 rounded-lg px-3 py-2 hover:bg-slate-200 transition font-medium">Exportar XLSX</button>
                   )}
                 </div>
               </SectionCard>
-            </div>
 
-            {/* Resumen rápido */}
-            <SectionCard title="📈 Resumen rápido">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <KpiCardUI label="Cursos abiertos" value={dashboardData.cursosAbiertos} icon="📚" variant={dashboardData.cursosAbiertos > 5 ? "warning" : "info"} onClick={() => setActiveModulo("cursos")} />
-                <KpiCardUI label="P1 Críticos" value={dashboardData.cursosP1} icon="🔴" variant={dashboardData.cursosP1 > 0 ? "danger" : "success"} onClick={() => setActiveModulo("cursos")} />
-                <KpiCardUI label="OCs pendientes" value={dashboardData.ocsPendientes} icon="🧾" variant={dashboardData.ocsPendientes > 3 ? "warning" : "default"} onClick={() => setActiveModulo("ocs")} />
-                <KpiCardUI label="Pendientes BUK" value={dashboardData.diplomasBUK} icon="📜" variant={dashboardData.diplomasBUK > 0 ? "danger" : "success"} onClick={() => setActiveModulo("diplomas")} />
-                <KpiCardUI label="Evaluaciones abiertas" value={dashboardData.evaluacionesAbiertas} icon="🧠" variant="purple" onClick={() => setActiveModulo("evaluaciones")} />
-                <KpiCardUI label="Informe pendiente" value={dashboardData.evaluacionesInformePendiente} icon="⏳" variant={dashboardData.evaluacionesInformePendiente > 0 ? "warning" : "success"} onClick={() => setActiveModulo("evaluaciones")} />
-                <KpiCardUI label="Presupuesto usado" value={fmtCLP(dashboardData.presupuestoUsado)} icon="💰" variant="purple" onClick={() => setActiveModulo("presupuesto")} />
-                <KpiCardUI label="Procesos bloqueados" value={dashboardData.procesosBloqueados} icon="🚫" variant={dashboardData.procesosBloqueados > 0 ? "danger" : "success"} onClick={() => setActiveModulo("procesos")} />
-              </div>
-            </SectionCard>
+              <SectionCard
+                title={<span className="flex items-center gap-2"><TrendingUp size={14} className="text-slate-400" />Estado general</span>}
+                noPadding
+              >
+                <div className="divide-y divide-slate-50">
+                  <KpiCardUI size="mini" label="Cursos abiertos" value={dashboardData.cursosAbiertos} icon={<BookOpen size={14} />} variant="info" onClick={() => setActiveModulo("cursos")} />
+                  <KpiCardUI size="mini" label="OCs pendientes" value={dashboardData.ocsPendientes} icon={<FileText size={14} />} variant={dashboardData.ocsPendientes > 3 ? "warning" : "default"} onClick={() => setActiveModulo("ocs")} />
+                  <KpiCardUI size="mini" label="Pendientes BUK" value={dashboardData.diplomasBUK} icon={<Award size={14} />} variant={dashboardData.diplomasBUK > 0 ? "danger" : "default"} onClick={() => setActiveModulo("diplomas")} />
+                  <KpiCardUI size="mini" label="Evaluaciones abiertas" value={dashboardData.evaluacionesAbiertas} icon={<ClipboardCheck size={14} />} variant="purple" onClick={() => setActiveModulo("evaluaciones")} />
+                  <KpiCardUI size="mini" label="Sin actualizar +7d" value={dashboardData.sinActualizar} icon={<Clock size={14} />} variant={dashboardData.sinActualizar > 0 ? "warning" : "default"} />
+                </div>
+              </SectionCard>
+            </div>
           </div>
         )}
 
         {activeModulo === "midia" && <ModuloMiDia data={data} setActiveModulo={setActiveModulo} onCapturaRapida={() => setCaptureOpen(true)} />}
         {activeModulo === "dashboard" && (
           <div className="space-y-6">
-            <PageHeader
-              icon="📊"
-              title="¿Qué hago primero hoy?"
+            <ModuleHeader
+              icon={<LayoutDashboard size={20} className="text-white" />}
+              gradient="from-blue-500 to-indigo-600"
+              title="Dashboard"
               subtitle="Vista centralizada de estado operacional, alertas y prioridades."
-              actions={
-                <button onClick={() => setCaptureOpen(true)} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">
-                  ⚡ Captura rápida
-                </button>
-              }
             />
 
-            {/* KPIs agrupados por área */}
-            <div className="space-y-4">
-              <KpiGroup title="Operacional">
-                <KpiCardUI label="Cursos abiertos" value={dashboardData.cursosAbiertos} icon="📚" variant={dashboardData.cursosAbiertos > 5 ? "warning" : "info"} description="Sin cerrar" onClick={() => setActiveModulo("cursos")} />
-                <KpiCardUI label="P1 Críticos" value={dashboardData.cursosP1} icon="🔴" variant={dashboardData.cursosP1 > 0 ? "danger" : "success"} description="Prioridad máxima" onClick={() => setActiveModulo("cursos")} />
-                <KpiCardUI label="OCs pendientes" value={dashboardData.ocsPendientes} icon="🧾" variant={dashboardData.ocsPendientes > 3 ? "warning" : "default"} description="En proceso" onClick={() => setActiveModulo("ocs")} />
-                <KpiCardUI label="Pendientes BUK" value={dashboardData.diplomasBUK} icon="📜" variant={dashboardData.diplomasBUK > 0 ? "danger" : "success"} description="Por subir" onClick={() => setActiveModulo("diplomas")} />
-              </KpiGroup>
-              <KpiGroup title="Personas y evaluaciones">
-                <KpiCardUI label="Evaluaciones abiertas" value={dashboardData.evaluacionesAbiertas} icon="🧠" variant="purple" description="En seguimiento" onClick={() => setActiveModulo("evaluaciones")} />
-                <KpiCardUI label="Informe pendiente" value={dashboardData.evaluacionesInformePendiente} icon="⏳" variant={dashboardData.evaluacionesInformePendiente > 0 ? "warning" : "success"} description="Realizada sin informe" onClick={() => setActiveModulo("evaluaciones")} />
-                <KpiCardUI label="Procesos bloqueados" value={dashboardData.procesosBloqueados} icon="🚫" variant={dashboardData.procesosBloqueados > 0 ? "danger" : "success"} description="Con bloqueo activo" onClick={() => setActiveModulo("procesos")} />
-                <KpiCardUI label="Sin actualizar +7d" value={dashboardData.sinActualizar} icon="🕐" variant={dashboardData.sinActualizar > 0 ? "warning" : "success"} description="Requieren revisión" />
-              </KpiGroup>
-              <KpiGroup title="Vales de gas">
-                <KpiCardUI label="Stock organización" value={dashboardData.valesGasStockOrg} icon="⛽" variant="info" description="Total registrado" onClick={() => setActiveModulo("valesGas")} />
-                <KpiCardUI label="Saldo disponible" value={dashboardData.valesGasSaldoOrg} icon="📦" variant={dashboardData.valesGasSaldoOrg < 0 ? "danger" : "success"} description="Stock − asignados" onClick={() => setActiveModulo("valesGas")} />
-                <KpiCardUI label="Vales asignados" value={dashboardData.valesGasAsignados} icon="👤" variant="default" description="A colaboradores" onClick={() => setActiveModulo("valesGas")} />
-                <KpiCardUI label="En descuento" value={dashboardData.valesGasEnDescuento} icon="💸" variant={dashboardData.valesGasEnDescuento > 0 ? "warning" : "default"} description="Activos" onClick={() => setActiveModulo("valesGas")} />
-              </KpiGroup>
-              <KpiGroup title="Reclutamiento">
-                <KpiCardUI label="Procesos abiertos" value={dashboardData.reclAbiertos} icon="👥" variant="info" description="En curso" onClick={() => setActiveModulo("reclutamiento")} />
-                <KpiCardUI label="Pausados" value={dashboardData.reclPausados} icon="⏸" variant={dashboardData.reclPausados > 0 ? "warning" : "success"} description="Con bloqueo" onClick={() => setActiveModulo("reclutamiento")} />
-                <KpiCardUI label="Bloqueados" value={dashboardData.reclBloqueados} icon="🚧" variant={dashboardData.reclBloqueados > 0 ? "danger" : "success"} description="Requieren acción" onClick={() => setActiveModulo("reclutamiento")} />
-                <KpiCardUI label="Ingresos próximos" value={dashboardData.reclIngresosProximos} icon="📅" variant={dashboardData.reclIngresosProximos > 0 ? "info" : "default"} description="En los próximos 7 días" onClick={() => setActiveModulo("reclutamiento")} />
-              </KpiGroup>
+            {/* 3 KPIs héroe — críticos */}
+            <div className="grid grid-cols-3 gap-4">
+              <KpiCardUI size="hero" label="Vencidos sin cerrar" value={dashboardData.semaforoCounts.vencido} icon={<AlertTriangle size={22} strokeWidth={2} />} variant={dashboardData.semaforoCounts.vencido > 0 ? "danger" : "default"} description="Requieren acción inmediata" />
+              <KpiCardUI size="hero" label="P1 Críticos activos" value={dashboardData.cursosP1} icon={<Zap size={22} strokeWidth={2} />} variant={dashboardData.cursosP1 > 0 ? "danger" : "default"} description="Prioridad máxima" onClick={() => setActiveModulo("cursos")} />
+              <KpiCardUI size="hero" label="Procesos bloqueados" value={dashboardData.procesosBloqueados} icon={<ShieldOff size={22} strokeWidth={2} />} variant={dashboardData.procesosBloqueados > 0 ? "warning" : "default"} description="Con bloqueo activo" onClick={() => setActiveModulo("procesos")} />
+            </div>
+
+            {/* Stats secundarios en tabla compacta */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <SectionCard title={<span className="flex items-center gap-2"><GraduationCap size={14} className="text-amber-500" />Operacional</span>} noPadding>
+                <div className="divide-y divide-slate-50">
+                  <KpiCardUI size="mini" label="Cursos abiertos" value={dashboardData.cursosAbiertos} icon={<BookOpen size={14} />} variant="info" onClick={() => setActiveModulo("cursos")} />
+                  <KpiCardUI size="mini" label="OCs pendientes" value={dashboardData.ocsPendientes} icon={<FileText size={14} />} variant={dashboardData.ocsPendientes > 3 ? "warning" : "default"} onClick={() => setActiveModulo("ocs")} />
+                  <KpiCardUI size="mini" label="Pendientes BUK" value={dashboardData.diplomasBUK} icon={<Award size={14} />} variant={dashboardData.diplomasBUK > 0 ? "danger" : "default"} onClick={() => setActiveModulo("diplomas")} />
+                  <KpiCardUI size="mini" label="Sin actualizar +7d" value={dashboardData.sinActualizar} icon={<Clock size={14} />} variant={dashboardData.sinActualizar > 0 ? "warning" : "default"} />
+                  <KpiCardUI size="mini" label="Informe psico pendiente" value={dashboardData.evaluacionesInformePendiente} icon={<ClipboardCheck size={14} />} variant={dashboardData.evaluacionesInformePendiente > 0 ? "warning" : "default"} onClick={() => setActiveModulo("evaluaciones")} />
+                  <KpiCardUI size="mini" label="Evaluaciones abiertas" value={dashboardData.evaluacionesAbiertas} icon={<ClipboardCheck size={14} />} variant="purple" onClick={() => setActiveModulo("evaluaciones")} />
+                </div>
+              </SectionCard>
+              <SectionCard title={<span className="flex items-center gap-2"><Fuel size={14} className="text-emerald-500" />Finanzas &amp; Reclutamiento</span>} noPadding>
+                <div className="divide-y divide-slate-50">
+                  <KpiCardUI size="mini" label="Stock vales organización" value={dashboardData.valesGasStockOrg} icon={<Fuel size={14} />} variant="info" onClick={() => setActiveModulo("valesGas")} />
+                  <KpiCardUI size="mini" label="Saldo disponible vales" value={dashboardData.valesGasSaldoOrg} icon={<Package size={14} />} variant={dashboardData.valesGasSaldoOrg < 0 ? "danger" : "default"} onClick={() => setActiveModulo("valesGas")} />
+                  <KpiCardUI size="mini" label="Vales en descuento" value={dashboardData.valesGasEnDescuento} icon={<Wallet size={14} />} variant={dashboardData.valesGasEnDescuento > 0 ? "warning" : "default"} onClick={() => setActiveModulo("valesGas")} />
+                  <KpiCardUI size="mini" label="Reclut. procesos abiertos" value={dashboardData.reclAbiertos} icon={<Users size={14} />} variant="info" onClick={() => setActiveModulo("reclutamiento")} />
+                  <KpiCardUI size="mini" label="Reclut. bloqueados" value={dashboardData.reclBloqueados} icon={<ShieldOff size={14} />} variant={dashboardData.reclBloqueados > 0 ? "danger" : "default"} onClick={() => setActiveModulo("reclutamiento")} />
+                  <KpiCardUI size="mini" label="Ingresos próximos 7d" value={dashboardData.reclIngresosProximos} icon={<CalendarRange size={14} />} variant={dashboardData.reclIngresosProximos > 0 ? "info" : "default"} onClick={() => setActiveModulo("reclutamiento")} />
+                </div>
+              </SectionCard>
             </div>
 
             {/* Semáforo general */}
-            <SectionCard title="🚦 Semáforo general" subtitle="Distribución de urgencias por fecha próxima acción">
+            <SectionCard title={<span className="flex items-center gap-2"><CheckCircle2 size={14} className="text-slate-400" />Semáforo general</span>} subtitle="Distribución de urgencias por fecha próxima acción">
               <div className="flex flex-wrap gap-3">
                 <SemaforoItem color="#DC2626" label="Vencido" count={dashboardData.semaforoCounts.vencido} />
                 <SemaforoItem color="#EA580C" label="Vence hoy" count={dashboardData.semaforoCounts.venceHoy} />
@@ -2015,7 +2121,7 @@ El dashboard responde:
             </SectionCard>
 
             {/* Bandeja de acción */}
-            <SectionCard title="📋 Bandeja de acción priorizada" subtitle="Los 20 ítems más urgentes de todos los módulos activos" noPadding>
+            <SectionCard title={<span className="flex items-center gap-2"><AlertTriangle size={14} className="text-amber-500" />Bandeja de acción priorizada</span>} subtitle="Los 20 ítems más urgentes de todos los módulos activos" noPadding>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left" aria-label="Bandeja de acción priorizada">
                   <thead>
@@ -2224,15 +2330,6 @@ El dashboard responde:
           <FormCapturaRapida data={data} onCancel={() => setCaptureOpen(false)} onSave={saveCaptura} />
         </Modal>
 
-        {/* CAPTURA RÁPIDA: Botón flotante global (visible en cualquier pantalla) */}
-        <button
-          onClick={() => setCaptureOpen(true)}
-          title="Captura rápida"
-          className="fixed bottom-6 left-6 z-[60] bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-2xl shadow-lg shadow-blue-200/40 text-sm font-medium flex items-center gap-2 transition-colors"
-        >
-          <span className="text-lg">⚡</span>
-          <span className="hidden sm:inline">+ Captura rápida</span>
-        </button>
 
         <div aria-live="polite">
           <ToastContainer toasts={toasts.map(({ id, ...rest }) => rest)} onRemove={(index) => {
@@ -2241,6 +2338,7 @@ El dashboard responde:
           }} />
         </div>
       </ErrorBoundary>
+        </div>
       </main>
     </div>
   );
@@ -2248,208 +2346,6 @@ El dashboard responde:
 
 // ── HELPER COMPONENTS ────────────────────────
 // ── "MI DÍA" MODULE ──────────────────────────
-
-function ModuloMiDia({ data, setActiveModulo, onCapturaRapida }: { data: AppData; setActiveModulo: (m: Modulo) => void; onCapturaRapida: () => void }) {
-  const hoyStr = hoy();
-  const hace7Str = new Date(new Date(hoyStr).getTime() - 7 * 86400000).toISOString().slice(0, 10);
-
-  interface Tarjeta {
-    tipo: string;
-    nombre: string;
-    prioridad: string;
-    estado: string;
-    responsable: string;
-    proximaAccion: string;
-    fecha: string;
-    bloqueadoPor: string;
-    modulo: Modulo;
-    semaforoLabel: string;
-    semaforoColor: string;
-    order: number;
-  }
-
-    const allOpenItems = useMemo(() => {
-      const items: Tarjeta[] = [];
-
-      data.cursos.forEach(c => {
-        if (isClosedRecord(c, "cursos")) return;
-        const s = semaforo(c.fechaProximaAccion || c.fechaRequerida);
-        items.push({
-          tipo: "Curso", nombre: c.curso, prioridad: c.prioridad, estado: c.estado,
-          responsable: getResponsableName(data, c.responsableId),
-          proximaAccion: c.proximaAccion, fecha: c.fechaProximaAccion || c.fechaRequerida,
-          bloqueadoPor: c.bloqueadoPor, modulo: "cursos",
-          semaforoLabel: s.label, semaforoColor: s.color, order: s.order,
-        });
-      });
-
-      data.ocs.forEach(o => {
-        if (isClosedRecord(o, "ocs")) return;
-        const s = semaforo(o.fechaLimite);
-        items.push({
-          tipo: "OC", nombre: `${o.numeroOC} - ${o.cursoAsociado}`, prioridad: o.prioridad,
-          estado: o.estadoOC, responsable: getResponsableName(data, o.responsableId),
-          proximaAccion: o.accionPendiente, fecha: o.fechaLimite,
-          bloqueadoPor: o.bloqueadoPor, modulo: "ocs",
-          semaforoLabel: s.label, semaforoColor: s.color, order: s.order,
-        });
-      });
-
-      data.practicantes.forEach(p => {
-        if (isClosedRecord(p, "practicantes")) return;
-        const s = semaforo(p.fechaProximaAccion || p.fechaTermino);
-        items.push({
-          tipo: "Practicante", nombre: p.nombre, prioridad: "P3 Medio", estado: p.estado,
-          responsable: getResponsableName(data, p.responsableId),
-          proximaAccion: p.proximoPaso, fecha: p.fechaProximaAccion || p.fechaTermino,
-          bloqueadoPor: p.bloqueadoPor, modulo: "practicantes",
-          semaforoLabel: s.label, semaforoColor: s.color, order: s.order,
-        });
-      });
-
-      data.procesos.forEach(p => {
-        if (isClosedRecord(p, "procesos")) return;
-        const s = semaforo(p.fechaProximaAccion || p.fechaLimite);
-        items.push({
-          tipo: "Proceso", nombre: p.proceso, prioridad: p.prioridad,
-          estado: p.estadoActual, responsable: getResponsableName(data, p.responsableId),
-          proximaAccion: p.proximaAccion, fecha: p.fechaProximaAccion || p.fechaLimite,
-          bloqueadoPor: p.bloqueadoPor, modulo: "procesos",
-          semaforoLabel: s.label, semaforoColor: s.color, order: s.order,
-        });
-      });
-
-      data.diplomas.forEach(d => {
-        if (isClosedRecord(d, "diplomas")) return;
-        const s = semaforo(d.fechaProximaAccion);
-        items.push({
-          tipo: "Diploma/Cert/Lic", nombre: `${d.tipoDocumento} - ${d.participante}`,
-          prioridad: d.prioridad, estado: d.etapa, responsable: getResponsableName(data, d.responsableId),
-          proximaAccion: d.proximaAccion, fecha: d.fechaProximaAccion,
-          bloqueadoPor: d.bloqueadoPor, modulo: "diplomas",
-          semaforoLabel: s.label, semaforoColor: s.color, order: s.order,
-        });
-      });
-
-      data.evaluacionesPsicolaborales.forEach(e => {
-        if (isClosedRecord(e, "evaluacionesPsicolaborales")) return;
-        const s = semaforo(e.fechaProximaAccion || e.fechaEntregaInforme);
-        items.push({
-          tipo: "Eval. Psico", nombre: `${e.cargo} - ${e.candidato}`,
-          prioridad: e.prioridad, estado: e.estado, responsable: getResponsableName(data, e.responsableId),
-          proximaAccion: e.proximaAccion, fecha: e.fechaProximaAccion || e.fechaEntregaInforme,
-          bloqueadoPor: e.bloqueadoPor, modulo: "evaluaciones",
-          semaforoLabel: s.label, semaforoColor: s.color, order: s.order,
-        });
-      });
-
-      (data.reclutamiento || []).forEach((r: ProcesoReclutamiento) => {
-        if (["Cerrado", "Desistido"].includes(r.proceso)) return;
-        const fechaRef = r.fechaProximaAccion || r.fechaIngreso;
-        const s = semaforo(fechaRef);
-        items.push({
-          tipo: "Reclutamiento", nombre: `${r.reclutamiento || "Proceso"} - ${r.plantaCentro}`,
-          prioridad: r.prioridad, estado: r.proceso, responsable: getResponsableName(data, r.reclutadorId),
-          proximaAccion: r.proximaAccion, fecha: fechaRef,
-          bloqueadoPor: r.bloqueadoPor, modulo: "reclutamiento" as Modulo,
-          semaforoLabel: s.label, semaforoColor: s.color, order: s.order,
-        });
-      });
-
-      return items;
-    }, [data]);
-
-  const blocked = (b: string) => b && b !== "Sin bloqueo" && b !== "";
-
-  const urgenteHoy = allOpenItems.filter(item =>
-    item.semaforoLabel === "Vence hoy" || item.prioridad === "P1 Crítico"
-  ).sort((a, b) => a.order - b.order);
-
-  const vencido = allOpenItems.filter(item =>
-    item.semaforoLabel === "Vencido"
-  ).sort((a, b) => a.order - b.order);
-
-  const bloqueadoList = allOpenItems.filter(item =>
-    blocked(item.bloqueadoPor)
-  ).sort((a, b) => a.order - b.order);
-
-  const actualizar = allOpenItems.filter(item => {
-    const c = data.cursos.find((x: any) => x.curso === item.nombre);
-    const ult = (c as any)?.ultimaActualizacion || "";
-    return (ult && ult < hace7Str) || (!item.proximaAccion && !item.fecha);
-  }).sort((a, b) => a.order - b.order);
-
-  const secciones = [
-    { title: "🔴 Urgente hoy", desc: "Fecha hoy o prioridad P1 Crítico", items: urgenteHoy, color: "border-red-300", bg: "bg-red-50/50" },
-    { title: "⚠️ Vencido", desc: "Fecha límite anterior a hoy, sin cerrar", items: vencido, color: "border-orange-300", bg: "bg-orange-50/50" },
-    { title: "🚫 Bloqueado", desc: "Registros con un bloqueo activo", items: bloqueadoList, color: "border-purple-300", bg: "bg-purple-50/50" },
-    { title: "📝 Actualizar antes de cerrar el día", desc: "Sin actualizar hace más de 7 días o sin próxima acción", items: actualizar, color: "border-blue-300", bg: "bg-blue-50/50" },
-  ];
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">☀️ Mi Día</h1>
-          <p className="text-sm text-slate-500 mt-1">Qué revisar primero hoy, sin entrar a todos los módulos.</p>
-        </div>
-        <button onClick={onCapturaRapida} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Captura rápida</button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {secciones.map(sec => (
-          <div key={sec.title} className={`bg-white rounded-xl border ${sec.color} shadow-sm overflow-hidden`}>
-            <div className={`px-5 py-4 ${sec.bg} border-b ${sec.color}`}>
-              <h3 className="font-bold text-slate-800 text-sm">{sec.title}</h3>
-              <p className="text-xs text-slate-500">{sec.desc}</p>
-            </div>
-            <div className="divide-y divide-slate-100">
-              {sec.items.length === 0 ? (
-                <div className="px-5 py-6 text-center text-sm text-green-600">
-                  ✅ No hay elementos en esta categoría.
-                </div>
-              ) : (
-                sec.items.slice(0, 5).map((item, idx) => (
-                  <div key={idx} className="px-5 py-3 hover:bg-slate-50 transition-colors">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <Badge label={item.tipo} colorClass="bg-slate-200 text-slate-700" />
-                          <Badge label={item.prioridad} colorClass={prioridadColor[item.prioridad] || ""} />
-                          <span className="text-sm font-semibold text-slate-800 truncate">{item.nombre}</span>
-                        </div>
-                        <div className="text-xs text-slate-500 space-y-0.5">
-                          <div>Estado: <span className="font-medium">{item.estado}</span> · Resp: {item.responsable}</div>
-                          {item.proximaAccion && <div>Próxima acción: {item.proximaAccion}</div>}
-                          {blocked(item.bloqueadoPor) && <div className="text-red-600 font-medium">Bloqueado por: {item.bloqueadoPor}</div>}
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-2 shrink-0">
-                        {item.fecha && <SemaforoBadge fecha={item.fecha} />}
-                        <button
-                          onClick={() => setActiveModulo(item.modulo)}
-                          className="text-xs text-blue-600 hover:underline whitespace-nowrap"
-                        >
-                          Ir al módulo →
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-              {sec.items.length > 5 && (
-                <div className="px-5 py-2 text-center">
-                  <button className="text-xs text-blue-600 hover:underline">Ver {sec.items.length - 5} más...</button>
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ── MODULE COMPONENTS ────────────────────────
 
 function ModuloCursos({ data, search, setSearch, openNew, openEdit, deleteItem, markClosed, getResponsableName, tableLoading }: any) {
@@ -2472,7 +2368,8 @@ function ModuloCursos({ data, search, setSearch, openNew, openEdit, deleteItem, 
   return (
     <div className="space-y-5">
       <PageHeader
-        icon="📚"
+        icon={<GraduationCap size={18} />}
+        iconColor="text-amber-500"
         title="Cursos / DNC"
         subtitle="Control de cursos y capacitaciones planificadas y emergentes."
         actions={<button onClick={() => openNew("cursos")} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Agregar nuevo</button>}
@@ -2509,13 +2406,23 @@ function ModuloOCs({ data, search, setSearch, openNew, openEdit, deleteItem, mar
 
   return (
     <div className="space-y-5">
-      <PageHeader
-        icon="🧾"
+      <ModuleHeader
+        icon={<FileText size={20} className="text-white" />}
+        gradient="from-amber-400 to-orange-500"
         title="OCs Pendientes"
         subtitle="Seguimiento de órdenes de compra por categoría, estado y monto."
-        actions={<button onClick={() => openNew("ocs")} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Nueva OC</button>}
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Buscar OC, curso o proveedor..."
+        filterPanel={
+          <FilterPanel activeCount={[filtroCategoria, filtroEstado, filtroPrioridad].filter(Boolean).length} onClear={() => { setFiltroCategoria(""); setFiltroEstado(""); setFiltroPrioridad(""); }}>
+            <Select value={filtroCategoria} onChange={setFiltroCategoria} options={CATEGORIAS_OC} placeholder="Categoría" />
+            <Select value={filtroEstado} onChange={setFiltroEstado} options={ESTADOS_OC} placeholder="Estado" />
+            <Select value={filtroPrioridad} onChange={setFiltroPrioridad} options={PRIORIDADES} placeholder="Prioridad" />
+          </FilterPanel>
+        }
+        actions={<button onClick={() => openNew("ocs")} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Nueva OC</button>}
       />
-      <FilterBar search={search} setSearch={setSearch} searchPlaceholder="Buscar OC, curso o proveedor..." filters={<><Select value={filtroCategoria} onChange={setFiltroCategoria} options={CATEGORIAS_OC} placeholder="Categoría" /><Select value={filtroEstado} onChange={setFiltroEstado} options={ESTADOS_OC} placeholder="Estado" /><Select value={filtroPrioridad} onChange={setFiltroPrioridad} options={PRIORIDADES} placeholder="Prioridad" /></>} />
       <Table
         columns={columns}
         rows={filtered}
@@ -2544,13 +2451,21 @@ function ModuloPracticantes({ data, search, setSearch, openNew, openEdit, delete
 
   return (
     <div className="space-y-5">
-      <PageHeader
-        icon="👤"
+      <ModuleHeader
+        icon={<UserRound size={20} className="text-white" />}
+        gradient="from-cyan-400 to-blue-400"
         title="Practicantes"
         subtitle="Control de prácticas profesionales: estado, duración y costos."
-        actions={<button onClick={() => openNew("practicantes")} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Nuevo practicante</button>}
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Buscar practicante o área..."
+        filterPanel={
+          <FilterPanel activeCount={[filtroEstado].filter(Boolean).length} onClear={() => { setFiltroEstado(""); }}>
+            <Select value={filtroEstado} onChange={setFiltroEstado} options={ESTADOS_PRACTICANTE} placeholder="Estado" />
+          </FilterPanel>
+        }
+        actions={<button onClick={() => openNew("practicantes")} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Nuevo practicante</button>}
       />
-      <FilterBar search={search} setSearch={setSearch} searchPlaceholder="Buscar practicante o área..." filters={<Select value={filtroEstado} onChange={setFiltroEstado} options={ESTADOS_PRACTICANTE} placeholder="Estado" />} />
       <Table
         columns={columns}
         rows={filtered}
@@ -2637,14 +2552,13 @@ function ModuloPresupuesto({ data, search, setSearch, openNew: _openNew, openEdi
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-slate-800">💰 Control Financiero y Presupuesto</h1>
-          <p className="text-slate-500 text-xs">Visión unificada del presupuesto, montos comprometidos, ejecutados y saldos en tiempo real.</p>
-        </div>
-        <p className="text-xs text-slate-400 italic">Los módulos son fijos. Solo se edita el presupuesto asignado.</p>
-      </div>
+      <ModuleHeader
+        icon={<Wallet size={20} className="text-white" />}
+        gradient="from-emerald-400 to-teal-500"
+        title="Control Financiero y Presupuesto"
+        subtitle="Visión unificada del presupuesto, montos comprometidos, ejecutados y saldos en tiempo real."
+        actions={<p className="text-xs text-slate-400 italic">Los módulos son fijos. Solo se edita el presupuesto asignado.</p>}
+      />
 
       {/* 1. Resumen General Card */}
       <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
@@ -2874,13 +2788,22 @@ function ModuloProcesos({ data, search, setSearch, openNew, openEdit, deleteItem
 
   return (
     <div className="space-y-5">
-      <PageHeader
-        icon="⏳"
+      <ModuleHeader
+        icon={<Hourglass size={20} className="text-white" />}
+        gradient="from-amber-400 to-orange-500"
         title="Procesos Pendientes"
         subtitle="Seguimiento de procesos transversales, riesgos y bloqueos."
-        actions={<button onClick={() => openNew("procesos")} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Nuevo proceso</button>}
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Buscar proceso..."
+        filterPanel={
+          <FilterPanel activeCount={[filtroTipo, filtroPrioridad].filter(Boolean).length} onClear={() => { setFiltroTipo(""); setFiltroPrioridad(""); }}>
+            <Select value={filtroTipo} onChange={setFiltroTipo} options={TIPOS_PROCESO} placeholder="Tipo" />
+            <Select value={filtroPrioridad} onChange={setFiltroPrioridad} options={PRIORIDADES} placeholder="Prioridad" />
+          </FilterPanel>
+        }
+        actions={<button onClick={() => openNew("procesos")} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Nuevo proceso</button>}
       />
-      <FilterBar search={search} setSearch={setSearch} searchPlaceholder="Buscar proceso..." filters={<><Select value={filtroTipo} onChange={setFiltroTipo} options={TIPOS_PROCESO} placeholder="Tipo" /><Select value={filtroPrioridad} onChange={setFiltroPrioridad} options={PRIORIDADES} placeholder="Prioridad" /></>} />
       <Table
         columns={columns}
         rows={filtered}
@@ -2911,22 +2834,32 @@ function ModuloDiplomas({ data, search, setSearch, openNew, openEdit, deleteItem
   const bukPendientes = data.diplomas.filter((d: Diploma) => d.estadoBUK === "Pendiente subir").length;
   return (
     <div className="space-y-5">
-      <PageHeader
-        icon="📜"
+      <ModuleHeader
+        icon={<Award size={20} className="text-white" />}
+        gradient="from-violet-400 to-purple-500"
         title="Diplomas / Certificados / Licencias"
         subtitle="Seguimiento de documentos por etapa: OTEC → Participante → BUK."
-        actions={<button onClick={() => openNew("diplomas")} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Nuevo documento</button>}
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Buscar curso, participante u OTEC..."
+        filterPanel={
+          <FilterPanel activeCount={[filtroEtapa, filtroBUK, filtroPrioridad].filter(Boolean).length} onClear={() => { setFiltroEtapa(""); setFiltroBUK(""); setFiltroPrioridad(""); }}>
+            <Select value={filtroEtapa} onChange={setFiltroEtapa} options={ESTADOS_DIPLOMA} placeholder="Etapa" />
+            <Select value={filtroBUK} onChange={setFiltroBUK} options={ESTADOS_BUK} placeholder="Estado BUK" />
+            <Select value={filtroPrioridad} onChange={setFiltroPrioridad} options={PRIORIDADES} placeholder="Prioridad" />
+          </FilterPanel>
+        }
+        actions={<button onClick={() => openNew("diplomas")} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Nuevo documento</button>}
       />
       {bukPendientes > 0 && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
-          <span className="text-xl shrink-0">⚠️</span>
+          <AlertTriangle size={18} className="text-red-500 shrink-0" />
           <div>
             <span className="text-sm font-semibold text-red-800">Atención BUK:</span>
             <span className="text-sm text-red-700 ml-1"><strong>{bukPendientes}</strong> {bukPendientes === 1 ? "documento pendiente" : "documentos pendientes"} de subir a BUK</span>
           </div>
         </div>
       )}
-      <FilterBar search={search} setSearch={setSearch} searchPlaceholder="Buscar curso, participante u OTEC..." filters={<><Select value={filtroEtapa} onChange={setFiltroEtapa} options={ESTADOS_DIPLOMA} placeholder="Etapa" /><Select value={filtroBUK} onChange={setFiltroBUK} options={ESTADOS_BUK} placeholder="Estado BUK" /><Select value={filtroPrioridad} onChange={setFiltroPrioridad} options={PRIORIDADES} placeholder="Prioridad" /></>} />
       <Table
         columns={columns}
         rows={filtered}
@@ -2979,25 +2912,26 @@ function ModuloEvaluaciones({ data, search, setSearch, openNew, openEdit, delete
 
   return (
     <div className="space-y-5">
-      <PageHeader
-        icon="🧠"
+      <ModuleHeader
+        icon={<ClipboardCheck size={20} className="text-white" />}
+        gradient="from-cyan-400 to-blue-400"
         title="Evaluaciones Psicolaborales"
         subtitle="Control de evaluaciones por candidato, cargo, estado y resultado."
-        actions={<button onClick={() => openNew("evaluaciones")} className="bg-violet-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-violet-700 transition-colors shadow-sm">+ Nueva evaluación</button>}
-      />
-      <FilterBar
         search={search}
-        setSearch={setSearch}
-        searchPlaceholder="Buscar cargo, candidato, proveedor o área..."
-        filters={
-          <>
+        onSearchChange={setSearch}
+        searchPlaceholder="Buscar cargo, candidato o área..."
+        filterPanel={
+          <FilterPanel activeCount={[filtroMes, filtroAno, filtroEstado, filtroResultado, filtroPrioridad].filter(Boolean).length} onClear={() => { setFiltroMes(""); setFiltroAno(""); setFiltroEstado(""); setFiltroResultado(""); setFiltroPrioridad(""); }}>
             <Select value={filtroMes} onChange={setFiltroMes} options={MESES} placeholder="Mes" />
-            <select value={filtroAno} onChange={e => setFiltroAno(e.target.value)} className="border border-[#D9E2EC] rounded-xl px-4 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:border-[#93C5FD] focus:ring-2 focus:ring-blue-100 transition-colors"><option value="">Año</option><option value="2026">2026</option><option value="2025">2025</option></select>
+            <select value={filtroAno} onChange={e => setFiltroAno(e.target.value)} className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white text-slate-800 w-full focus:outline-none focus:border-blue-300 transition-colors">
+              <option value="">Año</option><option value="2026">2026</option><option value="2025">2025</option>
+            </select>
             <Select value={filtroEstado} onChange={setFiltroEstado} options={ESTADOS_EVALUACION} placeholder="Estado" />
             <Select value={filtroResultado} onChange={setFiltroResultado} options={RESULTADOS_EVALUACION} placeholder="Resultado" />
             <Select value={filtroPrioridad} onChange={setFiltroPrioridad} options={PRIORIDADES} placeholder="Prioridad" />
-          </>
+          </FilterPanel>
         }
+        actions={<button onClick={() => openNew("evaluaciones")} className="bg-violet-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-violet-700 transition-colors shadow-sm">+ Nueva evaluación</button>}
       />
       <Table
         columns={columns}
@@ -3020,13 +2954,16 @@ function ModuloCargaSemanal({ data, search, setSearch, openNew, openEdit, delete
 
   return (
     <div className="space-y-5">
-      <PageHeader
-        icon="📅"
+      <ModuleHeader
+        icon={<CalendarRange size={20} className="text-white" />}
+        gradient="from-emerald-400 to-teal-500"
         title="Carga Semanal"
         subtitle="Registro de carga operativa real vs planificada por semana."
-        actions={<button onClick={() => openNew("cargaSemanal")} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Nueva semana</button>}
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Buscar semana..."
+        actions={<button onClick={() => openNew("cargaSemanal")} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Nueva semana</button>}
       />
-      <FilterBar search={search} setSearch={setSearch} searchPlaceholder="Buscar semana..." filters={null} />
       <Table
         columns={columns}
         rows={filtered}
@@ -3055,17 +2992,28 @@ function ModuloContactos({ data, search, setSearch, openNew, openEdit, deleteIte
 
   return (
     <div className="space-y-5">
-      <PageHeader
-        icon="📇"
+      <ModuleHeader
+        icon={<ContactRound size={20} className="text-white" />}
+        gradient="from-cyan-400 to-blue-400"
         title="Contactos / Responsables"
         subtitle="Base de personas: internos, OTEC, jefaturas, psicólogos y proveedores."
-        actions={<button onClick={() => openNew("contactos")} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Nuevo contacto</button>}
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Buscar contacto..."
+        filterPanel={
+          <FilterPanel activeCount={[filtroRelacion, filtroActivo].filter(Boolean).length} onClear={() => { setFiltroRelacion(""); setFiltroActivo(""); }}>
+            <Select value={filtroRelacion} onChange={setFiltroRelacion} options={RELACIONES} placeholder="Relación" />
+            <select value={filtroActivo} onChange={e => setFiltroActivo(e.target.value)} className="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white text-slate-800 w-full focus:outline-none focus:border-blue-300 transition-colors">
+              <option value="">Activo (todos)</option><option value="Sí">Sí</option><option value="No">No</option>
+            </select>
+          </FilterPanel>
+        }
+        actions={<button onClick={() => openNew("contactos")} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Nuevo contacto</button>}
       />
       <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
         <span className="text-xl shrink-0">ℹ️</span>
         <p className="text-sm text-blue-800">Todos los responsables de los módulos se asignan desde aquí. <strong>Crea el contacto antes de asignarlo</strong> en cualquier registro.</p>
       </div>
-      <FilterBar search={search} setSearch={setSearch} searchPlaceholder="Buscar contacto..." filters={<><Select value={filtroRelacion} onChange={setFiltroRelacion} options={RELACIONES} placeholder="Relación" /><select value={filtroActivo} onChange={e => setFiltroActivo(e.target.value)} className="border border-[#D9E2EC] rounded-xl px-4 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:border-[#93C5FD] focus:ring-2 focus:ring-blue-100 transition-colors"><option value="">Activo</option><option value="Sí">Sí</option><option value="No">No</option></select></>} />
       <Table
         columns={columns}
         rows={filtered}
@@ -3379,302 +3327,227 @@ function ModuloConfiguracion({
   const lastLocalBackupDate = backups[0]?.fecha;
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        icon="⚙️"
+    <div className="space-y-4">
+      <ModuleHeader
+        icon={<Settings size={20} className="text-white" />}
+        gradient="from-slate-500 to-slate-600"
         title="Configuración y Respaldos"
         subtitle="Gestión de datos, exportación, importación y respaldos del sistema."
       />
 
-      {/* Alerta semanal */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
-        <span className="text-xl shrink-0">📢</span>
-        <div>
-          <p className="text-sm font-semibold text-blue-900">Recomendación semanal</p>
-          <p className="text-sm text-blue-700 mt-0.5">Descarga un respaldo JSON al menos 1 vez por semana y guárdalo de manera segura en tu carpeta de backups.</p>
-        </div>
-      </div>
+      {/* ── Acordeón 1: Importar / Exportar ── */}
+      <ExpandableSection title="Importar / Exportar datos" defaultOpen={true}>
+        <div className="space-y-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-start gap-3">
+            <span className="text-base shrink-0">💡</span>
+            <p className="text-sm text-blue-700">Descarga un respaldo JSON al menos 1 vez por semana y guárdalo en una carpeta segura.</p>
+          </div>
 
-      {/* Flujo XLSX — destacado */}
-      <SectionCard title="📊 Importación / Exportación XLSX" subtitle="Conecta el sistema con Excel. Descarga la plantilla, complétala e importa." headerRight={
-        <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded font-medium">Recomendado</span>
-      }>
-        <input ref={xlsxFileInputRef} type="file" accept=".xlsx" className="hidden" onChange={handleXlsxFileSelect} />
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
-            <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center text-lg">1️⃣</div>
-            <div>
-              <p className="text-sm font-semibold text-slate-700">Descargar plantilla</p>
-              <p className="text-xs text-slate-500 mt-0.5">Plantilla oficial con todos los módulos y ejemplos incluidos.</p>
-            </div>
-            <button
-              onClick={downloadXlsxTemplate}
-              disabled={exportingTemplate}
-              className="w-full bg-indigo-600 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-indigo-700 transition disabled:opacity-60"
-            >
-              {exportingTemplate ? "⏳ Generando plantilla..." : "📋 Descargar plantilla XLSX"}
-            </button>
-          </div>
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
-            <div className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center text-lg">2️⃣</div>
-            <div>
-              <p className="text-sm font-semibold text-slate-700">Importar base XLSX</p>
-              <p className="text-xs text-slate-500 mt-0.5">Sube tu archivo, previsualiza los datos y elige modo: fusionar o reemplazar.</p>
-            </div>
-            <button
-              onClick={() => xlsxFileInputRef.current?.click()}
-              disabled={xlsxImporting}
-              className="w-full bg-teal-600 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-teal-700 transition disabled:opacity-50"
-            >
-              {xlsxImporting ? "⏳ Procesando..." : "📤 Subir e importar XLSX"}
-            </button>
-            {xlsxImporting && (
-              <div className="flex justify-center">
-                <LoadingSpinner size="sm" label="Procesando archivo XLSX..." />
+          <input ref={xlsxFileInputRef} type="file" accept=".xlsx" className="hidden" onChange={handleXlsxFileSelect} />
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Paso 1 */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center">1</span>
+                <p className="text-sm font-semibold text-slate-700">Descargar plantilla</p>
               </div>
-            )}
-          </div>
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
-            <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center text-lg">3️⃣</div>
-            <div>
-              <p className="text-sm font-semibold text-slate-700">Exportar datos</p>
-              <p className="text-xs text-slate-500 mt-0.5">Descarga el XLSX completo o una versión anonimizada para compartir.</p>
+              <p className="text-xs text-slate-500">Plantilla oficial con todos los módulos y ejemplos incluidos.</p>
+              <button onClick={downloadXlsxTemplate} disabled={exportingTemplate} className="w-full bg-indigo-600 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-indigo-700 transition disabled:opacity-60">
+                {exportingTemplate ? "Generando..." : "Descargar plantilla XLSX"}
+              </button>
             </div>
+            {/* Paso 2 */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-teal-100 text-teal-700 text-xs font-bold flex items-center justify-center">2</span>
+                <p className="text-sm font-semibold text-slate-700">Importar base XLSX</p>
+              </div>
+              <p className="text-xs text-slate-500">Sube tu archivo, previsualiza los datos y elige modo: fusionar o reemplazar.</p>
+              <button onClick={() => xlsxFileInputRef.current?.click()} disabled={xlsxImporting} className="w-full bg-teal-600 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-teal-700 transition disabled:opacity-50">
+                {xlsxImporting ? "Procesando..." : "Subir e importar XLSX"}
+              </button>
+              {xlsxImporting && <div className="flex justify-center"><LoadingSpinner size="sm" label="Procesando..." /></div>}
+            </div>
+            {/* Paso 3 */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center justify-center">3</span>
+                <p className="text-sm font-semibold text-slate-700">Exportar datos</p>
+              </div>
+              <p className="text-xs text-slate-500">Descarga el XLSX completo o una versión anonimizada para compartir.</p>
+              <div className="space-y-2">
+                {canExportFull && (
+                  <button onClick={exportXLSX} disabled={exportingXlsx} className="w-full bg-emerald-600 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-emerald-700 transition disabled:opacity-60">
+                    {exporting === "xlsx" ? "Generando XLSX..." : "Exportar XLSX completo"}
+                  </button>
+                )}
+                {canExportAnonymized && (
+                  <button onClick={exportXLSXAnonymized} disabled={exportingXlsx} className="w-full bg-emerald-500 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-emerald-600 transition disabled:opacity-60">
+                    {exporting === "xlsxAnon" ? "Generando..." : "Exportar XLSX anon."}
+                  </button>
+                )}
+                {!canExportFull && !canExportAnonymized && <p className="text-[11px] text-slate-400">Sin permisos de exportación</p>}
+              </div>
+              {exportingXlsx && <div className="flex justify-center"><LoadingSpinner size="sm" label="Generando XLSX..." /></div>}
+            </div>
+          </div>
+          <p className="text-xs text-slate-400">Modos al importar: <strong>Fusionar</strong> agrega/actualiza sin borrar · <strong>Reemplazar</strong> sobreescribe los módulos presentes en el archivo.</p>
+        </div>
+      </ExpandableSection>
+
+      {/* ── Acordeón 2: Respaldos ── */}
+      <ExpandableSection title="Respaldos locales" count={backups.length} defaultOpen={true}>
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Estado */}
+            <div className="space-y-2 text-xs text-slate-600">
+              <div className="flex justify-between py-1 border-b border-slate-100"><span>Último respaldo local</span><span className="font-semibold text-slate-800">{lastLocalBackupDate ? new Date(lastLocalBackupDate).toLocaleString("es-CL") : "Ninguno"}</span></div>
+              <div className="flex justify-between py-1 border-b border-slate-100"><span>Última descarga JSON</span><span className="font-semibold text-slate-800">{lastJSONExport ? new Date(lastJSONExport).toLocaleString("es-CL") : "Nunca"}</span></div>
+              <div className="flex justify-between py-1 border-b border-slate-100"><span>Última descarga XLSX</span><span className="font-semibold text-slate-800">{lastXLSXExport ? new Date(lastXLSXExport).toLocaleString("es-CL") : "Nunca"}</span></div>
+              <div className="flex justify-between py-1 border-b border-slate-100"><span>Última actualización</span><span className="font-semibold text-slate-800">{new Date(data.meta.actualizado).toLocaleString("es-CL")}</span></div>
+              <div className="flex justify-between py-1"><span>Versión</span><span className="font-semibold text-slate-800">v{data.meta.version}</span></div>
+            </div>
+            {/* Acciones JSON */}
             <div className="space-y-2">
-              {canExportFull && (
-                <button
-                  onClick={exportXLSX}
-                  disabled={exportingXlsx}
-                  className="w-full bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-emerald-700 transition disabled:opacity-60"
-                >
-                  {exporting === "xlsx" ? "⏳ Generando XLSX..." : "📥 Exportar XLSX completo"}
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Exportar / Importar JSON</p>
+              <div className="flex flex-wrap gap-2">
+                {canExportFull && (
+                  <button onClick={exportJSON} disabled={exportingJson} className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-emerald-700 transition disabled:opacity-60">
+                    {exporting === "json" ? "Generando..." : "Exportar JSON completo"}
+                  </button>
+                )}
+                {canExportSummary && (
+                  <button onClick={exportJSONSummary} disabled={exportingJson} className="bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-emerald-600 transition disabled:opacity-60">
+                    {exporting === "jsonSummary" ? "Generando..." : "Exportar resumen"}
+                  </button>
+                )}
+                {canExportAnonymized && (
+                  <button onClick={exportJSONAnonymized} disabled={exportingJson} className="bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-emerald-600 transition disabled:opacity-60">
+                    {exporting === "jsonAnon" ? "Generando..." : "Exportar JSON anon."}
+                  </button>
+                )}
+                <button onClick={importJSON} className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-blue-700 transition">Importar JSON</button>
+                <button onClick={exportLimpia} disabled={exportingCleanTemplate} className="bg-slate-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-slate-600 transition disabled:opacity-60">
+                  {exportingCleanTemplate ? "Generando..." : "Plantilla limpia"}
                 </button>
-              )}
-              {canExportAnonymized && (
-                <button
-                  onClick={exportXLSXAnonymized}
-                  disabled={exportingXlsx}
-                  className="w-full bg-emerald-500 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-emerald-600 transition disabled:opacity-60"
-                >
-                  {exporting === "xlsxAnon" ? "⏳ Generando XLSX anon..." : "🫥 Exportar XLSX anon."}
-                </button>
-              )}
-              {!canExportFull && !canExportAnonymized && (
-                <p className="text-[11px] text-slate-400">Sin permisos de exportación</p>
-              )}
-            </div>
-            {exportingXlsx && (
-              <div className="flex justify-center">
-                <LoadingSpinner size="sm" label="Generando XLSX..." />
               </div>
-            )}
-          </div>
-        </div>
-        <p className="text-xs text-slate-400 mt-3">Modos al importar: <strong>Fusionar</strong> agrega/actualiza sin borrar · <strong>Reemplazar</strong> sobreescribe los módulos presentes en el archivo.</p>
-      </SectionCard>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Estado respaldos */}
-        <SectionCard title="💾 Estado de respaldos">
-          <div className="space-y-2 text-xs text-slate-600">
-            <div className="flex justify-between py-1 border-b border-slate-100"><span>Último respaldo local</span><span className="font-semibold text-slate-800">{lastLocalBackupDate ? new Date(lastLocalBackupDate).toLocaleString("es-CL") : "Ninguno"}</span></div>
-            <div className="flex justify-between py-1 border-b border-slate-100"><span>Última descarga JSON</span><span className="font-semibold text-slate-800">{lastJSONExport ? new Date(lastJSONExport).toLocaleString("es-CL") : "Nunca"}</span></div>
-            <div className="flex justify-between py-1 border-b border-slate-100"><span>Última descarga XLSX</span><span className="font-semibold text-slate-800">{lastXLSXExport ? new Date(lastXLSXExport).toLocaleString("es-CL") : "Nunca"}</span></div>
-            <div className="flex justify-between py-1 border-b border-slate-100"><span>Última actualización</span><span className="font-semibold text-slate-800">{new Date(data.meta.actualizado).toLocaleString("es-CL")}</span></div>
-            <div className="flex justify-between py-1"><span>Versión</span><span className="font-semibold text-slate-800">v{data.meta.version}</span></div>
-          </div>
-          <div className="flex flex-wrap gap-2 pt-4 border-t border-slate-100 mt-3">
-            {canExportFull && (
-              <button
-                onClick={exportJSON}
-                disabled={exportingJson}
-                className="bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-emerald-700 transition disabled:opacity-60"
-              >
-                {exporting === "json" ? "⏳ Generando JSON..." : "📥 Exportar JSON completo"}
-              </button>
-            )}
-            {canExportSummary && (
-              <button
-                onClick={exportJSONSummary}
-                disabled={exportingJson}
-                className="bg-emerald-500 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-emerald-600 transition disabled:opacity-60"
-              >
-                {exporting === "jsonSummary" ? "⏳ Generando resumen..." : "📥 Exportar resumen"}
-              </button>
-            )}
-            {canExportAnonymized && (
-              <button
-                onClick={exportJSONAnonymized}
-                disabled={exportingJson}
-                className="bg-emerald-500 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-emerald-600 transition disabled:opacity-60"
-              >
-                {exporting === "jsonAnon" ? "⏳ Generando JSON anon..." : "🫥 Exportar JSON anon."}
-              </button>
-            )}
-            <button onClick={importJSON} className="bg-blue-600 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-blue-700 transition">📤 Importar JSON</button>
-            <button
-              onClick={exportLimpia}
-              disabled={exportingCleanTemplate}
-              className="bg-slate-500 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-slate-600 transition disabled:opacity-60"
-            >
-              {exportingCleanTemplate ? "⏳ Generando plantilla..." : "📋 Plantilla limpia"}
-            </button>
-          </div>
-          {exportingJson && (
-            <div className="mt-3 flex justify-center">
-              <LoadingSpinner size="sm" label="Generando exportación..." />
-            </div>
-          )}
-        </SectionCard>
-
-        <SectionCard title="🔐 Cifrado local">
-          <p className="text-sm text-slate-600 mb-3">Protege datos sensibles en este navegador con una clave local.</p>
-          <div className="flex justify-between items-center text-xs text-slate-600 mb-4">
-            <span>Estado</span>
-            <span className={`font-semibold ${encryptionEnabled ? "text-emerald-600" : "text-slate-500"}`}>
-              {encryptionEnabled ? "Activo" : "Desactivado"}
-            </span>
-          </div>
-          {!encryptionEnabled && (
-            <button onClick={openEncryptionSetup} className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-emerald-700 transition">
-              Activar cifrado
-            </button>
-          )}
-          {encryptionEnabled && (
-            <button onClick={disableEncryption} className="bg-amber-500 text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-amber-600 transition">
-              Desactivar cifrado
-            </button>
-          )}
-          <p className="text-[11px] text-slate-400 mt-3">La clave se solicita al iniciar y no se guarda en localStorage.</p>
-        </SectionCard>
-
-        {/* Contador */}
-        <SectionCard title="📊 Registros por módulo">
-          <div className="space-y-1.5">
-            {Object.entries(counts).map(([k, v]) => (
-              <div key={k} className="flex justify-between items-center text-sm py-1 border-b border-slate-50">
-                <span className="text-slate-600 capitalize">{k.replace(/([A-Z])/g, " $1").trim()}</span>
-                <span className={`font-bold text-sm px-2 py-0.5 rounded-lg ${v > 0 ? "bg-blue-50 text-blue-700" : "text-slate-400"}`}>{v}</span>
-              </div>
-            ))}
-            <div className="flex justify-between text-sm font-bold pt-2">
-              <span className="text-slate-700">Total</span>
-              <span className="text-slate-800">{Object.values(counts).reduce((a, b) => a + b, 0)}</span>
+              {exportingJson && <div className="flex justify-center mt-2"><LoadingSpinner size="sm" label="Generando exportación..." /></div>}
             </div>
           </div>
-        </SectionCard>
 
-        {/* Instrucciones */}
-        <SectionCard title="📖 Guía de uso">
-          <p className="text-sm text-slate-600 mb-4">Consulta las instrucciones completas de uso del sistema, rutina semanal y buenas prácticas.</p>
-          <button onClick={showInstructions} className="bg-amber-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-amber-600 transition-colors shadow-sm">
-            Ver instrucciones de uso
-          </button>
-        </SectionCard>
-
-        {/* Acciones de datos */}
-        <div className="space-y-3">
-          <SectionCard title="🔄 Datos de ejemplo">
-            <p className="text-sm text-slate-600 mb-3">Restaura datos de ejemplo para previsualizar el sistema.</p>
-            <button onClick={restaurarEjemplos} className="bg-amber-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-amber-600 transition-colors">
-              Restaurar datos de ejemplo
+          {/* Tabla de respaldos */}
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Historial de respaldos automáticos (hasta 10)</p>
+            <button onClick={handleCrearBackupManual} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition">
+              Crear respaldo ahora
             </button>
-          </SectionCard>
-          <SectionCard title="⚠️ Zona de peligro">
-            <p className="text-sm text-slate-600 mb-3">Elimina <strong>todos</strong> los datos permanentemente. Requiere doble confirmación.</p>
-            <button onClick={limpiarTodo} className="bg-red-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-red-700 transition-colors">
-              Limpiar todos los datos
-            </button>
-          </SectionCard>
-        </div>
-      </div>
-
-      {/* Respaldos Locales Tabla */}
-      <div className="bg-white rounded-2xl border border-[#D9E2EC] p-6 shadow-sm space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h3 className="font-bold text-slate-800 text-base">💾 Respaldos Locales (localStorage)</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Se guardan automáticamente antes de cada acción importante (hasta 10 registros).</p>
           </div>
-          <button
-            onClick={handleCrearBackupManual}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-semibold transition animate-pulse"
-          >
-            ⚡ Crear respaldo local ahora
-          </button>
-        </div>
-
-        {backups.length === 0 ? (
-          <div className="text-center py-8 text-slate-400 text-sm">
-            Aún no hay respaldos locales
-          </div>
-        ) : (
-          <div className="overflow-x-auto rounded-2xl border border-[#D9E2EC]">
-            <table className="w-full text-sm text-left table-stripe">
-              <thead>
-                <tr className="bg-[#F1F5F9] text-slate-500 text-xs font-medium tracking-wide">
-                  <th className="px-4 py-3">Fecha</th>
-                  <th className="px-4 py-3">Motivo / Acción</th>
-                  <th className="px-4 py-3">Tamaño</th>
-                  <th className="px-4 py-3 text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {backups.map((backup: BackupItem) => (
-                  <tr key={backup.id} className="border-t border-[#F1F5F9] hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 text-slate-700 font-medium">
-                      {new Date(backup.fecha).toLocaleString("es-CL")}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded text-xs font-semibold uppercase ${
-                        backup.motivo === "manual" ? "bg-blue-50 text-blue-700 border border-blue-200" :
-                        backup.motivo === "importar" ? "bg-purple-50 text-purple-700 border border-purple-200" :
-                        backup.motivo === "eliminar" ? "bg-red-50 text-red-700 border border-red-200" :
-                        "bg-slate-100 text-slate-700 border border-slate-200"
-                      }`}>
-                        {backup.motivo}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">{backup.tamaño}</td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="flex gap-1.5 justify-center">
-                        <button
-                          onClick={() => handleRestaurarBackup(backup)}
-                          className="px-3 py-1 text-xs font-medium bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors"
-                        >
-                          Restaurar
-                        </button>
-                        <button
-                          onClick={() => handleDescargarBackup(backup)}
-                          className="px-3 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors"
-                        >
-                          Descargar
-                        </button>
-                        <button
-                          onClick={() => handleEliminarBackup(backup.id)}
-                          className="px-3 py-1 text-xs font-medium bg-red-50 text-red-700 rounded-lg border border-red-100 hover:bg-red-100 transition-colors"
-                        >
-                          Eliminar
-                        </button>
-                      </div>
-                    </td>
+          {backups.length === 0 ? (
+            <div className="text-center py-8 text-slate-400 text-sm">Aún no hay respaldos locales</div>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-slate-200">
+              <table className="w-full text-sm text-left">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-500 text-xs font-medium">
+                    <th className="px-4 py-2">Fecha</th>
+                    <th className="px-4 py-2">Motivo</th>
+                    <th className="px-4 py-2">Tamaño</th>
+                    <th className="px-4 py-2 text-center">Acciones</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                </thead>
+                <tbody>
+                  {backups.map((backup: BackupItem) => (
+                    <tr key={backup.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                      <td className="px-4 py-2 text-slate-700 font-medium text-xs">{new Date(backup.fecha).toLocaleString("es-CL")}</td>
+                      <td className="px-4 py-2">
+                        <span className={`px-2 py-0.5 rounded text-xs font-semibold uppercase ${
+                          backup.motivo === "manual" ? "bg-blue-50 text-blue-700 border border-blue-200" :
+                          backup.motivo === "importar" ? "bg-purple-50 text-purple-700 border border-purple-200" :
+                          backup.motivo === "eliminar" ? "bg-red-50 text-red-700 border border-red-200" :
+                          "bg-slate-100 text-slate-700 border border-slate-200"
+                        }`}>{backup.motivo}</span>
+                      </td>
+                      <td className="px-4 py-2 text-slate-600 text-xs">{backup.tamaño}</td>
+                      <td className="px-4 py-2 text-center">
+                        <div className="flex gap-1.5 justify-center">
+                          <button onClick={() => handleRestaurarBackup(backup)} className="px-2 py-1 text-xs font-medium bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors">Restaurar</button>
+                          <button onClick={() => handleDescargarBackup(backup)} className="px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors">Descargar</button>
+                          <button onClick={() => handleEliminarBackup(backup.id)} className="px-2 py-1 text-xs font-medium bg-red-50 text-red-700 rounded-lg border border-red-100 hover:bg-red-100 transition-colors">Eliminar</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </ExpandableSection>
 
-        {xlsxParseResult && (
-          <XlsxImportPreview
-            parseResult={xlsxParseResult}
-            onConfirmMerge={() => confirmXlsxImport("merge")}
-            onConfirmReplace={() => confirmXlsxImport("replace")}
-            onCancel={() => setXlsxParseResult(null)}
-            loading={xlsxApplying}
-          />
-        )}
+      {/* ── Acordeón 3: Sistema ── */}
+      <ExpandableSection title="Sistema y seguridad">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Cifrado */}
+          <div className="space-y-3">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Cifrado local</p>
+            <p className="text-sm text-slate-600">Protege datos sensibles en este navegador con una clave local.</p>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-slate-500">Estado:</span>
+              <span className={`text-xs font-semibold ${encryptionEnabled ? "text-emerald-600" : "text-slate-500"}`}>{encryptionEnabled ? "Activo" : "Desactivado"}</span>
+            </div>
+            {!encryptionEnabled
+              ? <button onClick={openEncryptionSetup} className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-emerald-700 transition">Activar cifrado</button>
+              : <button onClick={disableEncryption} className="bg-amber-500 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-amber-600 transition">Desactivar cifrado</button>
+            }
+            <p className="text-[11px] text-slate-400">La clave se solicita al iniciar y no se guarda en localStorage.</p>
+          </div>
+
+          {/* Registros */}
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Registros por módulo</p>
+            <div className="space-y-1">
+              {Object.entries(counts).map(([k, v]) => (
+                <div key={k} className="flex justify-between items-center text-xs py-0.5">
+                  <span className="text-slate-600 capitalize">{k.replace(/([A-Z])/g, " $1").trim()}</span>
+                  <span className={`font-bold px-1.5 py-0.5 rounded ${v > 0 ? "bg-blue-50 text-blue-700" : "text-slate-400"}`}>{v}</span>
+                </div>
+              ))}
+              <div className="flex justify-between text-xs font-bold pt-1 border-t border-slate-100 mt-1">
+                <span className="text-slate-700">Total</span>
+                <span className="text-slate-800">{Object.values(counts).reduce((a, b) => a + b, 0)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Guía */}
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Guía de uso</p>
+            <p className="text-sm text-slate-600">Consulta las instrucciones completas, rutina semanal y buenas prácticas.</p>
+            <button onClick={showInstructions} className="bg-amber-500 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-amber-600 transition">Ver instrucciones de uso</button>
+          </div>
+
+          {/* Zona peligro */}
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Datos y zona de peligro</p>
+            <p className="text-sm text-slate-600">Restaura datos de ejemplo o elimina todo permanentemente.</p>
+            <div className="flex gap-2 flex-wrap">
+              <button onClick={restaurarEjemplos} className="bg-amber-500 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-amber-600 transition">Restaurar ejemplos</button>
+              <button onClick={limpiarTodo} className="bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-red-700 transition">Limpiar todos los datos</button>
+            </div>
+          </div>
+        </div>
+      </ExpandableSection>
+
+      {xlsxParseResult && (
+        <XlsxImportPreview
+          parseResult={xlsxParseResult}
+          onConfirmMerge={() => confirmXlsxImport("merge")}
+          onConfirmReplace={() => confirmXlsxImport("replace")}
+          onCancel={() => setXlsxParseResult(null)}
+          loading={xlsxApplying}
+        />
+      )}
       <ConfirmDialog
         isOpen={!!confirm}
         title={confirm?.title || "Confirmar acción"}
@@ -4359,8 +4232,9 @@ function ModuloValesGas({ data, search, setSearch, openNew, openEdit, deleteItem
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        icon="⛽"
+      <ModuleHeader
+        icon={<Fuel size={20} className="text-white" />}
+        gradient="from-emerald-400 to-teal-500"
         title="Vales de Gas"
         subtitle="Control integral de stock organizacional y distribución a colaboradores."
       />
@@ -4407,18 +4281,23 @@ function ModuloValesGas({ data, search, setSearch, openNew, openEdit, deleteItem
           <h2 className="text-sm font-semibold text-slate-700">Movimientos de vales — Organización</h2>
           <button onClick={() => openNew("valesGasOrganizacion")} className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-emerald-700 transition-colors shadow-sm">+ Registrar vales organización</button>
         </div>
-        <div className="flex flex-wrap gap-3 items-center">
-          <select aria-label="Filtrar por tipo" value={filterOrgTipo} onChange={e => setFilterOrgTipo(e.target.value)} className={INPUT_BASE}>
-            <option value="">Todos los tipos</option>
-            {TIPOS_MOVIMIENTO_VALES.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-          <select aria-label="Filtrar por período" value={filterOrgPeriodo} onChange={e => setFilterOrgPeriodo(e.target.value)} className={INPUT_BASE}>
-            <option value="">Todos los períodos</option>
-            {orgPeriodos.map(p => <option key={p as string} value={p as string}>{p as string}</option>)}
-          </select>
-          {(filterOrgTipo || filterOrgPeriodo) && (
-            <button onClick={() => { setFilterOrgTipo(""); setFilterOrgPeriodo(""); }} className="text-xs text-slate-500 hover:text-red-600 transition-colors">✕ Limpiar</button>
-          )}
+        <div className="flex items-center gap-2">
+          <FilterPanel activeCount={(filterOrgTipo ? 1 : 0) + (filterOrgPeriodo ? 1 : 0)} onClear={() => { setFilterOrgTipo(""); setFilterOrgPeriodo(""); }}>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-600">Tipo movimiento</label>
+              <select value={filterOrgTipo} onChange={e => setFilterOrgTipo(e.target.value)} className={INPUT_BASE}>
+                <option value="">Todos los tipos</option>
+                {TIPOS_MOVIMIENTO_VALES.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-600">Período</label>
+              <select value={filterOrgPeriodo} onChange={e => setFilterOrgPeriodo(e.target.value)} className={INPUT_BASE}>
+                <option value="">Todos los períodos</option>
+                {orgPeriodos.map(p => <option key={p as string} value={p as string}>{p as string}</option>)}
+              </select>
+            </div>
+          </FilterPanel>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <Table
@@ -4437,30 +4316,34 @@ function ModuloValesGas({ data, search, setSearch, openNew, openEdit, deleteItem
           <h2 className="text-sm font-semibold text-slate-700">Registros por colaborador</h2>
           <button onClick={() => openNew("valesGas")} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Nuevo registro colaborador</button>
         </div>
-        <div className="flex flex-wrap gap-3 items-center">
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar por colaborador, área o período..."
-            aria-label="Buscar vales de colaborador"
-            className={cn(INPUT_BASE, "w-64")}
-          />
-          <select value={filterEstado} onChange={e => setFilterEstado(e.target.value)} aria-label="Filtrar por estado" className={INPUT_BASE}>
-            <option value="">Todos los estados</option>
-            {ESTADOS_VALE_GAS.map(e => <option key={e} value={e}>{e}</option>)}
-          </select>
-          <select value={filterArea} onChange={e => setFilterArea(e.target.value)} aria-label="Filtrar por área" className={INPUT_BASE}>
-            <option value="">Todas las áreas</option>
-            {areas.map(a => <option key={a as string} value={a as string}>{a as string}</option>)}
-          </select>
-          <select value={filterPeriodo} onChange={e => setFilterPeriodo(e.target.value)} aria-label="Filtrar por período" className={INPUT_BASE}>
-            <option value="">Todos los períodos</option>
-            {periodos.map(p => <option key={p as string} value={p as string}>{p as string}</option>)}
-          </select>
-          {(filterEstado || filterArea || filterPeriodo || search) && (
-            <button onClick={() => { setFilterEstado(""); setFilterArea(""); setFilterPeriodo(""); setSearch(""); }} className="text-xs text-slate-500 hover:text-red-600 transition-colors">✕ Limpiar filtros</button>
-          )}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 w-56 focus-within:border-blue-300 transition-colors">
+            <Search size={13} className="text-slate-400 shrink-0" />
+            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar colaborador, área..." aria-label="Buscar vales de colaborador" className="bg-transparent flex-1 text-sm text-slate-700 outline-none placeholder:text-slate-400 min-w-0" />
+          </div>
+          <FilterPanel activeCount={(filterEstado ? 1 : 0) + (filterArea ? 1 : 0) + (filterPeriodo ? 1 : 0)} onClear={() => { setFilterEstado(""); setFilterArea(""); setFilterPeriodo(""); }}>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-600">Estado</label>
+              <select value={filterEstado} onChange={e => setFilterEstado(e.target.value)} aria-label="Filtrar por estado" className={INPUT_BASE}>
+                <option value="">Todos los estados</option>
+                {ESTADOS_VALE_GAS.map(e => <option key={e} value={e}>{e}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-600">Área</label>
+              <select value={filterArea} onChange={e => setFilterArea(e.target.value)} aria-label="Filtrar por área" className={INPUT_BASE}>
+                <option value="">Todas las áreas</option>
+                {areas.map(a => <option key={a as string} value={a as string}>{a as string}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-600">Período</label>
+              <select value={filterPeriodo} onChange={e => setFilterPeriodo(e.target.value)} aria-label="Filtrar por período" className={INPUT_BASE}>
+                <option value="">Todos los períodos</option>
+                {periodos.map(p => <option key={p as string} value={p as string}>{p as string}</option>)}
+              </select>
+            </div>
+          </FilterPanel>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <Table
@@ -4536,11 +4419,24 @@ function ModuloReclutamiento({ data, search, setSearch, openNew, openEdit, delet
 
   return (
     <div className="space-y-5">
-      <PageHeader
-        icon="👥"
+      <ModuleHeader
+        icon={<UserRoundPlus size={20} className="text-white" />}
+        gradient="from-cyan-400 to-blue-400"
         title="Reclutamiento"
         subtitle="Control de procesos de reclutamiento y selección de personal."
-        actions={<button onClick={() => openNew("reclutamiento")} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Nuevo proceso</button>}
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Buscar por planta, tipo, reclutador..."
+        filterPanel={
+          <FilterPanel activeCount={(filtroEstado ? 1 : 0) + (filtroPlanta ? 1 : 0) + (filtroTipo ? 1 : 0) + (filtroMes ? 1 : 0) + (filtroPrioridad ? 1 : 0)} onClear={() => { setFiltroEstado(""); setFiltroPlanta(""); setFiltroTipo(""); setFiltroMes(""); setFiltroPrioridad(""); }}>
+            <div className="space-y-1"><label className="text-xs font-medium text-slate-600">Proceso</label><Select value={filtroEstado} onChange={setFiltroEstado} options={ESTADOS_PROCESO_RECLUTAMIENTO} placeholder="Proceso" /></div>
+            <div className="space-y-1"><label className="text-xs font-medium text-slate-600">Planta / Centro</label><Select value={filtroPlanta} onChange={setFiltroPlanta} options={PLANTAS_CENTROS} placeholder="Planta / Centro" /></div>
+            <div className="space-y-1"><label className="text-xs font-medium text-slate-600">Tipo vacante</label><Select value={filtroTipo} onChange={setFiltroTipo} options={TIPOS_VACANTE} placeholder="Tipo vacante" /></div>
+            <div className="space-y-1"><label className="text-xs font-medium text-slate-600">Mes ingreso</label><Select value={filtroMes} onChange={setFiltroMes} options={MESES} placeholder="Mes ingreso" /></div>
+            <div className="space-y-1"><label className="text-xs font-medium text-slate-600">Prioridad</label><Select value={filtroPrioridad} onChange={setFiltroPrioridad} options={PRIORIDADES} placeholder="Prioridad" /></div>
+          </FilterPanel>
+        }
+        actions={<button onClick={() => openNew("reclutamiento")} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">+ Nuevo proceso</button>}
       />
 
       <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
@@ -4555,14 +4451,6 @@ function ModuloReclutamiento({ data, search, setSearch, openNew, openEdit, delet
           <KpiCardUI key={k.label} label={k.label} value={k.val} variant={k.variant} />
         ))}
       </div>
-
-      <FilterBar search={search} setSearch={setSearch} searchPlaceholder="Buscar por planta, tipo, reclutador..." filters={<>
-        <Select value={filtroEstado} onChange={setFiltroEstado} options={ESTADOS_PROCESO_RECLUTAMIENTO} placeholder="Proceso" />
-        <Select value={filtroPlanta} onChange={setFiltroPlanta} options={PLANTAS_CENTROS} placeholder="Planta / Centro" />
-        <Select value={filtroTipo} onChange={setFiltroTipo} options={TIPOS_VACANTE} placeholder="Tipo vacante" />
-        <Select value={filtroMes} onChange={setFiltroMes} options={MESES} placeholder="Mes ingreso" />
-        <Select value={filtroPrioridad} onChange={setFiltroPrioridad} options={PRIORIDADES} placeholder="Prioridad" />
-      </>} />
 
       <Table
         columns={columns}
@@ -4580,3 +4468,5 @@ function ModuloReclutamiento({ data, search, setSearch, openNew, openEdit, delet
     </div>
   );
 }
+
+
