@@ -117,7 +117,8 @@ export function migrateData(data: unknown, fallbackData: AppData): AppData {
     meta: {
       version: String(CURRENT_SCHEMA_VERSION),
       ultimaExportacion: oldData.meta?.ultimaExportacion || "",
-      actualizado: ahora(),
+      // Preserve existing timestamp; only stamp now if there was none (fresh data or schema upgrade)
+      actualizado: oldData.meta?.actualizado || ahora(),
     },
   };
 }
