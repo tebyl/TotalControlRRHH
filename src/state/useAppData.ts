@@ -200,6 +200,9 @@ export function useAppData(storageKey = STORAGE_KEY) {
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [needsWorkspaceSetup, setNeedsWorkspaceSetup] = useState(false);
 
+  // When data arrives from Supabase (realtime or load), skip the next remote write
+  const skipNextRemoteSave = useRef(false);
+
   // When Supabase session becomes available: resolve workspace, then sync data
   const dataRef = useRef<AppData | null>(null);
   dataRef.current = data;
@@ -224,6 +227,8 @@ export function useAppData(storageKey = STORAGE_KEY) {
           loadRemoteData().then(r => {
             if (r.ok && r.data) {
               const remote = hydrateData(r.data);
+              // Mark skip so the auto-save effect doesn't echo this back to Supabase
+              skipNextRemoteSave.current = true;
               setData(remote);
               saveAppData(storageKey, remote);
             } else if (dataRef.current) {
@@ -247,6 +252,7 @@ export function useAppData(storageKey = STORAGE_KEY) {
     loadRemoteData().then(r => {
       if (r.ok && r.data) {
         const remote = hydrateData(r.data);
+        skipNextRemoteSave.current = true;
         setData(remote);
         saveAppData(storageKey, remote);
       } else if (dataRef.current) {
@@ -256,30 +262,32 @@ export function useAppData(storageKey = STORAGE_KEY) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey]);
 
-  // Track last data sent to Supabase — declared here so realtime can read it too
-  const lastRemoteSave = useRef<string>("");
-
   // Subscribe to real-time changes from collaborators in the same workspace
   const setDataRef = useRef(setData);
   setDataRef.current = setData;
   useEffect(() => {
     if (!dataReady || !workspaceId) return;
     return subscribeToRemoteChanges(workspaceId, newData => {
-      // Skip updates we generated ourselves to break the save→realtime→save loop
-      const serialized = JSON.stringify(newData);
-      if (serialized === lastRemoteSave.current) return;
       const hydrated = hydrateData(newData);
+      skipNextRemoteSave.current = true;
       setDataRef.current(hydrated);
       saveAppData(storageKey, hydrated);
     });
   }, [dataReady, workspaceId, storageKey]);
 
+  // Track last serialized data sent to Supabase for dedup
+  const lastRemoteSave = useRef<string>("");
+
   useEffect(() => {
     if (!dataReady) return;
     if (!encryptionEnabled) {
       saveAppData(storageKey, data);
-      // Debounce + dedup: only push to Supabase after 2s of no changes AND data actually changed
+      // Debounce remote save: wait 2s of inactivity, skip if came from realtime or content unchanged
       const timer = setTimeout(() => {
+        if (skipNextRemoteSave.current) {
+          skipNextRemoteSave.current = false;
+          return;
+        }
         const serialized = JSON.stringify(data);
         if (serialized === lastRemoteSave.current) return;
         lastRemoteSave.current = serialized;
